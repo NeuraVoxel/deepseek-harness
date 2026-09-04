@@ -342,7 +342,7 @@ describe('imageRequestPricing resolution', () => {
 describe('tokenMoneyRates resolution', () => {
   it('resolves the owning adapter declaration and degrades everywhere else to undefined', async () => {
     const ctx = await setup()
-    const rates = { uncachedInputUsdPerMtok: 0.22, outputUsdPerMtok: 0.66 }
+    const rates = { uncachedInputPerMtok: 0.22, outputPerMtok: 0.66 }
     class MoneyAdapter extends NoopAdapter {
       override tokenMoneyRates(provider: string, model: string): typeof rates | undefined {
         return provider === 'a' && model === 'priced' ? rates : undefined

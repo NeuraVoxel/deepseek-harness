@@ -139,7 +139,7 @@ intent：「Turn usage 面板增加实际金钱消耗统计」
 
 产物：
 
-- [`.agents/notes/proposed/feature/2026-09-04-turn-usage-money-cost.md`](../../.agents/notes/proposed/feature/2026-09-04-turn-usage-money-cost.md)
+- [`.agents/notes/implemented/feature/2026-09-04-turn-usage-money-cost.md`](../../.agents/notes/implemented/feature/2026-09-04-turn-usage-money-cost.md)
 - `.zh.md` / `.i18n.yaml`
 
 ## 相关权威来源

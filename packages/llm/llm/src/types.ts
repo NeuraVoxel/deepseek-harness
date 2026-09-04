@@ -180,22 +180,23 @@ export interface LlmImageRequestPricing {
 
 /**
  * Published monetary token rates for one exact `(provider, model)` route.
- * Values are USD per million tokens. Distinct from {@link LlmImageRequestPricing},
- * which prices visual occupancy tokens rather than currency.
+ * Values are currency units per million tokens (USD or CNY list prices).
+ * Distinct from {@link LlmImageRequestPricing}, which prices visual occupancy
+ * tokens rather than currency.
  */
 export interface LlmTokenMoneyRates {
   /** Cache-miss / uncached prompt input. */
-  readonly uncachedInputUsdPerMtok: number
-  readonly outputUsdPerMtok: number
+  readonly uncachedInputPerMtok: number
+  readonly outputPerMtok: number
   /** Required when an attempt reports `cacheReadTokens`. */
-  readonly cacheReadUsdPerMtok?: number
+  readonly cacheReadPerMtok?: number
   /** Required when an attempt reports `cacheWriteTokens`. */
-  readonly cacheWriteUsdPerMtok?: number
+  readonly cacheWritePerMtok?: number
   /**
    * When set, reasoning tokens bill separately and remaining output bills at
-   * `outputUsdPerMtok`. When omitted, full output bills at `outputUsdPerMtok`.
+   * `outputPerMtok`. When omitted, full output bills at `outputPerMtok`.
    */
-  readonly reasoningUsdPerMtok?: number
+  readonly reasoningPerMtok?: number
 }
 
 /** Display metadata for one registered provider route. */

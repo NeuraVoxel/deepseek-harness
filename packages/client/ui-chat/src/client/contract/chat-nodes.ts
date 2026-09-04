@@ -86,6 +86,8 @@ export interface TurnTokenUsage {
    */
   readonly attempts?: readonly {
     readonly route: TurnTokenUsageRoute
+    /** Settlement time (Unix epoch ms) for peak/off-peak rate selection. */
+    readonly time: number
     readonly uncachedInputTokens: number
     readonly outputTokens: number
     readonly totalTokens: number

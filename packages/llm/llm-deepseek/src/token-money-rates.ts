@@ -1,10 +1,10 @@
 /**
- * Published DeepSeek API monetary token rates (USD per million tokens).
+ * Published DeepSeek API monetary token rates (per million tokens).
  *
- * Source: https://api-docs.deepseek.com/quick_start/pricing/ (off-peak column).
+ * Source: https://api-docs.deepseek.com/quick_start/pricing/
  * Peak rates are exactly 2× during Mon–Fri 01:00–04:00 and 06:00–10:00 UTC;
- * this table ships the off-peak column as the estimate default so the Turn
- * usage panel does not invent a clock. DeepSeek does not publish a separate
+ * pass `atMs` to {@link deepSeekTokenMoneyRates} to select the window. USD and
+ * CNY columns are published in parallel. DeepSeek does not publish a separate
  * cache-write line; `mapUsage` also omits `cacheWriteTokens`.
  *
  * Browser-safe: Chat reads the parallel table from
@@ -16,33 +16,109 @@
 
 import type { LlmTokenMoneyRates } from '@deepseek-ai/dsh-llm'
 
-/**
- * Off-peak list prices for catalogued DeepSeek model ids.
- * Unknown ids deliberately have no entry.
- */
-export const DEEPSEEK_TOKEN_MONEY_RATES: Readonly<Record<string, LlmTokenMoneyRates>> = {
+/** ISO currency used for DeepSeek list-price estimates. */
+export type MoneyCurrency = 'USD' | 'CNY'
+
+/** Options that select currency and peak/off-peak for one attempt. */
+export interface DeepSeekTokenMoneyRateOptions {
+  /** Billing currency; defaults to USD (international list). */
+  readonly currency?: MoneyCurrency
+  /**
+   * Attempt settlement time (Unix epoch ms). When omitted, off-peak rates are
+   * used so the helper never invents a clock.
+   */
+  readonly atMs?: number
+}
+
+/** Off-peak USD list prices for catalogued DeepSeek model ids. */
+export const DEEPSEEK_TOKEN_MONEY_RATES_USD: Readonly<Record<string, LlmTokenMoneyRates>> = {
   'deepseek-v4-flash': {
-    uncachedInputUsdPerMtok: 0.22,
-    cacheReadUsdPerMtok: 0.007,
-    outputUsdPerMtok: 0.66,
+    uncachedInputPerMtok: 0.22,
+    cacheReadPerMtok: 0.007,
+    outputPerMtok: 0.66,
   },
   'deepseek-v4-pro': {
-    uncachedInputUsdPerMtok: 0.66,
-    cacheReadUsdPerMtok: 0.022,
-    outputUsdPerMtok: 1.98,
+    uncachedInputPerMtok: 0.66,
+    cacheReadPerMtok: 0.022,
+    outputPerMtok: 1.98,
   },
   'deepseek-v4-flash-vision-exp': {
-    uncachedInputUsdPerMtok: 0.22,
-    cacheReadUsdPerMtok: 0.007,
-    outputUsdPerMtok: 0.66,
+    uncachedInputPerMtok: 0.22,
+    cacheReadPerMtok: 0.007,
+    outputPerMtok: 0.66,
   },
+}
+
+/** Off-peak CNY list prices for catalogued DeepSeek model ids. */
+export const DEEPSEEK_TOKEN_MONEY_RATES_CNY: Readonly<Record<string, LlmTokenMoneyRates>> = {
+  'deepseek-v4-flash': {
+    uncachedInputPerMtok: 1.5,
+    cacheReadPerMtok: 0.05,
+    outputPerMtok: 4.5,
+  },
+  'deepseek-v4-pro': {
+    uncachedInputPerMtok: 4.5,
+    cacheReadPerMtok: 0.15,
+    outputPerMtok: 13.5,
+  },
+  'deepseek-v4-flash-vision-exp': {
+    uncachedInputPerMtok: 1.5,
+    cacheReadPerMtok: 0.05,
+    outputPerMtok: 4.5,
+  },
+}
+
+/**
+ * Default off-peak USD table (adapter `tokenMoneyRates` declaration).
+ * Prefer {@link deepSeekTokenMoneyRates} when currency or peak selection matter.
+ */
+export const DEEPSEEK_TOKEN_MONEY_RATES = DEEPSEEK_TOKEN_MONEY_RATES_USD
+
+/**
+ * Whether `atMs` falls in DeepSeek's published weekday peak UTC windows.
+ * Windows are half-open: `[01:00, 04:00)` and `[06:00, 10:00)` UTC, Mon–Fri.
+ * @param atMs - Unix epoch milliseconds.
+ * @returns true when peak list prices apply.
+ */
+export function isDeepSeekPeakUtc(atMs: number): boolean {
+  if (!Number.isFinite(atMs)) return false
+  const date = new Date(atMs)
+  const day = date.getUTCDay()
+  if (day === 0 || day === 6) return false
+  const minutes = date.getUTCHours() * 60 + date.getUTCMinutes()
+  return (minutes >= 60 && minutes < 240) || (minutes >= 360 && minutes < 600)
+}
+
+function scaleRates(rates: LlmTokenMoneyRates, factor: number): LlmTokenMoneyRates {
+  return {
+    uncachedInputPerMtok: rates.uncachedInputPerMtok * factor,
+    outputPerMtok: rates.outputPerMtok * factor,
+    ...rates.cacheReadPerMtok === undefined
+      ? {}
+      : { cacheReadPerMtok: rates.cacheReadPerMtok * factor },
+    ...rates.cacheWritePerMtok === undefined
+      ? {}
+      : { cacheWritePerMtok: rates.cacheWritePerMtok * factor },
+    ...rates.reasoningPerMtok === undefined
+      ? {}
+      : { reasoningPerMtok: rates.reasoningPerMtok * factor },
+  }
 }
 
 /**
  * Look up published monetary rates for one DeepSeek model id.
  * @param model - exact model id on the wire / request header.
- * @returns off-peak USD-per-million rates, or `undefined` when unpublished.
+ * @param options - currency and optional attempt time for peak selection.
+ * @returns list prices for the selected window, or `undefined` when unpublished.
  */
-export function deepSeekTokenMoneyRates(model: string): LlmTokenMoneyRates | undefined {
-  return DEEPSEEK_TOKEN_MONEY_RATES[model]
+export function deepSeekTokenMoneyRates(
+  model: string,
+  options: DeepSeekTokenMoneyRateOptions = {},
+): LlmTokenMoneyRates | undefined {
+  const currency = options.currency ?? 'USD'
+  const table = currency === 'CNY' ? DEEPSEEK_TOKEN_MONEY_RATES_CNY : DEEPSEEK_TOKEN_MONEY_RATES_USD
+  const base = table[model]
+  if (base === undefined) return undefined
+  if (options.atMs === undefined || !isDeepSeekPeakUtc(options.atMs)) return base
+  return scaleRates(base, 2)
 }

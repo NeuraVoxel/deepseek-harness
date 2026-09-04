@@ -65,6 +65,7 @@ describe('deriveTurnTokenUsage', () => {
       routes: [{ provider: 'deepseek', model: 'deepseek-chat' }],
       attempts: [{
         route: { provider: 'deepseek', model: 'deepseek-chat' },
+        time: 3,
         uncachedInputTokens: 100,
         outputTokens: 20,
         totalTokens: 170,
@@ -215,6 +216,7 @@ describe('deriveTurnTokenUsage', () => {
       attempts: [
         {
           route: { provider: 'deepseek', model: 'deepseek-chat' },
+          time: 3,
           uncachedInputTokens: 100,
           outputTokens: 20,
           totalTokens: 170,
@@ -222,6 +224,7 @@ describe('deriveTurnTokenUsage', () => {
         },
         {
           route: { provider: 'openai', model: 'gpt-5' },
+          time: 6,
           uncachedInputTokens: 100,
           outputTokens: 20,
           totalTokens: 170,

@@ -414,6 +414,11 @@
     },
     {
       "doc": "docs/subsystems/llm-streaming.md",
+      "symbol": "LlmTokenMoneyRates",
+      "source": "packages/llm/llm/src/types.ts"
+    },
+    {
+      "doc": "docs/subsystems/llm-streaming.md",
       "symbol": "ContentBlockMap",
       "source": "packages/llm/llm/src/types.ts"
     },

@@ -276,6 +276,29 @@ interface LlmImageRequestPricing {
 }
 ```
 
+```ts type-equiv
+/**
+ * Published monetary token rates for one exact `(provider, model)` route.
+ * Values are currency units per million tokens (USD or CNY list prices).
+ * Distinct from {@link LlmImageRequestPricing}, which prices visual occupancy
+ * tokens rather than currency.
+ */
+interface LlmTokenMoneyRates {
+  /** Cache-miss / uncached prompt input. */
+  readonly uncachedInputPerMtok: number
+  readonly outputPerMtok: number
+  /** Required when an attempt reports `cacheReadTokens`. */
+  readonly cacheReadPerMtok?: number
+  /** Required when an attempt reports `cacheWriteTokens`. */
+  readonly cacheWritePerMtok?: number
+  /**
+   * When set, reasoning tokens bill separately and remaining output bills at
+   * `outputPerMtok`. When omitted, full output bills at `outputPerMtok`.
+   */
+  readonly reasoningPerMtok?: number
+}
+```
+
 ## 适配器约定
 
 每个适配器必须遵守以下规则，每个消费方可以依赖它们：
@@ -789,6 +812,15 @@ declare abstract class LlmAdapter {
    */
   imageRequestPricing(_provider: string, _model: string): LlmImageRequestPricing | undefined;
   /**
+   * Resolve published monetary token rates for one exact model route.
+   * The default declares none; consumers omit money rather than guessing.
+   * Implementations must answer synchronously without I/O.
+   * @param _provider - a route passed to `registerAdapter()` for this instance.
+   * @param _model - exact model id passed to {@link GenerateOptions.model}.
+   * @returns route-owned per-million rates, or `undefined` when unpublished.
+   */
+  tokenMoneyRates(_provider: string, _model: string): LlmTokenMoneyRates | undefined;
+  /**
    * List models this adapter can currently advertise for one owned provider.
    * The result is advisory: an adapter may accept unlisted model ids, and
    * consumers must not turn absence into request rejection.
@@ -956,6 +988,17 @@ providerRetryPolicy(provider: string): ResolvedRetryPolicy
  * @returns the owning adapter's image pricing for the route, when declared.
  */
 imageRequestPricing(provider: string, model: string): LlmImageRequestPricing | undefined
+
+/**
+ * Resolve published monetary token rates for one exact route, or `undefined`
+ * when the provider is unregistered or declares none. Unknown providers
+ * degrade to `undefined` rather than throwing because callers estimate over
+ * durable history whose route may no longer be mounted.
+ * @param provider - provider route named by a request or Turn attempt.
+ * @param model - exact model id named by the same route.
+ * @returns the owning adapter's monetary rates for the route, when declared.
+ */
+tokenMoneyRates(provider: string, model: string): LlmTokenMoneyRates | undefined
 
 /**
  * Discover models advertised by one registered provider. Catalog membership

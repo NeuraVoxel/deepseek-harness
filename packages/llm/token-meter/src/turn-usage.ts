@@ -15,6 +15,8 @@ export interface TurnTokenUsageRoute {
  */
 export interface TurnTokenUsageAttempt {
   readonly route: TurnTokenUsageRoute
+  /** Settlement time of this attempt (Unix epoch ms) for peak/off-peak rates. */
+  readonly time: number
   readonly uncachedInputTokens: number
   readonly outputTokens: number
   readonly totalTokens: number
@@ -47,6 +49,7 @@ export interface TurnTokenUsage {
 }
 
 interface NormalizedAttempt {
+  readonly time: number
   readonly inputTokens: number
   readonly outputTokens: number
   readonly totalTokens: number
@@ -94,10 +97,15 @@ function messageRoute(message: AssistantMessage): TurnTokenUsageRoute | undefine
   return provider.length > 0 && model.length > 0 ? { provider, model } : undefined
 }
 
-function normalizeUsage(usage: TokenUsage, route?: TurnTokenUsageRoute): NormalizedAttempt | undefined {
+function normalizeUsage(
+  usage: TokenUsage,
+  time: number,
+  route?: TurnTokenUsageRoute,
+): NormalizedAttempt | undefined {
   const {
     inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, reasoningTokens, totalTokens,
   } = usage
+  if (!Number.isFinite(time)) return undefined
   if (!isCount(inputTokens) || !isCount(outputTokens)) return undefined
   if (cacheReadTokens !== undefined && !isCount(cacheReadTokens)) return undefined
   if (cacheWriteTokens !== undefined && !isCount(cacheWriteTokens)) return undefined
@@ -129,6 +137,7 @@ function normalizeUsage(usage: TokenUsage, route?: TurnTokenUsageRoute): Normali
   }
 
   return {
+    time,
     inputTokens,
     outputTokens,
     totalTokens: exactTotal,
@@ -169,6 +178,7 @@ function aggregateAttempts(attempts: readonly NormalizedAttempt[]): TurnTokenUsa
       }
       return {
         route,
+        time: attempt.time,
         uncachedInputTokens: attempt.inputTokens,
         outputTokens: attempt.outputTokens,
         totalTokens: attempt.totalTokens,
@@ -215,9 +225,9 @@ export function deriveTurnTokenUsage(events: readonly SessionEvent[]): TurnToken
   let sawEnd = false
   let invalid = false
 
-  const closeOpen = (route?: TurnTokenUsageRoute): boolean => {
+  const closeOpen = (time: number, route?: TurnTokenUsageRoute): boolean => {
     if (state.kind !== 'open' || state.sample === undefined) return false
-    const normalized = normalizeUsage(state.sample, route)
+    const normalized = normalizeUsage(state.sample, time, route)
     if (normalized === undefined) return false
     attempts.push(normalized)
     return true
@@ -267,7 +277,7 @@ export function deriveTurnTokenUsage(events: readonly SessionEvent[]): TurnToken
         state = { ...state, sample: event.data.chunk.usage }
       } else if (event.data.chunk.type === 'finish'
         && (event.data.chunk.reason.kind === 'error' || event.data.chunk.reason.kind === 'aborted')) {
-        if (!closeOpen()) invalid = true
+        if (!closeOpen(event.time)) invalid = true
         else state = { kind: 'finishClosed', turn, step: event.data.step }
       }
       continue
@@ -280,7 +290,7 @@ export function deriveTurnTokenUsage(events: readonly SessionEvent[]): TurnToken
         continue
       }
       if (event.data.usage !== undefined) state = { ...state, sample: event.data.usage }
-      if (!closeOpen(messageRoute(event.data.message))) invalid = true
+      if (!closeOpen(event.time, messageRoute(event.data.message))) invalid = true
       else state = { kind: 'settled', turn, step: event.data.step, by: 'message' }
       continue
     }
@@ -290,7 +300,7 @@ export function deriveTurnTokenUsage(events: readonly SessionEvent[]): TurnToken
         invalid = true
         continue
       }
-      if (state.kind === 'settled' || (state.kind === 'open' && !closeOpen())) invalid = true
+      if (state.kind === 'settled' || (state.kind === 'open' && !closeOpen(event.time))) invalid = true
       if (!invalid) state = { kind: 'settled', turn, step: event.data.step, by: 'retry' }
       continue
     }
@@ -300,7 +310,7 @@ export function deriveTurnTokenUsage(events: readonly SessionEvent[]): TurnToken
         invalid = true
         continue
       }
-      if (state.kind === 'open' && !closeOpen()) invalid = true
+      if (state.kind === 'open' && !closeOpen(event.time)) invalid = true
       if (!invalid) state = { kind: 'idle' }
     }
   }
