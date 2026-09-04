@@ -1,0 +1,9 @@
+{
+  "revision_id": "dsrev-demo-001",
+  "schema_version": "dataset-revision/v1",
+  "dataset_id": "demo-dataset",
+  "created_at": "2026-09-04T05:00:00Z",
+  "clip_ids": ["clip-demo-001"],
+  "parent_revision_ids": [],
+  "lineage_note": "MVP fixture revision from parsed clip-demo-001"
+}

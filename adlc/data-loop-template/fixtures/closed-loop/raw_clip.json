@@ -1,0 +1,11 @@
+{
+  "clip_id": "clip-demo-001",
+  "schema_version": "clip-metadata/v1",
+  "vehicle_id": "veh-001",
+  "captured_at": "2026-09-04T04:00:00Z",
+  "sensors": [
+    { "name": "cam_front", "modality": "camera" },
+    { "name": "lidar_top", "modality": "lidar" }
+  ],
+  "object_uri": "s3://example-raw/veh-001/clip-demo-001/"
+}

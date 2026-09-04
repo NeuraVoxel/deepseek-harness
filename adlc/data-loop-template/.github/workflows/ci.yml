@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+
+jobs:
+  schemas:
+    name: Schemas
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install 'jsonschema>=4.22' 'pytest>=8.0'
+      - name: Verify schemas
+        run: make check-schemas
+      - name: Verify agent notes
+        run: python3 scripts/verify_agent_notes.py
+
+  python:
+    name: Python tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: pip install 'jsonschema>=4.22' 'pytest>=8.0'
+      - name: Test
+        run: make test

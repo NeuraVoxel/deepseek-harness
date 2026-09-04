@@ -1,0 +1,15 @@
+# Git hooks — keep them cheap; CI owns the full matrix.
+
+pre-commit:
+  jobs:
+    - name: whitespace (staged)
+      run: git diff --cached --check
+
+    - name: schema verify
+      glob: '{schemas/**,fixtures/**,scripts/verify_schemas.py}'
+      run: python3 scripts/verify_schemas.py
+
+pre-push:
+  jobs:
+    - name: schemas + unit tests
+      run: make check
