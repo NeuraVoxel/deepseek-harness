@@ -4,9 +4,10 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, fireEvent, render } from '@testing-library/react'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { en as commonEn } from '@deepseek-ai/dsh-client-locale/src/locales/en.ts'
+import { zh as commonZh } from '@deepseek-ai/dsh-client-locale/src/locales/zh.ts'
 import { TurnTimePanel, TurnUsagePanel } from '../src/client/chat/TurnUsagePanel.tsx'
 import type { TurnTokenUsage } from '../src/client/contract/chat-nodes.ts'
-import { en } from '../src/client/locale.ts'
+import { en, zh } from '../src/client/locale.ts'
 
 const t = makeTranslate(en, commonEn)
 
@@ -52,6 +53,7 @@ describe('TurnUsagePanel', () => {
   })
 
   it('adds estimated cost when every attempt has published DeepSeek rates', () => {
+    const offPeak = Date.UTC(2026, 7, 26, 12, 0, 0)
     const usage: TurnTokenUsage = {
       uncachedInputTokens: 1_000_000,
       outputTokens: 1_000_000,
@@ -60,6 +62,7 @@ describe('TurnUsagePanel', () => {
       routes: [{ provider: 'deepseek-official', model: 'deepseek-v4-flash' }],
       attempts: [{
         route: { provider: 'deepseek-official', model: 'deepseek-v4-flash' },
+        time: offPeak,
         uncachedInputTokens: 1_000_000,
         outputTokens: 1_000_000,
         totalTokens: 2_000_000,
@@ -75,6 +78,48 @@ describe('TurnUsagePanel', () => {
     expect(cost.textContent).toContain('Uncached input$0.22')
     expect(cost.textContent).toContain('Cached input$0.007')
     expect(cost.textContent).toContain('Output$0.66')
+    expect(view.getByText('Estimated cost')).toBeTruthy()
+  })
+
+  it('uses peak USD rates and labels the cost section when the attempt is in peak UTC', () => {
+    const peak = Date.UTC(2026, 7, 26, 9, 27, 0)
+    const usage: TurnTokenUsage = {
+      uncachedInputTokens: 1_000_000,
+      outputTokens: 1_000_000,
+      totalTokens: 2_000_000,
+      routes: [{ provider: 'deepseek-official', model: 'deepseek-v4-flash' }],
+      attempts: [{
+        route: { provider: 'deepseek-official', model: 'deepseek-v4-flash' },
+        time: peak,
+        uncachedInputTokens: 1_000_000,
+        outputTokens: 1_000_000,
+        totalTokens: 2_000_000,
+      }],
+    }
+    const view = render(<TurnUsagePanel usage={usage} t={t} />)
+    expect(view.getByRole('button').textContent).toBe('Usage 2M tok · $1.76')
+    fireEvent.click(view.getByRole('button'))
+    expect(view.getByText('Estimated cost (peak)')).toBeTruthy()
+  })
+
+  it('prices CNY list rates when the Chat locale dictionary selects CNY', () => {
+    const zhT = makeTranslate(zh, commonZh)
+    const offPeak = Date.UTC(2026, 7, 26, 12, 0, 0)
+    const usage: TurnTokenUsage = {
+      uncachedInputTokens: 1_000_000,
+      outputTokens: 1_000_000,
+      totalTokens: 2_000_000,
+      routes: [{ provider: 'deepseek-official', model: 'deepseek-v4-flash' }],
+      attempts: [{
+        route: { provider: 'deepseek-official', model: 'deepseek-v4-flash' },
+        time: offPeak,
+        uncachedInputTokens: 1_000_000,
+        outputTokens: 1_000_000,
+        totalTokens: 2_000_000,
+      }],
+    }
+    const view = render(<TurnUsagePanel usage={usage} t={zhT} />)
+    expect(view.getByRole('button').textContent).toBe('用量 2M tok · ¥6.00')
   })
 
   it('omits unavailable optional facts instead of inventing values', () => {

@@ -12,7 +12,9 @@ import type { TurnTokenUsage } from '../contract/chat-nodes.ts'
 import type { ChatViewSlotProps } from '../contract/slots.ts'
 import { formatLatencySeconds, formatRunDuration, formatTokensPerSecond } from './message-chrome.ts'
 import { formatCacheHitPercent, formatExactTokens, formatTokens } from './token-format.ts'
-import { estimateTurnMoneyCost, formatUsdAmount } from './turn-money.ts'
+import {
+  estimateTurnMoneyCost, formatMoneyAmount, moneyCurrencyFromLocaleCode,
+} from './turn-money.ts'
 import css from './TurnUsagePanel.module.css'
 
 export interface TurnUsagePanelProps {
@@ -92,8 +94,8 @@ function useStatDialog(): StatDialogSeat {
   return { open, setOpen, rootRef, panelRef, pos }
 }
 
-function formatUsd(value: number, t: ChatViewSlotProps['t']): string {
-  return t('message.turnUsage.usd', { amount: formatUsdAmount(value) })
+function formatMoney(value: number, t: ChatViewSlotProps['t']): string {
+  return t('message.turnUsage.money', { amount: formatMoneyAmount(value) })
 }
 
 /**
@@ -108,12 +110,16 @@ export function TurnUsagePanel({ usage, t }: TurnUsagePanelProps) {
     ? null
     : formatCacheHitPercent(usage.cacheReadTokens, usage.totalTokens - usage.outputTokens, 1)
   const total = formatCompactCount(usage.totalTokens, t)
-  const cost = estimateTurnMoneyCost(usage)
-  const costLabel = cost === undefined ? undefined : formatUsd(cost.totalUsd, t)
+  const currency = moneyCurrencyFromLocaleCode(t('message.turnUsage.currencyCode'))
+  const cost = estimateTurnMoneyCost(usage, currency)
+  const costLabel = cost === undefined ? undefined : formatMoney(cost.total, t)
   const routes = usage.routes?.map(route => `${route.provider}/${route.model}`).join(', ') ?? ''
   const pillLabel = costLabel === undefined
     ? t('message.turnUsage.consumed', { total })
     : t('message.turnUsage.consumedWithCost', { total, cost: costLabel })
+  const costTitle = cost?.usedPeak === true
+    ? t('message.turnUsage.costTitlePeak')
+    : t('message.turnUsage.costTitle')
 
   return (
     <span ref={rootRef} className={css.root}>
@@ -183,29 +189,29 @@ export function TurnUsagePanel({ usage, t }: TurnUsagePanelProps) {
           {cost !== undefined && (
             <>
               <div className={css.sectionTitle}>
-                <span className={css.titleLabel}>{t('message.turnUsage.costTitle')}</span>
-                <span className={css.titleValue}>{formatUsd(cost.totalUsd, t)}</span>
+                <span className={css.titleLabel}>{costTitle}</span>
+                <span className={css.titleValue}>{formatMoney(cost.total, t)}</span>
               </div>
               <div className={css.titleRule} aria-hidden />
               <dl className={css.details} data-turn-usage-cost>
                 <dt>{t('message.turnUsage.costTotal')}</dt>
-                <dd>{formatUsd(cost.totalUsd, t)}</dd>
+                <dd>{formatMoney(cost.total, t)}</dd>
                 <dt>{t('message.turnUsage.input')}</dt>
-                <dd>{formatUsd(cost.uncachedInputUsd, t)}</dd>
-                {cost.cacheReadUsd !== undefined && (
+                <dd>{formatMoney(cost.uncachedInput, t)}</dd>
+                {cost.cacheRead !== undefined && (
                   <>
                     <dt>{t('message.turnUsage.cacheRead')}</dt>
-                    <dd>{formatUsd(cost.cacheReadUsd, t)}</dd>
+                    <dd>{formatMoney(cost.cacheRead, t)}</dd>
                   </>
                 )}
-                {cost.cacheWriteUsd !== undefined && (
+                {cost.cacheWrite !== undefined && (
                   <>
                     <dt>{t('message.turnUsage.cacheWrite')}</dt>
-                    <dd>{formatUsd(cost.cacheWriteUsd, t)}</dd>
+                    <dd>{formatMoney(cost.cacheWrite, t)}</dd>
                   </>
                 )}
                 <dt>{t('message.turnUsage.output')}</dt>
-                <dd>{formatUsd(cost.outputUsd, t)}</dd>
+                <dd>{formatMoney(cost.output, t)}</dd>
               </dl>
             </>
           )}

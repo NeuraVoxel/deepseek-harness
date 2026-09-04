@@ -16,6 +16,7 @@ import { chromium } from 'playwright'
 import { afterEach, describe, expect, it, onTestFailed } from 'vitest'
 import type { ReplayOverrideDoc } from '@deepseek-ai/dsh-llm-replay'
 import type { SessionEvent } from '@deepseek-ai/dsh-session'
+import { isDeepSeekPeakUtc } from '@deepseek-ai/dsh-token-meter/client'
 import {
   assertFixtureInventory, captureStableAria, compareOrRefreshGolden, fixtureUserPrompts,
   launchWebScaffold, recordFixture, watchConsole, webSnapshotMode, type WebScaffold,
@@ -173,13 +174,19 @@ describe('web e2e: assistant IconActions wait for the turn to end', () => {
     const { settled } = await sendPrompt(120_000)
     await settled
 
-    const trigger = page.getByRole('button', { name: /Usage 15\.8K tok · \$0\.0019/ })
+    // Live replay stamps attempt settlement times from wall clock; peak UTC
+    // windows double the published off-peak USD estimate for this fixture.
+    const peak = isDeepSeekPeakUtc(Date.now())
+    const money = peak ? '$0.0037' : '$0.0019'
+    const costTitle = peak ? 'Estimated cost (peak)' : 'Estimated cost'
+    const usageLabel = `Usage 15.8K tok · ${money}`
+    const trigger = page.getByRole('button', { name: usageLabel, exact: true })
     await expect.poll(() => trigger.count(), { timeout: 10_000 }).toBe(1)
     expect(await trigger.getAttribute('aria-expanded')).toBe('false')
     // The usage pill carries the icon, turn total, and estimated USD when rates
     // are published; the time pill beside it carries the run time, and both
     // keep their details dialog-only.
-    expect(await trigger.textContent()).toBe('Usage 15.8K tok · $0.0019')
+    expect(await trigger.textContent()).toBe(usageLabel)
     const timeTrigger = page.getByRole('button', { name: /^Ran for \S+$/ })
     expect(await timeTrigger.count()).toBe(1)
     expect(await page.locator('[data-turn-tail]').getByText(/tok\/s|TTFT/).count()).toBe(0)
@@ -195,8 +202,8 @@ describe('web e2e: assistant IconActions wait for the turn to end', () => {
     expect(await dialog.getByText('7,808 tok', { exact: true }).count()).toBe(1)
     expect(await dialog.getByText('112 tok (42 tok reasoning)', { exact: true }).count()).toBe(1)
     expect(await dialog.getByText('15,811 tok', { exact: true }).count()).toBe(1)
-    expect(await dialog.getByText('Estimated cost', { exact: true }).count()).toBe(1)
-    expect(await dialog.getByText('$0.0019', { exact: true }).count()).toBeGreaterThanOrEqual(1)
+    expect(await dialog.getByText(costTitle, { exact: true }).count()).toBe(1)
+    expect(await dialog.getByText(money, { exact: true }).count()).toBeGreaterThanOrEqual(1)
     await page.keyboard.press('Escape')
     expect(await page.getByRole('dialog').count()).toBe(0)
 

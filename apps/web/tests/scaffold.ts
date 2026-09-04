@@ -1137,6 +1137,9 @@ function normalizeAria(snapshot: string, workspaceCwd: string, age: boolean): st
       duration => duration.startsWith('约') ? duration : '{{duration}}',
     )
     .replace(/\d+(?:\.\d+)?(?= tok\/s(?!\w))/g, '{{throughput}}')
+    // Turn-usage money estimates flip between off-peak and 2× peak when the
+    // live replay stamps attempts from wall-clock time across UTC windows.
+    .replace(/[\$¥]\d+(?:\.\d+)?/g, '{{money}}')
     // Seeded compaction prices realized file paths, whose length differs
     // between local worktrees and CI scratch directories.
     .replace(/(Compacted \d+ history items \(~)\d+( tokens\))/g, '$1{{tokens}}$2')

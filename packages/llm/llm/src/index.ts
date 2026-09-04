@@ -229,7 +229,7 @@ export abstract class LlmAdapter {
    * Implementations must answer synchronously without I/O.
    * @param _provider - a route passed to `registerAdapter()` for this instance.
    * @param _model - exact model id passed to {@link GenerateOptions.model}.
-   * @returns route-owned USD-per-million rates, or `undefined` when unpublished.
+   * @returns route-owned per-million rates, or `undefined` when unpublished.
    */
   tokenMoneyRates(_provider: string, _model: string): LlmTokenMoneyRates | undefined {
     return undefined
