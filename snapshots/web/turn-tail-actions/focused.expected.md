@@ -41,9 +41,9 @@
   - img
 - button "Branch into a new conversation":
   - img
-- button "Usage 15.8K tok":
+- button "Usage 15.8K tok · $0.0019":
   - img
-  - text: Usage 15.8K tok
+  - text: Usage 15.8K tok · $0.0019
 - button "Ran for {{duration}}":
   - img
   - text: Ran for {{duration}}

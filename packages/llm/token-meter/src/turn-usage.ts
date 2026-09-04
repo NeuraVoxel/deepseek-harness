@@ -8,6 +8,21 @@ export interface TurnTokenUsageRoute {
   readonly model: string
 }
 
+/**
+ * Exact provider-reported token accounting for one billed request attempt.
+ * Present on {@link TurnTokenUsage.attempts} only when every attempt in the
+ * Turn has provider/model attribution.
+ */
+export interface TurnTokenUsageAttempt {
+  readonly route: TurnTokenUsageRoute
+  readonly uncachedInputTokens: number
+  readonly outputTokens: number
+  readonly totalTokens: number
+  readonly cacheReadTokens?: number
+  readonly cacheWriteTokens?: number
+  readonly reasoningTokens?: number
+}
+
 /** Exact provider-reported token accounting for every attempt in one completed Turn. */
 export interface TurnTokenUsage {
   /** Sum of uncached prompt input across all attempts. */
@@ -23,6 +38,12 @@ export interface TurnTokenUsage {
   readonly reasoningTokens?: number
   /** Present only when every billed attempt has provider/model attribution. */
   readonly routes?: readonly TurnTokenUsageRoute[]
+  /**
+   * One row per billed attempt, in fold order. Present only when every
+   * attempt has provider/model attribution (same gate as {@link routes}).
+   * Monetary estimates price these rows under each attempt's route rates.
+   */
+  readonly attempts?: readonly TurnTokenUsageAttempt[]
 }
 
 interface NormalizedAttempt {
@@ -135,11 +156,27 @@ function aggregateAttempts(attempts: readonly NormalizedAttempt[]): TurnTokenUsa
   // by output. Safe required aggregates therefore imply safe optional sums.
 
   let routes: readonly TurnTokenUsageRoute[] | undefined
+  let attemptRows: readonly TurnTokenUsageAttempt[] | undefined
   const attributed = attempts.map(attempt => attempt.route)
   if (attributed.every((route): route is TurnTokenUsageRoute => route !== undefined)) {
     const unique = new Map<string, TurnTokenUsageRoute>()
     for (const route of attributed) unique.set(`${route.provider}\0${route.model}`, route)
     routes = [...unique.values()]
+    attemptRows = attributed.map((route, index) => {
+      const attempt = attempts[index]
+      if (attempt === undefined) {
+        throw new Error(`aggregateAttempts: missing attempt at index ${index}`)
+      }
+      return {
+        route,
+        uncachedInputTokens: attempt.inputTokens,
+        outputTokens: attempt.outputTokens,
+        totalTokens: attempt.totalTokens,
+        ...attempt.cacheReadTokens === undefined ? {} : { cacheReadTokens: attempt.cacheReadTokens },
+        ...attempt.cacheWriteTokens === undefined ? {} : { cacheWriteTokens: attempt.cacheWriteTokens },
+        ...attempt.reasoningTokens === undefined ? {} : { reasoningTokens: attempt.reasoningTokens },
+      }
+    })
   }
 
   return {
@@ -150,6 +187,7 @@ function aggregateAttempts(attempts: readonly NormalizedAttempt[]): TurnTokenUsa
     ...cacheWriteTokens === undefined ? {} : { cacheWriteTokens },
     ...reasoningTokens === undefined ? {} : { reasoningTokens },
     ...routes === undefined ? {} : { routes },
+    ...attemptRows === undefined ? {} : { attempts: attemptRows },
   }
 }
 

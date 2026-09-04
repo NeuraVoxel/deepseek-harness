@@ -38,6 +38,7 @@ import type {
 import { serializeRequest, serializeRequestWithImages } from './serialize.ts'
 import type { ImageWireLocation, RequestDefaults } from './serialize.ts'
 import { deepSeekImageRequestPricing, resolveRequestImagePolicy } from './request-pricing.ts'
+import { deepSeekTokenMoneyRates } from './token-money-rates.ts'
 import { DeepSeekFileStore } from './file-store.ts'
 import type { DeepSeekFilePolicy } from './file-store.ts'
 import type { DeepSeekFileId } from './file-id.ts'
@@ -376,6 +377,10 @@ export class DeepSeekAdapter extends LlmAdapter {
         this.config.resolveImageAccess?.(attachments, ref)
       )
     return deepSeekImageRequestPricing(this.config.options(), model, resolveAccess)
+  }
+
+  override tokenMoneyRates(_provider: string, model: string): ReturnType<LlmAdapter['tokenMoneyRates']> {
+    return deepSeekTokenMoneyRates(model)
   }
 
   override listModels(provider: string): Promise<readonly LlmModelInfo[]> {

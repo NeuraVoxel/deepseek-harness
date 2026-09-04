@@ -48,7 +48,9 @@ When the composition provides `ctx.sessionProjections`, token-meter registers th
 
 `contextBreakdown` carries heuristic `systemTokens`, `toolsTokens`, and `messageTokens` — the context's composition rather than its provider-billed size. The envelope figures reprice last-wins on every `request/header`; the message figure replays the same O(1) shadow-price fold as `contextPressure`, so on fully metered logs it equals the sum of `measure().nodes[].heuristicTokens` at every event boundary and compaction shrinks it by its logged shadow price. The route-priced `measure().surfaceTokens` diverges when the routed model reprices images. A replacement without an adjacent shadow-price claim leaves this bounded projection unchanged because it cannot reconstruct the replaced range. All three figures use the measurement service's fixed heuristic and are estimates: they will not sum to `projectedTokens`, whose provider anchor carries exactly the error — CJK text and JSON schemas underprice badly at four characters per token — that the composition rows still contain. Present them as an approximate composition, never as a total.
 
-`deriveTurnTokenUsage(events)` folds one complete Turn into exact per-attempt and total usage for browser consumers. Missing lifecycle evidence, unsafe counts, or contradictory exact totals return no result; optional cache, reasoning, and route aggregates appear only when every contributing attempt reports them.
+`deriveTurnTokenUsage(events)` folds one complete Turn into exact per-attempt and total usage for browser consumers. Missing lifecycle evidence, unsafe counts, or contradictory exact totals return no result; optional cache, reasoning, and route aggregates appear only when every contributing attempt reports them. When every attempt has provider/model attribution, the result also carries `attempts` — one priced row per billed attempt in fold order — so monetary helpers can apply each route's rates without splitting aggregates.
+
+`deriveTurnMoneyCost(usage, lookup)` estimates USD from those attempt rows and a `(provider, model)` rate lookup (USD per million tokens). Missing attribution, missing rates, or a present token bucket without a matching rate omits the whole cost (fail-closed). Reasoning is not charged again unless the rate table sets a separate reasoning rate. This is an estimate over exact token buckets, not a durable billing record, and it is distinct from adapter visual-token `imageRequestPricing`.
 
 ### Composition
 
@@ -89,6 +91,7 @@ The service is built on one fold and one anchor. Each session gets an isolated r
 | [`src/breakdown-projection.ts`](src/breakdown-projection.ts) | `contextBreakdown` projection definition |
 | [`src/client.ts`](src/client.ts) | Browser-safe client surface for projection consumers |
 | [`src/turn-usage.ts`](src/turn-usage.ts) | Pure fold for exact per-attempt and per-Turn usage |
+| [`src/turn-money.ts`](src/turn-money.ts) | Pure USD estimate over attributed Turn attempt rows |
 
 ### Fold flow
 

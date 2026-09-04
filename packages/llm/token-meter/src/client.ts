@@ -6,4 +6,19 @@
 
 export type * from './projection.ts'
 export { deriveTurnTokenUsage } from './turn-usage.ts'
-export type { TurnTokenUsage, TurnTokenUsageRoute } from './turn-usage.ts'
+export type {
+  TurnTokenUsage,
+  TurnTokenUsageAttempt,
+  TurnTokenUsageRoute,
+} from './turn-usage.ts'
+export { deriveTurnMoneyCost } from './turn-money.ts'
+export type {
+  TurnMoneyCost,
+  TurnTokenMoneyRateLookup,
+  TurnTokenMoneyRates,
+  UsdPerMillionTokens,
+} from './turn-money.ts'
+export {
+  DEEPSEEK_TOKEN_MONEY_RATES,
+  deepSeekTokenMoneyRates,
+} from './deepseek-token-money-rates.ts'

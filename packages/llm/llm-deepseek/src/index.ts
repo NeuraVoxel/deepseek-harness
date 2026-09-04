@@ -69,6 +69,7 @@ export {
   deepSeekImageRequestPricing,
   resolveRequestImagePolicy,
 } from './request-pricing.ts'
+export { DEEPSEEK_TOKEN_MONEY_RATES, deepSeekTokenMoneyRates } from './token-money-rates.ts'
 export { deepSeekImageTokens } from './image-tokens.ts'
 export { DeepSeekFileStore, MAX_CHAT_IMAGE_BYTES } from './file-store.ts'
 export type { DeepSeekFileConnection, DeepSeekFilePolicy, DeepSeekFileReference } from './file-store.ts'
