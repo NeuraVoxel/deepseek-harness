@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/proposed/feature/2026-09-04-turn-usage-money-cost.md
-2026-09-04-turn-usage-money-cost.md: 9b4be4918a9b4a7e8108c4529c974e81e5ff9c57
-2026-09-04-turn-usage-money-cost.zh.md: 761372549de8edcccde2816447f6e79256d188e4
+2026-09-04-turn-usage-money-cost.md: 2209e45100538d132d574a1331fe6df1a377c442
+2026-09-04-turn-usage-money-cost.zh.md: 66a61b062c5d15ce2aa5e502396ff74d8ae92335

@@ -14,7 +14,7 @@ Add an estimated USD cost to the existing Turn usage UI without changing the ses
 
 ### Accounting
 
-Keep `@deepseek-ai/dsh-token-meter`'s `deriveTurnTokenUsage` as the sole exact token authority. Introduce a pure Client-safe function that takes one `TurnTokenUsage` plus a rate table and returns a monetary total (and optional per-bucket money rows) only when every contributing route has rates for every bucket that appears in the total.
+Keep `@deepseek-ai/dsh-token-meter`'s `deriveTurnTokenUsage` as the sole exact token authority. When every billed attempt has provider/model attribution, that fold also publishes `attempts` — one row per attempt with that attempt's buckets and route — so monetary pricing never splits aggregates. Introduce a pure Client-safe `deriveTurnMoneyCost` that takes one `TurnTokenUsage` plus a rate lookup and returns a monetary total (and optional per-bucket money rows) only when `attempts` is present and every contributing route has rates for every bucket that appears on that attempt.
 
 Rate dimensions match the fail-closed token buckets:
 
@@ -29,7 +29,7 @@ A Turn with multiple routes prices each attempt's buckets under that attempt's p
 
 LLM adapters declare optional **monetary** token rates for `(provider, model)`, parallel to but distinct from `imageRequestPricing`. The declaration is USD per million tokens (or an equivalent exact rational the UI formats as currency). Shipped DeepSeek adapters publish the current public list prices for the models they advertise; unknown models omit rates and the panel omits money rather than guessing.
 
-Ship both layers: adapters publish defaults for official routes, and a Cordis-config or user-settings overlay overrides or supplies rates for custom endpoints and local adjustments. Missing overlay entries fall back to the adapter table; missing adapter rates still omit money. Rates are not written into session events: replaying an old Turn always recomputes money from today's rate table over the historical token buckets, and the UI labels the figure as an estimate.
+Ship both layers: adapters publish defaults for official routes, and a Cordis-config or user-settings overlay overrides or supplies rates for custom endpoints and local adjustments. Missing overlay entries fall back to the adapter table; missing adapter rates still omit money. Rates are not written into session events: replaying an old Turn always recomputes money from today's rate table over the historical token buckets, and the UI labels the figure as an estimate. DeepSeek's shipped defaults use the published **off-peak** USD column; peak is 2× during weekday UTC windows and is not auto-selected in v1. Chat resolves those defaults via the browser-safe DeepSeek rate table on `@deepseek-ai/dsh-token-meter/client` (C1; aligned with the adapter table), rather than Host `ctx.llm`.
 
 ### UI
 

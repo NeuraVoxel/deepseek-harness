@@ -63,6 +63,15 @@ describe('deriveTurnTokenUsage', () => {
       cacheWriteTokens: 0,
       reasoningTokens: 8,
       routes: [{ provider: 'deepseek', model: 'deepseek-chat' }],
+      attempts: [{
+        route: { provider: 'deepseek', model: 'deepseek-chat' },
+        uncachedInputTokens: 100,
+        outputTokens: 20,
+        totalTokens: 170,
+        cacheReadTokens: 50,
+        cacheWriteTokens: 0,
+        reasoningTokens: 8,
+      }],
     })
   })
 
@@ -202,6 +211,22 @@ describe('deriveTurnTokenUsage', () => {
       routes: [
         { provider: 'deepseek', model: 'deepseek-chat' },
         { provider: 'openai', model: 'gpt-5' },
+      ],
+      attempts: [
+        {
+          route: { provider: 'deepseek', model: 'deepseek-chat' },
+          uncachedInputTokens: 100,
+          outputTokens: 20,
+          totalTokens: 170,
+          cacheReadTokens: 50,
+        },
+        {
+          route: { provider: 'openai', model: 'gpt-5' },
+          uncachedInputTokens: 100,
+          outputTokens: 20,
+          totalTokens: 170,
+          cacheReadTokens: 50,
+        },
       ],
     })
   })

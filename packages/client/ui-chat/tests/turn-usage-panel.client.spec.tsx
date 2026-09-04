@@ -48,6 +48,33 @@ describe('TurnUsagePanel', () => {
     expect(details.textContent).toContain('Cache write0 tok')
     expect(details.textContent).toContain('Output5,800 tok (42 tok reasoning)')
     expect(details.textContent).not.toContain('Total')
+    expect(view.queryByText('Estimated cost')).toBeNull()
+  })
+
+  it('adds estimated cost when every attempt has published DeepSeek rates', () => {
+    const usage: TurnTokenUsage = {
+      uncachedInputTokens: 1_000_000,
+      outputTokens: 1_000_000,
+      totalTokens: 2_000_000,
+      cacheReadTokens: 1_000_000,
+      routes: [{ provider: 'deepseek-official', model: 'deepseek-v4-flash' }],
+      attempts: [{
+        route: { provider: 'deepseek-official', model: 'deepseek-v4-flash' },
+        uncachedInputTokens: 1_000_000,
+        outputTokens: 1_000_000,
+        totalTokens: 2_000_000,
+        cacheReadTokens: 1_000_000,
+      }],
+    }
+    const view = render(<TurnUsagePanel usage={usage} t={t} />)
+    const trigger = view.getByRole('button')
+    expect(trigger.textContent).toBe('Usage 2M tok · $0.89')
+    fireEvent.click(trigger)
+    const cost = view.getByRole('dialog').querySelector('[data-turn-usage-cost]') as HTMLElement
+    expect(cost.textContent).toContain('Total$0.89')
+    expect(cost.textContent).toContain('Uncached input$0.22')
+    expect(cost.textContent).toContain('Cached input$0.007')
+    expect(cost.textContent).toContain('Output$0.66')
   })
 
   it('omits unavailable optional facts instead of inventing values', () => {

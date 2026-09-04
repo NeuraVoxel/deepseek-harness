@@ -103,13 +103,18 @@
 
 /* Dialog heading row: the section name left, the section's headline value
    (the usage total) right, both at the primary weight. */
-.title {
+.title,
+.sectionTitle {
   display: flex;
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 8px;
   color: var(--dsw-alias-label-primary);
   font-weight: 500;
+}
+
+.sectionTitle {
+  margin-top: 14px;
 }
 
 /* Rule under each section heading, above its rows. */

@@ -12,6 +12,7 @@ import type { TurnTokenUsage } from '../contract/chat-nodes.ts'
 import type { ChatViewSlotProps } from '../contract/slots.ts'
 import { formatLatencySeconds, formatRunDuration, formatTokensPerSecond } from './message-chrome.ts'
 import { formatCacheHitPercent, formatExactTokens, formatTokens } from './token-format.ts'
+import { estimateTurnMoneyCost, formatUsdAmount } from './turn-money.ts'
 import css from './TurnUsagePanel.module.css'
 
 export interface TurnUsagePanelProps {
@@ -91,6 +92,10 @@ function useStatDialog(): StatDialogSeat {
   return { open, setOpen, rootRef, panelRef, pos }
 }
 
+function formatUsd(value: number, t: ChatViewSlotProps['t']): string {
+  return t('message.turnUsage.usd', { amount: formatUsdAmount(value) })
+}
+
 /**
  * Turn-usage IconActions pill with a click-open Turn-usage details dialog.
  * @param props - Turn usage buckets and locale seat.
@@ -103,7 +108,12 @@ export function TurnUsagePanel({ usage, t }: TurnUsagePanelProps) {
     ? null
     : formatCacheHitPercent(usage.cacheReadTokens, usage.totalTokens - usage.outputTokens, 1)
   const total = formatCompactCount(usage.totalTokens, t)
+  const cost = estimateTurnMoneyCost(usage)
+  const costLabel = cost === undefined ? undefined : formatUsd(cost.totalUsd, t)
   const routes = usage.routes?.map(route => `${route.provider}/${route.model}`).join(', ') ?? ''
+  const pillLabel = costLabel === undefined
+    ? t('message.turnUsage.consumed', { total })
+    : t('message.turnUsage.consumedWithCost', { total, cost: costLabel })
 
   return (
     <span ref={rootRef} className={css.root}>
@@ -115,7 +125,7 @@ export function TurnUsagePanel({ usage, t }: TurnUsagePanelProps) {
         onClick={() => { setOpen(!open) }}
       >
         <IconDatabaseOutline16 />
-        <span className={css.label}>{t('message.turnUsage.consumed', { total })}</span>
+        <span className={css.label}>{pillLabel}</span>
       </button>
       {open && createPortal(
         <div
@@ -170,6 +180,35 @@ export function TurnUsagePanel({ usage, t }: TurnUsagePanelProps) {
               )}
             </dd>
           </dl>
+          {cost !== undefined && (
+            <>
+              <div className={css.sectionTitle}>
+                <span className={css.titleLabel}>{t('message.turnUsage.costTitle')}</span>
+                <span className={css.titleValue}>{formatUsd(cost.totalUsd, t)}</span>
+              </div>
+              <div className={css.titleRule} aria-hidden />
+              <dl className={css.details} data-turn-usage-cost>
+                <dt>{t('message.turnUsage.costTotal')}</dt>
+                <dd>{formatUsd(cost.totalUsd, t)}</dd>
+                <dt>{t('message.turnUsage.input')}</dt>
+                <dd>{formatUsd(cost.uncachedInputUsd, t)}</dd>
+                {cost.cacheReadUsd !== undefined && (
+                  <>
+                    <dt>{t('message.turnUsage.cacheRead')}</dt>
+                    <dd>{formatUsd(cost.cacheReadUsd, t)}</dd>
+                  </>
+                )}
+                {cost.cacheWriteUsd !== undefined && (
+                  <>
+                    <dt>{t('message.turnUsage.cacheWrite')}</dt>
+                    <dd>{formatUsd(cost.cacheWriteUsd, t)}</dd>
+                  </>
+                )}
+                <dt>{t('message.turnUsage.output')}</dt>
+                <dd>{formatUsd(cost.outputUsd, t)}</dd>
+              </dl>
+            </>
+          )}
         </div>,
         document.body,
       )}

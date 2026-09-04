@@ -14,7 +14,7 @@ Web Chat 的 Turn usage 披露已展示已完成 Turn 的精确提供方上报 t
 
 ### 计量
 
-继续以 `@deepseek-ai/dsh-token-meter` 的 `deriveTurnTokenUsage` 作为唯一精确 token 权威。新增一个 Client 安全的纯函数：接受一份 `TurnTokenUsage` 与费率表，仅当每一个贡献 route 都具备合计中出现的全部分桶费率时，才返回金钱总额（以及可选的分桶金钱行）。
+继续以 `@deepseek-ai/dsh-token-meter` 的 `deriveTurnTokenUsage` 作为唯一精确 token 权威。当每次计费尝试都具备 provider/model 归属时，该 fold 还会发布 `attempts`——每次尝试一行，带该次的分桶与路由——因此金钱计价无需拆分合计。新增 Client 安全的纯函数 `deriveTurnMoneyCost`：接受一份 `TurnTokenUsage` 与费率查找，仅当 `attempts` 存在且每一个贡献 route 都具备该次尝试中出现的全部分桶费率时，才返回金钱总额（以及可选的分桶金钱行）。
 
 费率维度与 fail-closed 的 token 分桶对齐：
 
@@ -29,7 +29,7 @@ Web Chat 的 Turn usage 披露已展示已完成 Turn 的精确提供方上报 t
 
 LLM adapter 为 `(provider, model)` 声明可选的**货币** token 费率，与 `imageRequestPricing` 平行且互不相同。声明单位为每百万 token 的 USD（或 UI 可格式化为货币的等价精确有理数）。已发布的 DeepSeek adapter 为其公布的模型发布当前公开目录价；未知模型省略费率，面板省略金钱而不是猜测。
 
-同时交付两层：adapter 为官方路由发布默认费率；Cordis 配置或用户 settings 覆盖层覆盖或补充自定义 endpoint 与本地调整。覆盖层缺项回退到 adapter 表；adapter 仍无费率时继续省略金钱。费率不写入 session 事件：回放旧 Turn 时，始终用**今天的**费率表乘以历史 token 分桶重算金钱，UI 将数字标注为估算。
+同时交付两层：adapter 为官方路由发布默认费率；Cordis 配置或用户 settings 覆盖层覆盖或补充自定义 endpoint 与本地调整。覆盖层缺项回退到 adapter 表；adapter 仍无费率时继续省略金钱。费率不写入 session 事件：回放旧 Turn 时，始终用**今天的**费率表乘以历史 token 分桶重算金钱，UI 将数字标注为估算。DeepSeek 已装船默认使用公布的 **off-peak** USD 列；peak 在工作日 UTC 窗口为 2 倍，v1 不自动选用。Chat 通过 `@deepseek-ai/dsh-token-meter/client` 上的浏览器安全 DeepSeek 费率表解析这些默认值（C1；与 adapter 表对齐），而不是 Host `ctx.llm`。
 
 ### UI
 

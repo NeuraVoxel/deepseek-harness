@@ -80,6 +80,19 @@ export interface TurnTokenUsage {
   readonly reasoningTokens?: number
   /** Present only when every billed attempt has provider/model attribution. */
   readonly routes?: readonly TurnTokenUsageRoute[]
+  /**
+   * One row per billed attempt when every attempt has provider/model
+   * attribution. Monetary estimates price these rows under each route's rates.
+   */
+  readonly attempts?: readonly {
+    readonly route: TurnTokenUsageRoute
+    readonly uncachedInputTokens: number
+    readonly outputTokens: number
+    readonly totalTokens: number
+    readonly cacheReadTokens?: number
+    readonly cacheWriteTokens?: number
+    readonly reasoningTokens?: number
+  }[]
 }
 
 /** Turn-local footer row that owns actions and optional feature contributions. */

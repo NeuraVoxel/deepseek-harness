@@ -15,6 +15,7 @@ import type {
   LlmDiscoveredModel,
   LlmFailure,
   LlmImageRequestPricing,
+  LlmTokenMoneyRates,
   LlmModelContext,
   LlmModelDiscoveryRequest,
   LlmModelInfo,
@@ -219,6 +220,18 @@ export abstract class LlmAdapter {
    * @returns route-owned image pricing, or `undefined` when the route declares none.
    */
   imageRequestPricing(_provider: string, _model: string): LlmImageRequestPricing | undefined {
+    return undefined
+  }
+
+  /**
+   * Resolve published monetary token rates for one exact model route.
+   * The default declares none; consumers omit money rather than guessing.
+   * Implementations must answer synchronously without I/O.
+   * @param _provider - a route passed to `registerAdapter()` for this instance.
+   * @param _model - exact model id passed to {@link GenerateOptions.model}.
+   * @returns route-owned USD-per-million rates, or `undefined` when unpublished.
+   */
+  tokenMoneyRates(_provider: string, _model: string): LlmTokenMoneyRates | undefined {
     return undefined
   }
 
@@ -658,6 +671,19 @@ export class LlmRuntime extends TypertRemoteService {
    */
   imageRequestPricing(provider: string, model: string): LlmImageRequestPricing | undefined {
     return this.adapters.get(provider)?.adapter.imageRequestPricing(provider, model)
+  }
+
+  /**
+   * Resolve published monetary token rates for one exact route, or `undefined`
+   * when the provider is unregistered or declares none. Unknown providers
+   * degrade to `undefined` rather than throwing because callers estimate over
+   * durable history whose route may no longer be mounted.
+   * @param provider - provider route named by a request or Turn attempt.
+   * @param model - exact model id named by the same route.
+   * @returns the owning adapter's monetary rates for the route, when declared.
+   */
+  tokenMoneyRates(provider: string, model: string): LlmTokenMoneyRates | undefined {
+    return this.adapters.get(provider)?.adapter.tokenMoneyRates(provider, model)
   }
 
   /** Detach typed adapter-owned modality metadata. */

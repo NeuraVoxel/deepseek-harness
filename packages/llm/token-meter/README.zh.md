@@ -48,7 +48,9 @@ const price = ctx.tokenMeter.estimateMessage(message)
 
 `contextBreakdown` 携带启发式的 `systemTokens`、`toolsTokens` 与 `messageTokens`，描述上下文的组成而非提供方计费规模。envelope 数字在每条 `request/header` 上按后者胜重新计价；消息数字重放与 `contextPressure` 相同的 O(1) 影子价折叠，因此在完整计量的日志上，它在每个事件边界都等于 `measure().nodes[].heuristicTokens` 之和，压缩会按记录的影子价缩小该值。路由定价的 `measure().surfaceTokens` 在路由模型重新为图片计价时会与该值不同。若替换前没有紧邻的影子价声明，这个有界投影会保持不变，因为它无法重建被替换区间。三个数字都使用测量服务的固定启发式规则，属于估算值。它们加起来不等于 `projectedTokens`，后者的提供方锚点体现了这些明细行仍然带有的误差（按「4 字符 ≈ 1 token」计价时，CJK 文本与 JSON schema 会被严重低估）。请把它们当作近似的**组成**呈现，而不是总量。
 
-`deriveTurnTokenUsage(events)` 为浏览器消费方把一个完整 Turn 折叠为精确的逐次尝试与整轮用量。生命周期证据缺失、计数不安全或精确总量矛盾时不返回结果；只有每次参与的尝试都报告可选缓存、推理或路由值时，相应汇总才会出现。
+`deriveTurnTokenUsage(events)` 为浏览器消费方把一个完整 Turn 折叠为精确的逐次尝试与整轮用量。生命周期证据缺失、计数不安全或精确总量矛盾时不返回结果；只有每次参与的尝试都报告可选缓存、推理或路由值时，相应汇总才会出现。当每次尝试都具备 provider/model 归属时，结果还会带上 `attempts`——按折叠顺序的每次计费尝试一行——以便金钱辅助函数按各路由费率计价，而无需拆分合计。
+
+`deriveTurnMoneyCost(usage, lookup)` 用这些尝试行与 `(provider, model)` 费率查找（每百万 token 的 USD）估算美元花费。缺少归属、缺少费率，或某 token 分桶存在却无对应费率时，整笔花费省略（fail-closed）。除非费率表单独设置 reasoning 费率，否则不对 reasoning 二次计费。这是基于精确 token 分桶的估算，不是持久账单，也不同于适配器的视觉 token `imageRequestPricing`。
 
 ### 组合
 
@@ -89,6 +91,7 @@ const price = ctx.tokenMeter.estimateMessage(message)
 | [`src/breakdown-projection.ts`](src/breakdown-projection.ts) | `contextBreakdown` 投影定义 |
 | [`src/client.ts`](src/client.ts) | 投影消费方的浏览器安全客户端表面 |
 | [`src/turn-usage.ts`](src/turn-usage.ts) | 精确逐次尝试与逐 Turn 用量的纯 fold |
+| [`src/turn-money.ts`](src/turn-money.ts) | 基于已归属 Turn 尝试行的纯 USD 估算 |
 
 ### Fold 流程
 
