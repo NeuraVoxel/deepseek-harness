@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { describe, expect, it } from 'vitest'
@@ -10,6 +10,7 @@ import {
   isPermissive,
   type Manifest,
   manifestPatterns,
+  parseFirstPartyVendorDirs,
   parsePyprojectRequirements,
   parseVendoredRows,
   render,
@@ -165,13 +166,22 @@ describe('parseVendoredRows', () => {
     expect(parseVendoredRows('| `cordis/` | `@deepseek-ai/cordis` | cordis | 4.0.0 | https://example.com | `abc123` |\n')).toEqual([])
   })
 
-  it('covers every vendored directory, so no package can drop out of the notices', () => {
-    const parsed = new Set(parseVendoredRows(readFileSync(resolve(root, 'vendor/README.md'), 'utf8')).map(row => row.npmName))
+  it('covers every Cordis-pin directory, so no upstream package can drop out of the notices', () => {
+    const readme = readFileSync(resolve(root, 'vendor/README.md'), 'utf8')
+    const parsed = new Set(parseVendoredRows(readme).map(row => row.npmName))
+    const firstParty = parseFirstPartyVendorDirs(readme)
     const onDisk = readdirSync(resolve(root, 'vendor'), { withFileTypes: true })
       .filter(entry => entry.isDirectory())
+      .filter(entry => !firstParty.has(entry.name))
+      .filter(entry => existsSync(resolve(root, 'vendor', entry.name, 'package.json')))
       .map(entry => (JSON.parse(readFileSync(resolve(root, 'vendor', entry.name, 'package.json'), 'utf8')) as Manifest).name)
 
     expect([...onDisk].sort()).toEqual([...parsed].sort())
+  })
+
+  it('lists first-party vendor libraries outside the Cordis pin table', () => {
+    const readme = readFileSync(resolve(root, 'vendor/README.md'), 'utf8')
+    expect(parseFirstPartyVendorDirs(readme).has('aitopo')).toBe(true)
   })
 })
 

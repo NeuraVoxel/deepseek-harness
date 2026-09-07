@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AITopo demo</title>
+    <style>
+      html, body { margin: 0; height: 100%; font-family: ui-sans-serif, system-ui, sans-serif; }
+      #app { display: flex; flex-direction: column; height: 100%; }
+      #toolbar { display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 12px; background: #0f172a; color: #e2e8f0; align-items: center; }
+      #toolbar button { cursor: pointer; border: 0; border-radius: 6px; padding: 6px 10px; background: #334155; color: #f8fafc; }
+      #toolbar button:hover { background: #475569; }
+      #status { padding: 6px 12px; font-size: 12px; background: #f1f5f9; color: #334155; }
+      #stage { flex: 1; min-height: 0; background: #f8fafc; }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="toolbar"></div>
+      <div id="status">Ready</div>
+      <div id="stage"></div>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

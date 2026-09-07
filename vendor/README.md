@@ -26,6 +26,16 @@ Third-party dependencies of the vendored packages stay on npm: `@standard-schema
 
 Intentionally **not** vendored (verified unused by this set): `reggol`, `@cordisjs/utils`, `@cordisjs/element`, `@cordisjs/unyaml` (dev-time YAML import hook only).
 
+## First-party libraries
+
+These directories live under `vendor/` for workspace layout but are **not** upstream Cordis pins. Do not run the Cordis sync procedure against them. Commits that touch their `src/` still stage this README (pre-commit `check-vendor-manifest.sh`).
+
+| Directory | npm name | Role |
+|---|---|---|
+| `aitopo/` | `@neuravoxel/aitopo` | Clean-room Canvas topology engine for AI graphs (Document/Patch/Events). Design reference: `SDK2D` / twaver.vector ideas only — no source copy or runtime dependency. |
+
+`SDK2D/` (when present locally) is a design-reference tree only and is gitignored; it is not a workspace package.
+
 ## Local modifications
 
 Keep this log exhaustive — every divergence from upstream must be listed.

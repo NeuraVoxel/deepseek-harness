@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write .agents/notes/proposed/architecture/2026-09-07-aitopo-dual-face-canvas-engine.md
+2026-09-07-aitopo-dual-face-canvas-engine.md: 526557fd66e031c8eb8d53fcd403eb17799fa521
+2026-09-07-aitopo-dual-face-canvas-engine.zh.md: 7906021963bd5dcd9ab6ae77477cce99a026183d

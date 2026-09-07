@@ -433,17 +433,44 @@ export function parseVendoredRows(text: string): VendoredRow[] {
 }
 
 /**
- * Parse the vendored manifest table and confirm it accounts for every vendored
- * directory. The `vendor/` tree — not the table — is the set that must be
- * disclosed, so a row that stops matching the table format is a hard error
- * rather than a package that quietly vanishes from the notices.
+ * Parse first-party library directory names from `vendor/README.md`.
+ * These are not Cordis upstream pins and are excluded from Cordis vendored disclosure.
+ * @param text - complete `vendor/README.md` contents.
+ * @returns directory names under `vendor/` (without trailing slash).
+ */
+export function parseFirstPartyVendorDirs(text: string): Set<string> {
+  const dirs = new Set<string>()
+  let inSection = false
+  for (const line of text.split('\n')) {
+    if (line.startsWith('## First-party libraries')) {
+      inSection = true
+      continue
+    }
+    if (inSection && line.startsWith('## ')) break
+    if (!inSection) continue
+    const match = /^\| `(\S+)\/` \| `([^`]+)` \|/.exec(line)
+    if (match?.[1] !== undefined) dirs.add(match[1])
+  }
+  return dirs
+}
+
+/**
+ * Parse the Cordis vendored-package manifest table and confirm it accounts for
+ * every Cordis-pin directory. First-party libraries under `vendor/` (see
+ * `## First-party libraries`) and directories without `package.json` are excluded.
+ * @returns one row per Cordis manifest-table entry, in table order.
  */
 function collectVendored(): VendoredRow[] {
-  const rows = parseVendoredRows(readFileSync(resolve(root, 'vendor/README.md'), 'utf8'))
+  const readme = readFileSync(resolve(root, 'vendor/README.md'), 'utf8')
+  const rows = parseVendoredRows(readme)
+  const firstPartyDirs = parseFirstPartyVendorDirs(readme)
   const onDisk = new Map<string, string>()
   for (const entry of readdirSync(resolve(root, 'vendor'), { withFileTypes: true })) {
     if (!entry.isDirectory()) continue
-    const manifest = readManifest(`vendor/${entry.name}/package.json`)
+    if (firstPartyDirs.has(entry.name)) continue
+    const rel = `vendor/${entry.name}/package.json`
+    if (!existsSync(resolve(root, rel))) continue
+    const manifest = readManifest(rel)
     if (manifest.name !== undefined) onDisk.set(manifest.name, entry.name)
   }
 

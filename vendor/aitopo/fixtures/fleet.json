@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "meta": { "title": "Fleet demo", "kind": "topology" },
+  "nodes": [
+    { "id": "s1", "type": "agent", "label": "session-1", "status": "running", "groupId": "ws" },
+    { "id": "s2", "type": "agent", "label": "session-2", "status": "idle", "groupId": "ws", "parentId": "s1" },
+    { "id": "s3", "type": "agent", "label": "cold-agent", "status": "cold", "groupId": "other" }
+  ],
+  "edges": [
+    { "id": "e1", "from": "s1", "to": "s2", "kind": "parent" }
+  ],
+  "groups": [
+    { "id": "ws", "label": "Workspace A", "memberIds": ["s1", "s2"], "x": 24, "y": 24, "w": 400, "h": 200 },
+    { "id": "other", "label": "Other", "memberIds": ["s3"], "x": 460, "y": 24, "w": 220, "h": 120 }
+  ]
+}
