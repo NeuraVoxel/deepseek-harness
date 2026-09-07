@@ -342,8 +342,10 @@ Keep `vendor/README.md` staged in every commit that touches `vendor/aitopo/src/*
 ## Part II — agent-canvas integration (P2 → P3)
 
 > Start only after Part I P1 acceptance is signed off.
+> **Integration design (approved):** [2026-09-07-aitopo-agent-canvas-integration.md](./2026-09-07-aitopo-agent-canvas-integration.md)
+> **Scope decision:** Chunks 12 + 13 in one delivery; **no feature flag**; SVG path removed in the same change.
 
-### Chunk 12 — Dependency + host shell
+### Chunk 12 — Dependency + Fleet host
 
 **Files:**
 - Modify `plugins/agent-canvas/package.json` (dependency `@neuravoxel/aitopo`)
@@ -351,25 +353,25 @@ Keep `vendor/README.md` staged in every commit that touches `vendor/aitopo/src/*
 - Create `plugins/agent-canvas/src/client/aitopo/snapshot-to-document.ts`
 - Create `plugins/agent-canvas/src/client/aitopo/flow-to-document.ts`
 - Create `plugins/agent-canvas/src/client/aitopo/alarms-from-status.ts`
-- Modify `plugins/agent-canvas/src/client/CanvasView.tsx` (feature flag branch)
+- Modify `plugins/agent-canvas/src/client/CanvasView.tsx` (Fleet stage → AITopoHost)
 - Modify client locales if new strings appear (i18n gate)
 
-- [ ] **Step 1:** Add workspace/file dependency; ensure client bundle resolves the package.
-- [ ] **Step 2:** `AITopoHost`: `useEffect` mount/destroy; props `document` / `patch` / event callbacks; no Session brands inside engine.
+- [ ] **Step 1:** Add workspace dependency; ensure client bundle resolves/inlines `@neuravoxel/aitopo`.
+- [ ] **Step 2:** `AITopoHost`: `useEffect` mount/destroy; props `document` / `patch` / event callbacks / zoom bridge; no Session brands inside engine.
 - [ ] **Step 3:** Adapters: `AgentCanvasSnapshot` → `GraphDocument`; flow snapshot → document; map error/active → alarms/styles.
-- [ ] **Step 4:** Feature flag (query param or local setting): `svg` | `aitopo`; default `svg` until parity.
-- [ ] **Step 5:** Wire Fleet click/dblclick to existing `openSession` / `showFlow`.
+- [ ] **Step 4:** Wire Fleet click/dblclick to existing `openSession` / `showFlow`.
+- [ ] **Step 5:** Toolbar zoom ± / fit / reset forward to Network viewport (replace `use-canvas-viewport` for Fleet).
 
-**Verify:** `pnpm --filter dsh-agent-canvas bundle`; manual Fleet with flag on.
+**Verify:** `pnpm --filter dsh-agent-canvas bundle`; manual Fleet open + dblclick flow.
 
-### Chunk 13 — Flow + Teams + retire SVG (P3)
+### Chunk 13 — Flow + Teams + retire SVG
 
-- [ ] **Step 1:** Flow pane uses AITopoHost; active/error styling + alarms.
-- [ ] **Step 2:** When Teams data exists, map teams → SubNetwork; dblclick enters team graph.
-- [ ] **Step 3:** Remove SVG drawing path, `use-canvas-viewport` if unused; delete flag once default is aitopo.
-- [ ] **Step 4:** Update plugin README (EN/ZH); run focused client checks / snapshots if product-visible behavior requires them per `docs/testing.md`.
+- [ ] **Step 1:** Flow pane uses AITopoHost; active/error styling + alarms; `hoverChanged` drives existing I/O tooltip.
+- [ ] **Step 2:** When Teams data exists, map teams → SubNetwork; dblclick enters team graph; else keep unavailable hint.
+- [ ] **Step 3:** Remove SVG drawing path, ZoomStage, and `use-canvas-viewport.ts` if unused.
+- [ ] **Step 4:** Update plugin README (EN/ZH); run focused client checks / GIF for product-visible Canvas change per `docs/testing.md` + `record-browser-gif`.
 
-**Verify:** Fleet + Flow parity; Teams drill-down when available; SVG code gone.
+**Verify:** Fleet + Flow parity; Teams drill-down when available; no SVG stage code remains.
 
 ---
 
@@ -401,5 +403,5 @@ Keep `vendor/README.md` staged in every commit that touches `vendor/aitopo/src/*
 | 9 Layout/fixtures | done |
 | 10 Demo | done |
 | 11 Note/harden | done |
-| 12 Plugin Fleet | blocked on P1 sign-off |
-| 13 Plugin Flow/Teams | blocked on P2 |
+| 12 Plugin Fleet | ready (no flag; AITopo-only) |
+| 13 Plugin Flow/Teams | ready (same delivery as 12) |
