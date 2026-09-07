@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Web ↔ Host 通信示例</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --line: #2d3a4d;
+      --text: #e7ecf3;
+      --muted: #8b9bb4;
+      --accent: #3d8bfd;
+      --ok: #3ecf8e;
+      --err: #f07178;
+      --mono: "IBM Plex Mono", "SF Mono", ui-monospace, monospace;
+      --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+      font: 15px/1.45 var(--sans);
+      background-image:
+        radial-gradient(ellipse 80% 50% at 10% -10%, #1a3a5c55, transparent),
+        radial-gradient(ellipse 60% 40% at 100% 0%, #2a1a4a44, transparent);
+    }
+    main { max-width: 920px; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
+    h1 { font-size: 1.35rem; font-weight: 600; margin: 0 0 .35rem; letter-spacing: -.02em; }
+    .lead { color: var(--muted); margin: 0 0 1.5rem; max-width: 40rem; }
+    .row { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: 1rem; align-items: center; }
+    label { color: var(--muted); font-size: .85rem; }
+    input[type=text] {
+      flex: 1; min-width: 12rem; background: var(--panel); border: 1px solid var(--line);
+      color: var(--text); border-radius: 6px; padding: .45rem .65rem; font: 13px var(--mono);
+    }
+    button {
+      background: var(--accent); color: #fff; border: 0; border-radius: 6px;
+      padding: .45rem .85rem; font: 600 13px var(--sans); cursor: pointer;
+    }
+    button.secondary { background: transparent; border: 1px solid var(--line); color: var(--text); }
+    button:disabled { opacity: .45; cursor: not-allowed; }
+    .grid { display: grid; gap: 1rem; grid-template-columns: 1fr; }
+    @media (min-width: 800px) { .grid { grid-template-columns: 1fr 1fr; } }
+    section {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+      padding: 1rem 1rem .85rem;
+    }
+    section h2 { margin: 0 0 .65rem; font-size: .95rem; font-weight: 600; }
+    pre {
+      margin: 0; max-height: 22rem; overflow: auto; padding: .65rem .75rem;
+      background: #0b1016; border-radius: 6px; font: 12px/1.4 var(--mono);
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .ok { color: var(--ok); }
+    .err { color: var(--err); }
+    .hint { font-size: .8rem; color: var(--muted); margin-top: .65rem; }
+    code { font-family: var(--mono); font-size: .9em; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>前端页面 ↔ Host 通信</h1>
+    <p class="lead">
+      本页通过本地 demo 代理访问运行中的 <code>dsh web</code>。
+      一元调用走 <code>POST /api/&lt;ns&gt;/&lt;method&gt;</code>（<code>client-request</code> envelope）；
+      跟流走 <code>WS /api/remote.mux</code>（<code>open</code> / <code>item</code> / <code>end</code>）。
+    </p>
+
+    <div class="row">
+      <label for="prompt">prompt</label>
+      <input id="prompt" type="text" value="hi" />
+      <button type="button" id="btn-list">session/list</button>
+      <button type="button" id="btn-create">session/create</button>
+      <button type="button" id="btn-round" class="secondary">create + follow + prompt</button>
+    </div>
+
+    <div class="grid">
+      <section>
+        <h2>HTTP RPC</h2>
+        <pre id="rpc-log">等待操作…</pre>
+        <p class="hint">envelope：<code>{ type:&quot;client-request&quot;, rpcId, method, payload:{ args } }</code></p>
+      </section>
+      <section>
+        <h2>WS session/follow</h2>
+        <pre id="ws-log">尚未打开流</pre>
+        <p class="hint">mux：<code>{ type:&quot;open&quot;, streamId, endpoint:&quot;session/follow&quot;, payload }</code></p>
+      </section>
+    </div>
+  </main>
+  <script type="module">
+    const rpcLog = document.getElementById('rpc-log')
+    const wsLog = document.getElementById('ws-log')
+    const promptInput = document.getElementById('prompt')
+
+    let sessionId = null
+    let followSocket = null
+    let followStreamId = null
+
+    function stamp(pre, text, cls) {
+      const line = document.createElement('div')
+      if (cls) line.className = cls
+      line.textContent = text
+      pre.appendChild(line)
+      pre.scrollTop = pre.scrollHeight
+    }
+
+    function clear(pre, placeholder) {
+      pre.textContent = ''
+      if (placeholder) stamp(pre, placeholder)
+    }
+
+    /** Unary Remote — mirrors packages/client/connection client-request envelope. */
+    async function remoteRpc(endpoint, args) {
+      const rpcId = crypto.randomUUID()
+      const body = {
+        type: 'client-request',
+        rpcId,
+        method: endpoint,
+        payload: { args },
+      }
+      stamp(rpcLog, `→ POST /api/${endpoint}`)
+      stamp(rpcLog, JSON.stringify(body, null, 2))
+      const response = await fetch(`/api/${endpoint}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const json = await response.json()
+      stamp(rpcLog, `← HTTP ${response.status}`, response.ok ? 'ok' : 'err')
+      stamp(rpcLog, JSON.stringify(json, null, 2), response.ok && json?.result?.ok ? 'ok' : 'err')
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      if (!json.result?.ok) {
+        throw new Error(`${json.result.error.code}: ${json.result.error.message}`)
+      }
+      if (json.rpcId !== rpcId) throw new Error('rpcId mismatch')
+      return json.result.value
+    }
+
+    function closeFollow() {
+      if (followSocket) {
+        try { followSocket.close() } catch { /* ignore */ }
+        followSocket = null
+        followStreamId = null
+      }
+    }
+
+    /** Open multiplexed session/follow on /api/remote.mux. */
+    function openFollow(id) {
+      closeFollow()
+      clear(wsLog, `connecting… sessionId=${id}`)
+      followStreamId = crypto.randomUUID()
+      const wsUrl = `${location.origin.replace(/^http/u, 'ws')}/api/remote.mux`
+      const socket = new WebSocket(wsUrl)
+      followSocket = socket
+
+      socket.addEventListener('open', () => {
+        const frame = {
+          type: 'open',
+          streamId: followStreamId,
+          endpoint: 'session/follow',
+          payload: {
+            args: {
+              request: {
+                address: { kind: 'session', sessionId: id },
+                maxMessages: 50,
+              },
+            },
+          },
+        }
+        stamp(wsLog, `→ ${JSON.stringify(frame)}`, 'ok')
+        socket.send(JSON.stringify(frame))
+      })
+
+      socket.addEventListener('message', (event) => {
+        let frame
+        try { frame = JSON.parse(String(event.data)) } catch {
+          stamp(wsLog, `← non-json: ${event.data}`, 'err')
+          return
+        }
+        if (frame.streamId !== followStreamId) return
+        const label = frame.type === 'error' ? 'err' : 'ok'
+        stamp(wsLog, `← ${JSON.stringify(frame)}`, label)
+      })
+
+      socket.addEventListener('close', () => stamp(wsLog, '← socket closed'))
+      socket.addEventListener('error', () => stamp(wsLog, '← socket error', 'err'))
+    }
+
+    document.getElementById('btn-list').addEventListener('click', async () => {
+      clear(rpcLog)
+      try {
+        const value = await remoteRpc('session/list', { _request: {} })
+        stamp(rpcLog, `sessions: ${value.items?.length ?? 0}`, 'ok')
+      } catch (error) {
+        stamp(rpcLog, String(error), 'err')
+      }
+    })
+
+    document.getElementById('btn-create').addEventListener('click', async () => {
+      clear(rpcLog)
+      try {
+        const value = await remoteRpc('session/create', { request: {} })
+        sessionId = value.sessionId
+        stamp(rpcLog, `sessionId=${sessionId}`, 'ok')
+        openFollow(sessionId)
+      } catch (error) {
+        stamp(rpcLog, String(error), 'err')
+      }
+    })
+
+    document.getElementById('btn-round').addEventListener('click', async () => {
+      clear(rpcLog)
+      const text = promptInput.value.trim() || 'hi'
+      try {
+        const created = await remoteRpc('session/create', { request: {} })
+        sessionId = created.sessionId
+        openFollow(sessionId)
+        await remoteRpc('session/prompt', {
+          request: {
+            requestId: crypto.randomUUID(),
+            sessionId,
+            mode: 'queue',
+            content: [{ type: 'text', text }],
+          },
+        })
+        stamp(rpcLog, 'prompt accepted — watch WS for snapshot / assistant frames', 'ok')
+      } catch (error) {
+        stamp(rpcLog, String(error), 'err')
+      }
+    })
+  </script>
+</body>
+</html>

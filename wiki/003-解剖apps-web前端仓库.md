@@ -1,7 +1,7 @@
 # 003 · 解剖 apps/web：前端仓库到底在哪
 
 > DeepSeek Harness 源码专题 · 第 3 篇
-> 接 [002 · 目录结构与架构图](./002-目录结构与架构图.md) · 呼应 [001 · hi 对话](./001-一次hi对话的源码之旅.md)
+> 接 [002 · 目录结构与架构图](./002-目录结构与架构图.md) · 呼应 [001 · hi 对话](./001-一次hi对话的源码之旅.md) · 流程见 [000](./000-当前项目开发流程.md)
 
 很多人打开仓库找「前端项目」，第一眼会进 `apps/web`。
 打开 `src/`，却只看到几行 TypeScript——这不是仓库坏了，而是 **设计如此**。
@@ -287,13 +287,12 @@ flowchart LR
 
 ---
 
-## 下期预告
+## 系列导航
 
-可选方向：
+- [000 · 当前项目开发流程](./000-当前项目开发流程.md)
+- [004 · Web UI 双进程与 dual-face](./004-Web-UI双进程与dual-face.md)（接本篇：进程拆分、connection、dual-face、HMR）
 
-- **004**：`ui-conversation` 提交机与 `Session.prompt` 细拆
-- 或：`cordis.patch.yml` 里整份 Web Client 花名册导读
-- 或：Slots 树——从 `root` 到输入框的注册链
+可选后续：`ui-conversation` 提交机与 `Session.prompt` 细拆；或 Slots 树从 `root` 到输入框的注册链。
 
 ---
 
