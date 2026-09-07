@@ -59,9 +59,9 @@ pnpm dsh --profile web --patch ./plugins/hello-patch/cordis.yml --dump-config
 
 ## 和「可安装 bundle」的区别
 
-| 方式 | 本示例 | `dsh plugin add` 安装的 bundle |
+| 方式 | 本示例 | [hello-bundle](../hello-bundle/README.md) |
 |---|---|---|
-| 配置入口 | 启动时 `--patch` | profile 的 `dsh.profile.bundles` |
+| 配置入口 | 启动时 `--patch` | `dsh plugin add` → profile 的 `dsh.profile.bundles` |
 | 模块引用 | 本地相对 / 绝对路径 | 包名（经 pnpm 安装） |
 | 持久性 | 每次启动显式传入 | 写进 profile，之后普通 `dsh --profile …` 即可 |
 
