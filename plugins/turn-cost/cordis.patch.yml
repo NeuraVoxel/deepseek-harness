@@ -1,0 +1,18 @@
+# Opt-in Turn-cost example: Host half registers the sessionCost projection.
+# Browser half joins via package.json dsh.client once this row is in the Loader.
+#
+# Use a path relative to THIS file (not the bare package name). Bare names
+# resolve from $DSH_HOME/profiles/<profile>/, which has no workspace link unless
+# you `dsh plugin add` first. Relative ./ paths are anchored to this patch file
+# (same rule as plugins/hello-patch).
+- insert:
+    - id: turn-cost
+      name: './src/index.ts'
+      # Optional: override demo CNY / 1M rates (keys are "provider/model").
+      # config:
+      #   rates:
+      #     deepseek/deepseek-v4-flash:
+      #       input: 1.008
+      #       cacheRead: 0.0202
+      #       cacheWrite: 1.008
+      #       output: 2.016
