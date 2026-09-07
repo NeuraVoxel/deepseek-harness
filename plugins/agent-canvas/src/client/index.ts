@@ -2,17 +2,24 @@
  * Agent Canvas plugin — browser half.
  *
  * Registers a Canvas tab on the conversation view ring (alongside Chat and
- * Trajectory) and derives Host-wide Session/Agent topology from list hooks.
+ * Trajectory). Fleet overview lists Agents; double-click opens a process
+ * topology for the current Agent's latest turn.
  */
 
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import type { SessionBinding } from '@deepseek-ai/dsh-api-session-controller/client'
+import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-api-session-controller/client'
 import { CanvasView, type CanvasViewInjected } from './CanvasView.tsx'
+import { createAgentFlowSource } from './flow-source.ts'
+import type { AgentFlowSnapshot } from './derive-flow.ts'
+import { emptyAgentFlow } from './derive-flow.ts'
+import { createCanvasNavStore } from './nav-store.ts'
 import { en, NS, zh, type AgentCanvasKey } from './locales.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -32,6 +39,22 @@ export const inject = ['slots', 'locale', 'sessions']
 export function apply(ctx: ClientContext): void {
   ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'agent-canvas: dictionaries')
   const t = ctx.locale.bind(NS)
+  const navStore = createCanvasNavStore()
+  const flowSources = new WeakMap<SessionBinding, ObservableSnapshot<AgentFlowSnapshot>>()
+  const emptyFlow: ObservableSnapshot<AgentFlowSnapshot> = {
+    getSnapshot: () => emptyAgentFlow(),
+    subscribe: () => () => {},
+  }
+
+  const flowSource = (binding: SessionBinding | undefined): ObservableSnapshot<AgentFlowSnapshot> => {
+    if (binding === undefined) return emptyFlow
+    let source = flowSources.get(binding)
+    if (source === undefined) {
+      source = createAgentFlowSource(binding)
+      flowSources.set(binding, source)
+    }
+    return source
+  }
 
   ctx.slots.inject('conversation.view', () => ctx.slots.register({
     name: 'conversation.view',
@@ -39,8 +62,13 @@ export function apply(ctx: ClientContext): void {
     order: 20,
     locale: NS,
     label: () => t('view.canvas'),
-    inject: (_sessionId: SessionId): CanvasViewInjected => ({
-      openSession: (id) => { ctx.sessions.open(id) },
-    }),
+    store: navStore,
+    inject: (sessionId: SessionId): CanvasViewInjected => {
+      const binding = ctx.sessions.binding(sessionId)
+      return {
+        openSession: (id) => { ctx.sessions.open(id) },
+        hooks: { agentFlow: flowSource(binding) },
+      }
+    },
   }, CanvasView))
 }

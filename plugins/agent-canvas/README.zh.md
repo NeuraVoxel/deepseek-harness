@@ -5,7 +5,8 @@
 - 节点：列表中的全部 Session，状态 `running` / `idle`
 - 边：subagent 的 `parentId`
 - 分组：默认 **Workspace**，可切 **父子树** / **Agent Teams**（未挂 Teams 时提示不可用）
-- 点击节点 → `sessions.open(id)`
+- 单击节点 → `sessions.open(id)`
+- **双击**节点 → 打开该 Agent **最近一轮**流程 Canvas（Client 输入 → Host 接纳 → Step → Model → Tools → Turn end → Client 渲染），**进行中**节点高亮
 
 **不修改** `packages/`，通过 patch / `dsh plugin` 挂载。
 
@@ -34,9 +35,10 @@ pnpm dsh --profile web-canvas-demo
 | `src/index.ts` | Host `ctx.agentCanvas.snapshot()` |
 | `src/topology.ts` | Host 侧 live 拓扑 |
 | `src/client/index.ts` | 注册 `conversation.view`（id `canvas`） |
-| `src/client/CanvasView.tsx` | SVG 画布 + 分组工具条 |
-| `src/client/derive-topology.ts` | Client 列表 → snapshot |
-| `src/client/layout.ts` | 列布局（可换成 twaver.js） |
+| `src/client/CanvasView.tsx` | SVG 画布 + 分组工具条 + 流程视图 |
+| `src/client/derive-topology.ts` | Client 列表 → 总览 snapshot |
+| `src/client/derive-flow.ts` | Session 事件 → 流程拓扑 |
+| `src/client/layout.ts` / `layout-flow.ts` | 总览 / 流程布局（可换 twaver） |
 
 ## 说明
 

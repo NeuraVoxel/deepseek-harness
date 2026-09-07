@@ -6,6 +6,7 @@ Opt-in plugin: a **Canvas** tab beside Chat / Trajectory that shows Session / Ag
 - Edges: subagent `parentId` links
 - Groups: **Workspace** (default), **Parent tree**, **Agent Teams** (placeholder until Teams is composed + wired)
 - Click a node → `sessions.open(id)`
+- **Double-click** a node → process Canvas for that Agent’s **latest turn** (Client input → Host admit → Step → Model → Tools → Turn end → Client render), with **active** nodes highlighted while the Session is running
 
 Does **not** modify `packages/` — mounts via patch / `dsh plugin`.
 
@@ -34,9 +35,10 @@ Open any Session → switch to the **Canvas** tab.
 | `src/index.ts` | Host `ctx.agentCanvas.snapshot()` |
 | `src/topology.ts` | Live Host topology fold |
 | `src/client/index.ts` | Registers `conversation.view` id `canvas` |
-| `src/client/CanvasView.tsx` | SVG canvas + group toolbar |
-| `src/client/derive-topology.ts` | Client list → snapshot |
-| `src/client/layout.ts` | Column layout (swap-in point for twaver.js) |
+| `src/client/CanvasView.tsx` | SVG canvas + group toolbar + flow pane |
+| `src/client/derive-topology.ts` | Client list → fleet snapshot |
+| `src/client/derive-flow.ts` | Session events → process topology |
+| `src/client/layout.ts` / `layout-flow.ts` | Fleet / flow layouts (twaver swap-in) |
 
 ## Notes
 

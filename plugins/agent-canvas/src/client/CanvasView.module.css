@@ -51,7 +51,8 @@
 
 .legend {
   display: flex;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 10px 12px;
   align-items: center;
   font-size: 11px;
 }
@@ -69,15 +70,103 @@
 .swatchIdle { background: #5b8def; }
 .swatchCold { background: #8b93a7; }
 
-.stage {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: 8px;
+.swatchFlowActive { background: #f5a524; }
+.swatchFlowDone { background: #3dd68c; }
+.swatchFlowPending { background: #5a6478; }
+.swatchFlowError { background: #f07178; }
+
+.swatchKindInput { background: #2dd4bf; }
+.swatchKindAdmit { background: #60a5fa; }
+.swatchKindStep { background: #a78bfa; }
+.swatchKindModel { background: #fbbf24; }
+.swatchKindTool {
+  background: #f472b6;
+  border-radius: 50%;
 }
 
-.svg {
+.flowTitle {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.flowNode {
+  stroke-width: 1.5;
+  rx: 8;
+}
+
+.flowTool {
+  stroke-width: 2;
+}
+
+.flowToolLabel {
+  fill: var(--dsw-text-primary, #e8eaed);
+  font-size: 9px;
+  font-weight: 600;
+  pointer-events: none;
+}
+
+.flowNodeHit {
+  cursor: help;
+}
+
+.kindClientInput { fill: #0f3d38; }
+.kindHostAdmit { fill: #152a48; }
+.kindStep { fill: #2a1f4a; }
+.kindModel { fill: #3a2a10; }
+.kindTool { fill: #3a1530; }
+.kindTurnEnd { fill: #1a1d24; }
+.kindClientRender { fill: #143528; }
+
+.flowStatusActive { stroke: #f5a524; stroke-width: 2.5; }
+.flowStatusDone { stroke: #3dd68c; }
+.flowStatusPending { stroke: #5a6478; }
+.flowStatusError { stroke: #f07178; }
+
+.flowPulse {
+  animation: agent-canvas-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes agent-canvas-pulse {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(245, 165, 36, 0)); }
+  50% { filter: drop-shadow(0 0 6px rgba(245, 165, 36, 0.65)); }
+}
+
+.flowStageWrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.stageSvg {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
   display: block;
+  touch-action: none;
+  cursor: grab;
+  overscroll-behavior: contain;
+  background: transparent;
+}
+
+.stageDragging {
+  cursor: grabbing;
+}
+
+.zoomControls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.zoomBadge {
+  min-width: 3.25rem;
+  text-align: center;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
 }
 
 .groupRect {
@@ -85,6 +174,13 @@
   stroke: var(--dsw-border-subtle, #2a2f3a);
   stroke-width: 1;
   rx: 10;
+}
+
+.stepGroupRect {
+  fill: #12161f;
+  stroke: #2e3648;
+  stroke-width: 1;
+  rx: 12;
 }
 
 .groupTitle {
@@ -137,6 +233,52 @@
   stroke-width: 1.25;
   marker-end: url(#agent-canvas-arrow);
   pointer-events: none;
+}
+
+.flowEdge {
+  fill: none;
+  stroke: #5a6478;
+  stroke-width: 1.25;
+  pointer-events: none;
+}
+
+.ioTooltip {
+  position: fixed;
+  z-index: 40;
+  width: 340px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid #3a4150;
+  background: #161b26;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+  font-size: 11px;
+}
+
+.ioTooltipTitle {
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.ioTooltipSection {
+  opacity: 0.65;
+  margin: 6px 0 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+}
+
+.ioTooltipBody {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  color: #d7dce6;
 }
 
 .empty {
