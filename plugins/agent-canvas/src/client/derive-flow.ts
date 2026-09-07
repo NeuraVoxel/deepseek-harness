@@ -26,9 +26,9 @@ export interface AgentFlowNode {
   readonly kind: FlowNodeKind
   readonly label: string
   readonly detail?: string
-  /** Full input payload for hover inspection. */
+  /** Full input payload for selection inspection. */
   readonly inputText: string
-  /** Full output payload for hover inspection. */
+  /** Full output payload for selection inspection. */
   readonly outputText: string
   readonly status: FlowNodeStatus
   readonly turn: number

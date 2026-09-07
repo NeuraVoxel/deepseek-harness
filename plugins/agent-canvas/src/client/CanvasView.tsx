@@ -193,11 +193,13 @@ function FlowPane(props: Props): ReactElement {
   }), [flow, t])
   const hostRef = useRef<AITopoHostHandle>(null)
   const [zoom, setZoom] = useState(1)
-  const [hover, setHover] = useState<{
+  /** IO tooltip pinned at the click that selected the node; null when nothing is selected. */
+  const [inspection, setInspection] = useState<{
     node: AgentFlowNode
     clientX: number
     clientY: number
   } | null>(null)
+  /** Latest pointer position; capture-phase pointerdown records the click before AITopo selects. */
   const pointerRef = useRef({ x: 0, y: 0 })
   const nodeById = useMemo(
     () => new Map(flow.nodes.map(node => [node.id, node])),
@@ -209,17 +211,18 @@ function FlowPane(props: Props): ReactElement {
       case 'viewportChanged':
         setZoom(event.viewport.zoom)
         break
-      case 'hoverChanged': {
-        if (event.hoverId === undefined) {
-          setHover(null)
+      case 'selectionChanged': {
+        const selectedId = event.selectedIds[0]
+        if (selectedId === undefined) {
+          setInspection(null)
           return
         }
-        const node = nodeById.get(event.hoverId)
+        const node = nodeById.get(selectedId)
         if (node === undefined) {
-          setHover(null)
+          setInspection(null)
           return
         }
-        setHover({
+        setInspection({
           node,
           clientX: pointerRef.current.x,
           clientY: pointerRef.current.y,
@@ -258,13 +261,8 @@ function FlowPane(props: Props): ReactElement {
       ) : (
         <div
           className={css.flowStageWrap}
-          onMouseMove={event => {
+          onPointerDownCapture={event => {
             pointerRef.current = { x: event.clientX, y: event.clientY }
-            if (hover !== null) {
-              setHover(prev => prev === null
-                ? null
-                : { ...prev, clientX: event.clientX, clientY: event.clientY })
-            }
           }}
         >
           <AITopoHost
@@ -275,12 +273,12 @@ function FlowPane(props: Props): ReactElement {
             fitToken={`${flow.turn ?? 0}:${adapted.layout.width}x${adapted.layout.height}`}
             onEvent={onEvent}
           />
-          {hover !== null ? (
+          {inspection !== null ? (
             <FlowIoTooltip
               t={t}
-              node={hover.node}
-              clientX={hover.clientX}
-              clientY={hover.clientY}
+              node={inspection.node}
+              clientX={inspection.clientX}
+              clientY={inspection.clientY}
             />
           ) : null}
         </div>
