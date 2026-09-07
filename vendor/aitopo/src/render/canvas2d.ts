@@ -28,6 +28,8 @@ export interface EdgePaintView {
   readonly selected: boolean
   /** Prefer horizontal vs vertical control points for the bezier. */
   readonly orientation?: 'horizontal' | 'vertical'
+  /** Orthogonal polyline (includes endpoints); drawn with rounded elbows. */
+  readonly points?: readonly { x: number; y: number }[]
 }
 
 /** Cached geometry for a group band. */
@@ -111,30 +113,40 @@ export class Canvas2DRenderer implements Renderer {
   drawGroup(group: GraphGroup, view: GroupPaintView): void {
     const { bounds } = view
     const ctx = this.rootCtx
+    const radius = 12
+    roundRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, radius)
     ctx.fillStyle = 'rgba(90, 100, 120, 0.08)'
+    ctx.fill()
     ctx.strokeStyle = '#5a6478'
     ctx.lineWidth = 1 / this.viewport.zoom
-    ctx.fillRect(bounds.x, bounds.y, bounds.width, bounds.height)
-    ctx.strokeRect(bounds.x, bounds.y, bounds.width, bounds.height)
+    ctx.stroke()
     ctx.fillStyle = '#5a6478'
     ctx.font = `${12 / this.viewport.zoom}px sans-serif`
     ctx.textBaseline = 'top'
     ctx.fillText(group.label, bounds.x + 8, bounds.y + 6)
+    void group
   }
 
   drawEdge(edge: GraphEdge, view: EdgePaintView): void {
     const ctx = this.rootCtx
     ctx.beginPath()
-    ctx.moveTo(view.from.x, view.from.y)
-    if (view.orientation === 'horizontal') {
-      const midX = (view.from.x + view.to.x) / 2
-      ctx.bezierCurveTo(midX, view.from.y, midX, view.to.y, view.to.x, view.to.y)
+    const points = view.points
+    if (points !== undefined && points.length >= 2) {
+      drawRoundedPolyline(ctx, points, 8)
     } else {
-      const midY = (view.from.y + view.to.y) / 2
-      ctx.bezierCurveTo(view.from.x, midY, view.to.x, midY, view.to.x, view.to.y)
+      ctx.moveTo(view.from.x, view.from.y)
+      if (view.orientation === 'horizontal') {
+        const midX = (view.from.x + view.to.x) / 2
+        ctx.bezierCurveTo(midX, view.from.y, midX, view.to.y, view.to.x, view.to.y)
+      } else {
+        const midY = (view.from.y + view.to.y) / 2
+        ctx.bezierCurveTo(view.from.x, midY, view.to.x, midY, view.to.x, view.to.y)
+      }
     }
     ctx.strokeStyle = view.selected ? '#3b82f6' : '#5a6478'
     ctx.lineWidth = (view.selected ? 2 : 1.25) / this.viewport.zoom
+    ctx.lineJoin = 'round'
+    ctx.lineCap = 'round'
     ctx.stroke()
     void edge
   }
@@ -287,6 +299,54 @@ function roundRect(
   ctx.arcTo(x, y + h, x, y, radius)
   ctx.arcTo(x, y, x + w, y, radius)
   ctx.closePath()
+}
+
+/**
+ * Orthogonal polyline with quadratic rounded elbows (Link-like).
+ * @param ctx - canvas context (path already begun).
+ * @param points - route points including endpoints.
+ * @param corner - max corner radius in world units.
+ */
+function drawRoundedPolyline(
+  ctx: CanvasRenderingContext2D,
+  points: readonly { x: number; y: number }[],
+  corner: number,
+): void {
+  if (points.length === 0) return
+  if (points.length === 1) {
+    ctx.moveTo(points[0]!.x, points[0]!.y)
+    return
+  }
+  if (points.length === 2) {
+    ctx.moveTo(points[0]!.x, points[0]!.y)
+    ctx.lineTo(points[1]!.x, points[1]!.y)
+    return
+  }
+  ctx.moveTo(points[0]!.x, points[0]!.y)
+  for (let i = 1; i < points.length - 1; i += 1) {
+    const prev = points[i - 1]!
+    const curr = points[i]!
+    const next = points[i + 1]!
+    const d1 = Math.hypot(curr.x - prev.x, curr.y - prev.y)
+    const d2 = Math.hypot(next.x - curr.x, next.y - curr.y)
+    const r = Math.min(corner, d1 / 2, d2 / 2)
+    if (r < 0.5) {
+      ctx.lineTo(curr.x, curr.y)
+      continue
+    }
+    const before = {
+      x: curr.x - ((curr.x - prev.x) / d1) * r,
+      y: curr.y - ((curr.y - prev.y) / d1) * r,
+    }
+    const after = {
+      x: curr.x + ((next.x - curr.x) / d2) * r,
+      y: curr.y + ((next.y - curr.y) / d2) * r,
+    }
+    ctx.lineTo(before.x, before.y)
+    ctx.quadraticCurveTo(curr.x, curr.y, after.x, after.y)
+  }
+  const last = points[points.length - 1]!
+  ctx.lineTo(last.x, last.y)
 }
 
 function truncate(text: string, max: number): string {

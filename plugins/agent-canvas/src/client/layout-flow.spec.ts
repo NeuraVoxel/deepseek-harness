@@ -87,4 +87,47 @@ describe('layoutAgentFlow parallel columns', () => {
     expect(cols).toHaveLength(3)
     expect(cols[1]?.map(n => n.id)).toEqual(['t1', 't2'])
   })
+
+  it('places Join above the next Step band with a single Join → Step edge', () => {
+    const snapshot: AgentFlowSnapshot = {
+      turn: 1,
+      running: false,
+      updatedAt: '2026-09-07T00:00:00.000Z',
+      nodes: [
+        {
+          id: 'step:1:1', kind: 'step', label: 'Step 1', inputText: '', outputText: '',
+          status: 'done', turn: 1, step: 1,
+        },
+        {
+          id: 'model:1:1', kind: 'model', label: 'Model', inputText: '', outputText: '',
+          status: 'done', turn: 1, step: 1,
+        },
+        tool('tool:a'),
+        tool('tool:b'),
+        {
+          id: 'join:1:1', kind: 'join', label: 'Join', inputText: '', outputText: '',
+          status: 'done', turn: 1, step: 1,
+        },
+        {
+          id: 'step:1:2', kind: 'step', label: 'Step 2', inputText: '', outputText: '',
+          status: 'done', turn: 1, step: 2,
+        },
+      ],
+      edges: [
+        { from: 'step:1:1', to: 'model:1:1' },
+        { from: 'model:1:1', to: 'tool:a' },
+        { from: 'model:1:1', to: 'tool:b' },
+        { from: 'tool:a', to: 'join:1:1' },
+        { from: 'tool:b', to: 'join:1:1' },
+        { from: 'join:1:1', to: 'step:1:2' },
+      ],
+    }
+    const layout = layoutAgentFlow(snapshot)
+    const join = layout.nodes.find(n => n.id === 'join:1:1')!
+    const step2 = layout.nodes.find(n => n.id === 'step:1:2')!
+    expect(join.y + join.height).toBeLessThanOrEqual(step2.y)
+    expect(layout.edges.filter(e => e.to === 'step:1:2')).toEqual([
+      { from: 'join:1:1', to: 'step:1:2' },
+    ])
+  })
 })

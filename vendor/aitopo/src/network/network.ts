@@ -361,6 +361,7 @@ export class Network {
           to: anchors.to,
           selected: this.scene.selectedIds.has(edge.id),
           orientation: anchors.orientation,
+          points: anchors.points,
         })
       }
       for (const node of this.scene.nodes.values()) {

@@ -35,8 +35,9 @@ export function groupBounds(group: GraphGroup): Rect {
 }
 
 /**
- * Edge endpoint anchors. Prefers left/right when the target is mostly
- * horizontal of the source; otherwise bottom → top (fleet trees).
+ * Edge endpoint anchors and route points (twaver Link orthogonal/flexional ideas).
+ * Prefer left↔right when boxes sit side-by-side (Model → Tools fan-out), then
+ * top↔bottom for stacked bands (Join → next Step).
  * @param from - source node.
  * @param to - target node.
  */
@@ -45,6 +46,8 @@ export function edgeAnchors(from: GraphNode, to: GraphNode): {
   to: Point
   bounds: Rect
   orientation: 'horizontal' | 'vertical'
+  /** Polyline points including endpoints (orthogonal.H.V / V.H style). */
+  points: readonly Point[]
 } {
   const a = nodeBounds(from)
   const b = nodeBounds(to)
@@ -52,36 +55,100 @@ export function edgeAnchors(from: GraphNode, to: GraphNode): {
   const acy = a.y + a.height / 2
   const bcx = b.x + b.width / 2
   const bcy = b.y + b.height / 2
-  const dx = bcx - acx
-  const dy = bcy - acy
+  const aRight = a.x + a.width
+  const aBottom = a.y + a.height
+  const bRight = b.x + b.width
+  const bBottom = b.y + b.height
+
   let fromPt: Point
   let toPt: Point
   let orientation: 'horizontal' | 'vertical'
-  if (Math.abs(dx) >= Math.abs(dy)) {
+  let points: Point[]
+
+  // Right-side fan-out (Model → Tools) before vertical bands; vertical
+  // before leftward (Join → next Step which sits below-left).
+  if (b.x >= aRight - 1) {
     orientation = 'horizontal'
-    if (dx >= 0) {
-      fromPt = { x: a.x + a.width, y: acy }
-      toPt = { x: b.x, y: bcy }
-    } else {
-      fromPt = { x: a.x, y: acy }
-      toPt = { x: b.x + b.width, y: bcy }
-    }
-  } else {
+    fromPt = { x: aRight, y: acy }
+    toPt = { x: b.x, y: bcy }
+    points = orthogonalHV(fromPt, toPt)
+  } else if (b.y >= aBottom - 1) {
     orientation = 'vertical'
-    if (dy >= 0) {
-      fromPt = { x: acx, y: a.y + a.height }
-      toPt = { x: bcx, y: b.y }
+    fromPt = { x: acx, y: aBottom }
+    toPt = { x: bcx, y: b.y }
+    points = orthogonalVH(fromPt, toPt)
+  } else if (a.y >= bBottom - 1) {
+    orientation = 'vertical'
+    fromPt = { x: acx, y: a.y }
+    toPt = { x: bcx, y: bBottom }
+    points = orthogonalVH(fromPt, toPt)
+  } else if (a.x >= bRight - 1) {
+    orientation = 'horizontal'
+    fromPt = { x: a.x, y: acy }
+    toPt = { x: bRight, y: bcy }
+    points = orthogonalHV(fromPt, toPt)
+  } else {
+    const dx = bcx - acx
+    const dy = bcy - acy
+    if (Math.abs(dx) >= Math.abs(dy)) {
+      orientation = 'horizontal'
+      if (dx >= 0) {
+        fromPt = { x: aRight, y: acy }
+        toPt = { x: b.x, y: bcy }
+      } else {
+        fromPt = { x: a.x, y: acy }
+        toPt = { x: bRight, y: bcy }
+      }
+      points = orthogonalHV(fromPt, toPt)
     } else {
-      fromPt = { x: acx, y: a.y }
-      toPt = { x: bcx, y: b.y + b.height }
+      orientation = 'vertical'
+      if (dy >= 0) {
+        fromPt = { x: acx, y: aBottom }
+        toPt = { x: bcx, y: b.y }
+      } else {
+        fromPt = { x: acx, y: a.y }
+        toPt = { x: bcx, y: bBottom }
+      }
+      points = orthogonalVH(fromPt, toPt)
     }
   }
-  const x = Math.min(fromPt.x, toPt.x)
-  const y = Math.min(fromPt.y, toPt.y)
-  const width = Math.max(1, Math.abs(toPt.x - fromPt.x))
-  const height = Math.max(1, Math.abs(toPt.y - fromPt.y))
-  return { from: fromPt, to: toPt, bounds: { x, y, width, height }, orientation }
+
+  let bounds: Rect | undefined
+  for (const point of points) {
+    bounds = unionPoint(bounds, point)
+  }
+  return {
+    from: fromPt,
+    to: toPt,
+    bounds: bounds ?? { x: fromPt.x, y: fromPt.y, width: 1, height: 1 },
+    orientation,
+    points,
+  }
 }
+
+/** Horizontal-then-vertical orthognal: leave X, travel Y, enter X (H.V). */
+function orthogonalHV(from: Point, to: Point): Point[] {
+  if (Math.abs(from.y - to.y) < 0.5) return [from, to]
+  const midX = (from.x + to.x) / 2
+  return [from, { x: midX, y: from.y }, { x: midX, y: to.y }, to]
+}
+
+/** Vertical-then-horizontal orthogonal: leave Y, travel X, enter Y (V.H). */
+function orthogonalVH(from: Point, to: Point): Point[] {
+  if (Math.abs(from.x - to.x) < 0.5) return [from, to]
+  const midY = (from.y + to.y) / 2
+  return [from, { x: from.x, y: midY }, { x: to.x, y: midY }, to]
+}
+
+function unionPoint(bounds: Rect | undefined, point: Point): Rect {
+  if (bounds === undefined) return { x: point.x, y: point.y, width: 1, height: 1 }
+  const x = Math.min(bounds.x, point.x)
+  const y = Math.min(bounds.y, point.y)
+  const right = Math.max(bounds.x + bounds.width, point.x)
+  const bottom = Math.max(bounds.y + bounds.height, point.y)
+  return { x, y, width: Math.max(1, right - x), height: Math.max(1, bottom - y) }
+}
+
 
 /**
  * Hit-test nodes top-most first.

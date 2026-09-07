@@ -3,6 +3,7 @@ import { hitRect, unionRect } from '../src/geom.ts'
 import { DirtyAccumulator } from '../src/network/dirty.ts'
 import { layoutGrid, layoutFlowColumns } from '../src/layout/index.ts'
 import { Viewport } from '../src/network/viewport.ts'
+import { edgeAnchors } from '../src/ui/bounds.ts'
 
 describe('geom + dirty + viewport + layout', () => {
   it('unions rects and hits points', () => {
@@ -56,5 +57,29 @@ describe('geom + dirty + viewport + layout', () => {
       edges: [],
     })
     expect(flow.s1!.x).toBeLessThan(flow.s2!.x)
+  })
+
+  it('routes Join → next Step from bottom to top when bands stack', () => {
+    const join = { id: 'join', type: 'join', label: 'Join', x: 400, y: 40, w: 148, h: 56 }
+    const step = { id: 'step', type: 'step', label: 'Step 2', x: 28, y: 200, w: 148, h: 56 }
+    const anchors = edgeAnchors(join, step)
+    expect(anchors.orientation).toBe('vertical')
+    expect(anchors.from.y).toBe(40 + 56)
+    expect(anchors.to.y).toBe(200)
+  })
+
+  it('fans Model → Tools from the shared right mid with orthogonal points', () => {
+    const model = { id: 'm', type: 'model', label: 'Model', x: 40, y: 100, w: 148, h: 56 }
+    const toolA = { id: 'ta', type: 'tool', label: 'A', x: 260, y: 40, w: 56, h: 56 }
+    const toolB = { id: 'tb', type: 'tool', label: 'B', x: 260, y: 160, w: 56, h: 56 }
+    const a = edgeAnchors(model, toolA)
+    const b = edgeAnchors(model, toolB)
+    expect(a.orientation).toBe('horizontal')
+    expect(a.from).toEqual(b.from)
+    expect(a.from).toEqual({ x: 40 + 148, y: 100 + 28 })
+    expect(a.to.x).toBe(260)
+    expect(a.points[0]).toEqual(a.from)
+    expect(a.points[a.points.length - 1]).toEqual(a.to)
+    expect(a.points.length).toBeGreaterThanOrEqual(2)
   })
 })
