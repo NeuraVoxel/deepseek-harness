@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write .agents/notes/proposed/architecture/2026-09-07-aitopo-dual-face-canvas-engine.md
-2026-09-07-aitopo-dual-face-canvas-engine.md: 526557fd66e031c8eb8d53fcd403eb17799fa521
-2026-09-07-aitopo-dual-face-canvas-engine.zh.md: 7906021963bd5dcd9ab6ae77477cce99a026183d
+2026-09-07-aitopo-dual-face-canvas-engine.md: 529f835fec81f4f150a7a205bcf71a3500d5cd54
+2026-09-07-aitopo-dual-face-canvas-engine.zh.md: cbdcaee44d88b32087caf249dd366f136e9ae27e

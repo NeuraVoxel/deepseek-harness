@@ -1,5 +1,7 @@
 # agent-canvas
 
+[English](README.md) | 中文
+
 可选插件：在 Chat / Trajectory **平级**增加 **Canvas** Tab，展示 Session / Agent 拓扑。
 
 - 节点：列表中的全部 Session，状态 `running` / `idle`

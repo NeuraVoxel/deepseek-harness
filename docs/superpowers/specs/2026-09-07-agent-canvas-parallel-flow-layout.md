@@ -1,6 +1,9 @@
 # Parallel tool columns on agent-canvas flow
 
+English | [中文](2026-09-07-agent-canvas-parallel-flow-layout.zh.md)
+
 **Status:** approved (2026-09-07)
+
 **Scope:** `plugins/agent-canvas` flow layout only (option A: sibling tool calls from one assistant message)
 
 ## Decision

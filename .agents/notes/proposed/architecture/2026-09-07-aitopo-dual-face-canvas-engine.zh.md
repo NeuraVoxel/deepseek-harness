@@ -19,7 +19,7 @@ Status: proposed
 5. 先交付引擎与 vanilla DOM demo，再集成 `plugins/agent-canvas`。
 6. Canvas 2D 实现放在可替换的 `Renderer` 接口之后（预留 WebGL）；引擎包不含 React。
 
-设计：[vendor/aitopo/docs/2026-09-07-aitopo-design.md](../../../vendor/aitopo/docs/2026-09-07-aitopo-design.md)。计划：[vendor/aitopo/docs/2026-09-07-aitopo-implementation-plan.md](../../../vendor/aitopo/docs/2026-09-07-aitopo-implementation-plan.md)。插件集成：[vendor/aitopo/docs/2026-09-07-aitopo-agent-canvas-integration.md](../../../vendor/aitopo/docs/2026-09-07-aitopo-agent-canvas-integration.md)。
+设计：[vendor/aitopo/docs/2026-09-07-aitopo-design.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-design.md)。计划：[vendor/aitopo/docs/2026-09-07-aitopo-implementation-plan.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-implementation-plan.md)。插件集成：[vendor/aitopo/docs/2026-09-07-aitopo-agent-canvas-integration.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-agent-canvas-integration.md)。
 
 ## Alternatives considered
 

@@ -1,5 +1,7 @@
 # agent-canvas
 
+English | [中文](README.zh.md)
+
 Opt-in plugin: a **Canvas** tab beside Chat / Trajectory that shows Session / Agent topology.
 
 - Nodes: every listed Session (Client list) with `running` / `idle` status

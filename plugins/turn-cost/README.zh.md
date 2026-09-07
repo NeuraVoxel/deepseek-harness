@@ -1,5 +1,7 @@
 # turn-cost
 
+[English](README.md) | 中文
+
 示例插件：在不改 `packages/` 的前提下，把 **Turn usage** 的 token 桶换算成 **人民币花费**。
 
 - **每个 Turn**：助手操作行上的分项花费 pill（与 Turn usage pill 并列）

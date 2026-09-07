@@ -19,7 +19,7 @@ Ship `@neuravoxel/aitopo` as a first-party TypeScript package under `vendor/aito
 5. Engine plus vanilla DOM demo before any `plugins/agent-canvas` integration.
 6. Canvas 2D renderer behind a `Renderer` interface reserved for WebGL later; no React in the engine package.
 
-Design: [vendor/aitopo/docs/2026-09-07-aitopo-design.md](../../../vendor/aitopo/docs/2026-09-07-aitopo-design.md). Plan: [vendor/aitopo/docs/2026-09-07-aitopo-implementation-plan.md](../../../vendor/aitopo/docs/2026-09-07-aitopo-implementation-plan.md). Plugin integration: [vendor/aitopo/docs/2026-09-07-aitopo-agent-canvas-integration.md](../../../vendor/aitopo/docs/2026-09-07-aitopo-agent-canvas-integration.md).
+Design: [vendor/aitopo/docs/2026-09-07-aitopo-design.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-design.md). Plan: [vendor/aitopo/docs/2026-09-07-aitopo-implementation-plan.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-implementation-plan.md). Plugin integration: [vendor/aitopo/docs/2026-09-07-aitopo-agent-canvas-integration.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-agent-canvas-integration.md).
 
 ## Alternatives considered
 

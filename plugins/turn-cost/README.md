@@ -1,5 +1,7 @@
 # turn-cost
 
+English | [中文](README.zh.md)
+
 Example plugin: convert **Turn usage** token buckets into **CNY (人民币) spend**, without changing `packages/`.
 
 - **Per Turn**: itemized cost pill on the assistant action row (next to the Turn usage pill)
