@@ -403,5 +403,5 @@ Keep `vendor/README.md` staged in every commit that touches `vendor/aitopo/src/*
 | 9 Layout/fixtures | done |
 | 10 Demo | done |
 | 11 Note/harden | done |
-| 12 Plugin Fleet | ready (no flag; AITopo-only) |
-| 13 Plugin Flow/Teams | ready (same delivery as 12) |
+| 12 Plugin Fleet | done (AITopo-only) |
+| 13 Plugin Flow/Teams | done (same delivery as 12) |

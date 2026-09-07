@@ -35,7 +35,8 @@ export function groupBounds(group: GraphGroup): Rect {
 }
 
 /**
- * Edge endpoint anchors (bottom-center → top-center).
+ * Edge endpoint anchors. Prefers left/right when the target is mostly
+ * horizontal of the source; otherwise bottom → top (fleet trees).
  * @param from - source node.
  * @param to - target node.
  */
@@ -43,16 +44,43 @@ export function edgeAnchors(from: GraphNode, to: GraphNode): {
   from: Point
   to: Point
   bounds: Rect
+  orientation: 'horizontal' | 'vertical'
 } {
   const a = nodeBounds(from)
   const b = nodeBounds(to)
-  const fromPt = { x: a.x + a.width / 2, y: a.y + a.height }
-  const toPt = { x: b.x + b.width / 2, y: b.y }
+  const acx = a.x + a.width / 2
+  const acy = a.y + a.height / 2
+  const bcx = b.x + b.width / 2
+  const bcy = b.y + b.height / 2
+  const dx = bcx - acx
+  const dy = bcy - acy
+  let fromPt: Point
+  let toPt: Point
+  let orientation: 'horizontal' | 'vertical'
+  if (Math.abs(dx) >= Math.abs(dy)) {
+    orientation = 'horizontal'
+    if (dx >= 0) {
+      fromPt = { x: a.x + a.width, y: acy }
+      toPt = { x: b.x, y: bcy }
+    } else {
+      fromPt = { x: a.x, y: acy }
+      toPt = { x: b.x + b.width, y: bcy }
+    }
+  } else {
+    orientation = 'vertical'
+    if (dy >= 0) {
+      fromPt = { x: acx, y: a.y + a.height }
+      toPt = { x: bcx, y: b.y }
+    } else {
+      fromPt = { x: acx, y: a.y }
+      toPt = { x: bcx, y: b.y + b.height }
+    }
+  }
   const x = Math.min(fromPt.x, toPt.x)
   const y = Math.min(fromPt.y, toPt.y)
   const width = Math.max(1, Math.abs(toPt.x - fromPt.x))
   const height = Math.max(1, Math.abs(toPt.y - fromPt.y))
-  return { from: fromPt, to: toPt, bounds: { x, y, width, height } }
+  return { from: fromPt, to: toPt, bounds: { x, y, width, height }, orientation }
 }
 
 /**

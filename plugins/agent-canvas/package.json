@@ -36,7 +36,9 @@
   },
   "scripts": {
     "bundle": "tsc -b && tsdown --config tsdown.config.mjs --config-loader tsx",
-    "watch": "tsdown --config tsdown.config.mjs --config-loader tsx --watch"
+    "watch": "tsdown --config tsdown.config.mjs --config-loader tsx --watch",
+    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "tsc -b --pretty false"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^"
@@ -45,6 +47,7 @@
     "@deepseek-ai/dsh-agent": "workspace:^",
     "@deepseek-ai/dsh-session": "workspace:^",
     "@deepseek-ai/schemastery": "workspace:^",
+    "@neuravoxel/aitopo": "workspace:*",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -61,7 +64,8 @@
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "vitest": "^4.1.8"
   },
   "files": [
     "lib/index.js",

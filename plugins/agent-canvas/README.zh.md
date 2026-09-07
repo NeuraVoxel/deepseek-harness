@@ -4,9 +4,11 @@
 
 - 节点：列表中的全部 Session，状态 `running` / `idle`
 - 边：subagent 的 `parentId`
-- 分组：默认 **Workspace**，可切 **父子树** / **Agent Teams**（未挂 Teams 时提示不可用）
+- 分组：默认 **Workspace**，可切 **父子树** / **Agent Teams**（有 `teamId` 时用 SubNetwork）
 - 单击节点 → `sessions.open(id)`
 - **双击**节点 → 打开该 Agent **最近一轮**流程 Canvas（Client 输入 → Host 接纳 → Step → Model → Tools → Turn end → Client 渲染），**进行中**节点高亮
+- 同一条 assistant 里的多个 tool 竖排为**并行列**，再汇入 Join
+- 渲染：[@neuravoxel/aitopo](../../vendor/aitopo) Canvas Network（dirty-rect）；无 SVG 舞台
 
 **不修改** `packages/`，通过 patch / `dsh plugin` 挂载。
 
@@ -35,16 +37,17 @@ pnpm dsh --profile web-canvas-demo
 | `src/index.ts` | Host `ctx.agentCanvas.snapshot()` |
 | `src/topology.ts` | Host 侧 live 拓扑 |
 | `src/client/index.ts` | 注册 `conversation.view`（id `canvas`） |
-| `src/client/CanvasView.tsx` | SVG 画布 + 分组工具条 + 流程视图 |
+| `src/client/CanvasView.tsx` | 工具条 + AITopo 总览 / 流程 |
+| `src/client/aitopo/` | `AITopoHost` + snapshot/flow → `GraphDocument` 适配 |
 | `src/client/derive-topology.ts` | Client 列表 → 总览 snapshot |
 | `src/client/derive-flow.ts` | Session 事件 → 流程拓扑 |
-| `src/client/layout.ts` / `layout-flow.ts` | 总览 / 流程布局（可换 twaver） |
+| `src/client/layout.ts` / `layout-flow.ts` | 总览 / 流程坐标（写入 Document） |
 
 ## 说明
 
 - Client 状态是近似的：只有 `running` 精确；冷会话与 idle live Agent 都会显示为 **idle**，除非后续加 Host Remote。
-- Agent Teams 分组依赖实验性 Teams remote；未挂载时 Tab 仍可用并提示。
-- 当前用 SVG 渲染；`layout.ts` 是接入 **twaver.js** 的替换点（需自备授权）。
+- Agent Teams 分组依赖成员 `teamId`；没有时提示不可用。有 `teamId` 时双击进入 SubNetwork。
+- 图形渲染使用 `@neuravoxel/aitopo`（源码在 `vendor/aitopo`）。
 
 ## 模型体验
 

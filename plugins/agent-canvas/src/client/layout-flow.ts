@@ -1,6 +1,6 @@
 /**
  * Step-grouped layout for an Agent process flow graph.
- * Tools render as circles; other kinds as rectangles.
+ * Sibling tools in one step stack in a vertical parallel column.
  */
 
 import type { AgentFlowEdge, AgentFlowNode, AgentFlowSnapshot } from './derive-flow.ts'
@@ -24,6 +24,8 @@ export interface FlowStepGroup {
   readonly y: number
   readonly width: number
   readonly height: number
+  /** True when the band stacks 2+ sibling tools. */
+  readonly parallelTools?: boolean
 }
 
 /** Complete flow layout. */
@@ -39,13 +41,14 @@ const RECT_W = 148
 const RECT_H = 56
 const TOOL_R = 28
 const GAP_X = 40
+const GAP_Y = 16
 const PAD = 28
 const GROUP_PAD = 16
 const HEADER = 26
 const BAND_GAP = 28
 
 /**
- * Place nodes in horizontal step bands (prelude → each step → epilogue).
+ * Place nodes in step bands; tools share a vertical parallel column.
  * @param snapshot - flow snapshot.
  * @returns layout geometry.
  */
@@ -61,7 +64,12 @@ export function layoutAgentFlow(snapshot: AgentFlowSnapshot): FlowLayout {
     snapshot.nodes.filter(n => n.step !== undefined).map(n => n.step!),
   )].sort((a, b) => a - b)
 
-  const bands: { key: string; label: string; step?: number; members: AgentFlowNode[] }[] = []
+  const bands: {
+    key: string
+    label: string
+    step?: number
+    members: AgentFlowNode[]
+  }[] = []
   if (prelude.length > 0) {
     bands.push({ key: 'prelude', label: 'Client → Host', members: orderBand(prelude) })
   }
@@ -79,47 +87,33 @@ export function layoutAgentFlow(snapshot: AgentFlowSnapshot): FlowLayout {
   let maxWidth = PAD * 2
 
   for (const band of bands) {
-    const sizes = band.members.map(nodeSize)
-    const innerW = sizes.reduce((sum, size, index) =>
+    const columns = buildColumns(band.members)
+    const colSizes = columns.map(col => columnSize(col))
+    const innerW = colSizes.reduce((sum, size, index) =>
       sum + size.width + (index > 0 ? GAP_X : 0), 0)
-    const innerH = Math.max(...sizes.map(size => size.height), RECT_H)
+    const innerH = Math.max(...colSizes.map(size => size.height), RECT_H)
     const width = innerW + GROUP_PAD * 2
     const height = HEADER + innerH + GROUP_PAD * 2
     const groupX = PAD
     const groupY = cursorY
+    const parallelTools = columns.some(col => col.length > 1 && col.every(n => n.kind === 'tool'))
 
     groups.push({
       key: band.key,
-      label: band.label,
+      label: parallelTools ? `${band.label} · parallel` : band.label,
       ...(band.step === undefined ? {} : { step: band.step }),
       x: groupX,
       y: groupY,
       width,
       height,
+      ...(parallelTools ? { parallelTools: true } : {}),
     })
 
     let cursorX = groupX + GROUP_PAD
-    band.members.forEach((node, index) => {
-      const size = sizes[index]!
-      const y = groupY + HEADER + GROUP_PAD + (innerH - size.height) / 2
-      if (node.kind === 'tool') {
-        laid.push({
-          ...node,
-          x: cursorX + size.width / 2,
-          y: y + size.height / 2,
-          radius: TOOL_R,
-          width: size.width,
-          height: size.height,
-        })
-      } else {
-        laid.push({
-          ...node,
-          x: cursorX,
-          y,
-          width: size.width,
-          height: size.height,
-        })
-      }
+    columns.forEach((col, colIndex) => {
+      const size = colSizes[colIndex]!
+      const top = groupY + HEADER + GROUP_PAD + (innerH - size.height) / 2
+      placeColumn(laid, col, cursorX, top)
       cursorX += size.width + GAP_X
     })
 
@@ -136,6 +130,65 @@ export function layoutAgentFlow(snapshot: AgentFlowSnapshot): FlowLayout {
   }
 }
 
+/**
+ * Split a band into left-to-right columns; consecutive tools share one column.
+ * @param members - ordered band members.
+ */
+export function buildColumns(members: readonly AgentFlowNode[]): AgentFlowNode[][] {
+  const columns: AgentFlowNode[][] = []
+  for (const node of members) {
+    const last = columns[columns.length - 1]
+    if (node.kind === 'tool' && last !== undefined && last.every(n => n.kind === 'tool')) {
+      last.push(node)
+    } else {
+      columns.push([node])
+    }
+  }
+  return columns
+}
+
+function columnSize(col: readonly AgentFlowNode[]): { width: number; height: number } {
+  const sizes = col.map(nodeSize)
+  return {
+    width: Math.max(...sizes.map(s => s.width)),
+    height: sizes.reduce((sum, size, index) =>
+      sum + size.height + (index > 0 ? GAP_Y : 0), 0),
+  }
+}
+
+function placeColumn(
+  laid: LaidOutFlowNode[],
+  col: readonly AgentFlowNode[],
+  left: number,
+  top: number,
+): void {
+  let y = top
+  const colW = Math.max(...col.map(n => nodeSize(n).width))
+  for (const node of col) {
+    const size = nodeSize(node)
+    const x = left + (colW - size.width) / 2
+    if (node.kind === 'tool') {
+      laid.push({
+        ...node,
+        x: x + size.width / 2,
+        y: y + size.height / 2,
+        radius: TOOL_R,
+        width: size.width,
+        height: size.height,
+      })
+    } else {
+      laid.push({
+        ...node,
+        x,
+        y,
+        width: size.width,
+        height: size.height,
+      })
+    }
+    y += size.height + GAP_Y
+  }
+}
+
 function orderBand(nodes: readonly AgentFlowNode[]): AgentFlowNode[] {
   const order: Record<string, number> = {
     'client-input': 0,
@@ -143,8 +196,9 @@ function orderBand(nodes: readonly AgentFlowNode[]): AgentFlowNode[] {
     step: 2,
     model: 3,
     tool: 4,
-    'turn-end': 5,
-    'client-render': 6,
+    join: 5,
+    'turn-end': 6,
+    'client-render': 7,
   }
   return [...nodes].sort((a, b) => {
     const kindDelta = (order[a.kind] ?? 50) - (order[b.kind] ?? 50)

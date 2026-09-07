@@ -360,6 +360,7 @@ export class Network {
           from: anchors.from,
           to: anchors.to,
           selected: this.scene.selectedIds.has(edge.id),
+          orientation: anchors.orientation,
         })
       }
       for (const node of this.scene.nodes.values()) {

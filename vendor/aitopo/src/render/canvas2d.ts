@@ -26,6 +26,8 @@ export interface EdgePaintView {
   readonly from: { x: number; y: number }
   readonly to: { x: number; y: number }
   readonly selected: boolean
+  /** Prefer horizontal vs vertical control points for the bezier. */
+  readonly orientation?: 'horizontal' | 'vertical'
 }
 
 /** Cached geometry for a group band. */
@@ -122,10 +124,15 @@ export class Canvas2DRenderer implements Renderer {
 
   drawEdge(edge: GraphEdge, view: EdgePaintView): void {
     const ctx = this.rootCtx
-    const midY = (view.from.y + view.to.y) / 2
     ctx.beginPath()
     ctx.moveTo(view.from.x, view.from.y)
-    ctx.bezierCurveTo(view.from.x, midY, view.to.x, midY, view.to.x, view.to.y)
+    if (view.orientation === 'horizontal') {
+      const midX = (view.from.x + view.to.x) / 2
+      ctx.bezierCurveTo(midX, view.from.y, midX, view.to.y, view.to.x, view.to.y)
+    } else {
+      const midY = (view.from.y + view.to.y) / 2
+      ctx.bezierCurveTo(view.from.x, midY, view.to.x, midY, view.to.x, view.to.y)
+    }
     ctx.strokeStyle = view.selected ? '#3b82f6' : '#5a6478'
     ctx.lineWidth = (view.selected ? 2 : 1.25) / this.viewport.zoom
     ctx.stroke()
@@ -135,22 +142,49 @@ export class Canvas2DRenderer implements Renderer {
   drawNode(node: GraphNode, view: NodePaintView): void {
     const { bounds } = view
     const ctx = this.rootCtx
-    const radius = 8
-    const fill = statusFill(node.status)
-    roundRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, radius)
-    ctx.fillStyle = fill
-    ctx.fill()
-    ctx.strokeStyle = view.selected || view.hovered ? '#3b82f6' : '#334155'
-    ctx.lineWidth = (view.selected ? 2.5 : 1.25) / this.viewport.zoom
-    ctx.stroke()
-    ctx.fillStyle = '#0f172a'
-    ctx.font = `${13 / this.viewport.zoom}px sans-serif`
-    ctx.textBaseline = 'middle'
-    ctx.fillText(truncate(node.label, 22), bounds.x + 12, bounds.y + bounds.height / 2 - 6)
-    if (node.status !== undefined) {
-      ctx.fillStyle = '#64748b'
-      ctx.font = `${11 / this.viewport.zoom}px sans-serif`
-      ctx.fillText(node.status, bounds.x + 12, bounds.y + bounds.height / 2 + 10)
+    const data = node.data ?? {}
+    const fill = typeof data.fill === 'string' ? data.fill : statusFill(node.status)
+    const stroke = typeof data.stroke === 'string'
+      ? data.stroke
+      : view.selected || view.hovered ? '#3b82f6' : statusStroke(node.status)
+    const labelColor = typeof data.labelColor === 'string' ? data.labelColor : '#e8eaed'
+    const metaColor = typeof data.metaColor === 'string' ? data.metaColor : '#a8b0c0'
+    const circular = node.type === 'tool' || data.shape === 'circle'
+    if (circular) {
+      const cx = bounds.x + bounds.width / 2
+      const cy = bounds.y + bounds.height / 2
+      const r = Math.min(bounds.width, bounds.height) / 2
+      ctx.beginPath()
+      ctx.arc(cx, cy, r, 0, Math.PI * 2)
+      ctx.fillStyle = fill
+      ctx.fill()
+      ctx.strokeStyle = stroke
+      ctx.lineWidth = (view.selected || node.status === 'active' ? 2.5 : 1.25) / this.viewport.zoom
+      ctx.stroke()
+      ctx.fillStyle = labelColor
+      ctx.font = `${10 / this.viewport.zoom}px sans-serif`
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'middle'
+      ctx.fillText(truncate(node.label, 8), cx, cy)
+      ctx.textAlign = 'start'
+    } else {
+      const radius = 8
+      roundRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, radius)
+      ctx.fillStyle = fill
+      ctx.fill()
+      ctx.strokeStyle = stroke
+      ctx.lineWidth = (view.selected || node.status === 'active' ? 2.5 : 1.25) / this.viewport.zoom
+      ctx.stroke()
+      ctx.fillStyle = labelColor
+      ctx.font = `${12 / this.viewport.zoom}px sans-serif`
+      ctx.textBaseline = 'middle'
+      ctx.fillText(truncate(node.label, 18), bounds.x + 12, bounds.y + bounds.height / 2 - 6)
+      if (node.status !== undefined) {
+        ctx.fillStyle = metaColor
+        ctx.font = `${10 / this.viewport.zoom}px sans-serif`
+        const meta = typeof data.meta === 'string' ? data.meta : node.status
+        ctx.fillText(truncate(meta, 18), bounds.x + 12, bounds.y + bounds.height / 2 + 10)
+      }
     }
     const alarm = node.alarms?.find(a => a.level === 'error') ?? node.alarms?.[0]
     if (alarm !== undefined) {
@@ -202,16 +236,38 @@ function resizeCanvas(canvas: HTMLCanvasElement, cssW: number, cssH: number, dpr
 function statusFill(status: string | undefined): string {
   switch (status) {
     case 'running':
+      return '#143528'
     case 'active':
-      return '#dbeafe'
+      return '#3a2a10'
     case 'error':
-      return '#fee2e2'
+      return '#3a1518'
     case 'cold':
-      return '#f1f5f9'
+      return '#1a1d24'
     case 'done':
-      return '#dcfce7'
+      return '#143528'
+    case 'idle':
+      return '#1a2438'
     default:
-      return '#ffffff'
+      return '#1a1d24'
+  }
+}
+
+function statusStroke(status: string | undefined): string {
+  switch (status) {
+    case 'running':
+      return '#3dd68c'
+    case 'active':
+      return '#f5a524'
+    case 'error':
+      return '#f07178'
+    case 'cold':
+      return '#8b93a7'
+    case 'done':
+      return '#3dd68c'
+    case 'idle':
+      return '#5b8def'
+    default:
+      return '#334155'
   }
 }
 

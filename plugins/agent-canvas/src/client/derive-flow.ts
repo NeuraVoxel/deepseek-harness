@@ -16,6 +16,7 @@ export type FlowNodeKind =
   | 'step'
   | 'model'
   | 'tool'
+  | 'join'
   | 'turn-end'
   | 'client-render'
 
@@ -290,10 +291,10 @@ export function deriveAgentFlow(
       const joinId = `join:${latestTurn}:${step}`
       add({
         id: joinId,
-        kind: 'step',
+        kind: 'join',
         label: 'Join',
-        detail: 'Tools settled',
-        inputText: clipIo(`${toolIds.length} tool branches`),
+        detail: `${toolIds.length} parallel tools`,
+        inputText: clipIo(`${toolIds.length} parallel tool branches`),
         outputText: clipIo('Continue to next step / turn end'),
         status: toolIds.every(id => nodes.find(n => n.id === id)?.status === 'done'
           || nodes.find(n => n.id === id)?.status === 'error')

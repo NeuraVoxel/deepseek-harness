@@ -1,5 +1,5 @@
 /**
- * Pure layout helpers for the SVG canvas (twaver-replaceable GraphAdapter face).
+ * Pure layout helpers for the Agent Canvas fleet (positions feed AITopo documents).
  */
 
 import type { SessionId } from '@deepseek-ai/dsh-session/types'

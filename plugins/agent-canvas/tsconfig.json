@@ -9,6 +9,9 @@
   ],
   "references": [
     {
+      "path": "../../vendor/aitopo"
+    },
+    {
       "path": "../../vendor/cordis"
     },
     {

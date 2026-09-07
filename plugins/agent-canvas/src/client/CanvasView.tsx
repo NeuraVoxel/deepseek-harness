@@ -1,22 +1,27 @@
-/** Conversation Canvas tab: fleet topology + per-Agent process flow. */
+/** Conversation Canvas tab: fleet topology + per-Agent process flow (AITopo). */
 
 import {
-  useEffect, useMemo, useState,
-  type MouseEvent as ReactMouseEvent,
-  type ReactElement, type ReactNode, type RefObject,
+  useMemo, useRef, useState,
+  type ReactElement,
+  type RefObject,
 } from 'react'
 import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { InjectFace, PropsLocale, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-store'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { deriveClientTopology } from './derive-topology.ts'
-import type { AgentFlowNode, AgentFlowSnapshot, FlowNodeKind } from './derive-flow.ts'
-import { layoutTopology, NODE_SIZE } from './layout.ts'
-import { flowAnchor, layoutAgentFlow, type LaidOutFlowNode } from './layout-flow.ts'
+import type { AgentFlowNode, AgentFlowSnapshot } from './derive-flow.ts'
 import type { AgentCanvasGroupMode } from '../types.ts'
 import { NS } from './locales.ts'
 import type { createCanvasNavStore } from './nav-store.ts'
-import { formatZoomPercent, useCanvasViewport } from './use-canvas-viewport.ts'
+import {
+  AITopoHost,
+  formatZoomPercent,
+  type AITopoHostHandle,
+  type GraphEvent,
+} from './aitopo/AITopoHost.tsx'
+import { snapshotToDocument } from './aitopo/snapshot-to-document.ts'
+import { flowToDocument } from './aitopo/flow-to-document.ts'
 import css from './CanvasView.module.css'
 
 /** Injected callbacks and hooks from the plugin apply closure. */
@@ -53,9 +58,11 @@ function FleetPane(props: Props): ReactElement {
     useSessions, useWorkspaces, sessionId, t, openSession, actions,
   } = props
   const [groupMode, setGroupMode] = useState<AgentCanvasGroupMode>('workspace')
+  const [zoom, setZoom] = useState(1)
+  const [activeNetworkId, setActiveNetworkId] = useState<string | null>(null)
+  const hostRef = useRef<AITopoHostHandle>(null)
   const sessions = useSessions(state => state)
   const workspaces = useWorkspaces(state => state)
-  const viewport = useCanvasViewport()
 
   const snapshot = useMemo(
     () => deriveClientTopology(sessions, workspaces),
@@ -70,24 +77,50 @@ function FleetPane(props: Props): ReactElement {
     return map
   }, [workspaces])
 
-  const layout = useMemo(() => layoutTopology(snapshot, groupMode, {
-    ungrouped: t('ungrouped'),
-    workspaceTitle: id => workspaceTitles.get(id) ?? id,
-  }), [snapshot, groupMode, t, workspaceTitles])
+  const adapted = useMemo(() => snapshotToDocument({
+    snapshot,
+    groupMode,
+    labels: {
+      ungrouped: t('ungrouped'),
+      workspaceTitle: id => workspaceTitles.get(id) ?? id,
+    },
+    currentSessionId: sessionId,
+  }), [snapshot, groupMode, t, workspaceTitles, sessionId])
 
-  const nodeById = useMemo(
-    () => new Map(layout.nodes.map(node => [node.id as string, node])),
-    [layout.nodes],
+  const selectedIds = useMemo(
+    () => (sessionId === undefined ? [] : [sessionId as string]),
+    [sessionId],
   )
-
-  useEffect(() => {
-    viewport.fit(layout.width, layout.height)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fit on layout identity
-  }, [layout.width, layout.height, groupMode])
 
   const openFlow = (id: SessionId): void => {
     if (id !== sessionId) openSession(id)
     actions.showFlow()
+  }
+
+  const onEvent = (event: GraphEvent): void => {
+    switch (event.type) {
+      case 'viewportChanged':
+        setZoom(event.viewport.zoom)
+        break
+      case 'subNetworkChanged':
+        setActiveNetworkId(event.activeNetworkId)
+        break
+      case 'nodeActivated': {
+        if (event.detail === 'click') {
+          openSession(event.nodeId as SessionId)
+          return
+        }
+        const node = adapted.document.nodes.find(n => n.id === event.nodeId)
+        if (groupMode === 'teams' && node?.networkId !== undefined && activeNetworkId === null) {
+          hostRef.current?.enterSubNetwork(node.networkId)
+          return
+        }
+        openFlow(event.nodeId as SessionId)
+        break
+      }
+      default:
+        break
+    }
   }
 
   if (snapshot.nodes.length === 0) {
@@ -109,13 +142,25 @@ function FleetPane(props: Props): ReactElement {
               type="button"
               className={css.groupButton}
               data-active={groupMode === item ? 'true' : 'false'}
-              onClick={() => { setGroupMode(item) }}
+              onClick={() => {
+                setGroupMode(item)
+                setActiveNetworkId(null)
+              }}
             >
               {t(`group.${item}`)}
             </button>
           ))}
         </div>
-        <ZoomControls t={t} viewport={viewport} contentWidth={layout.width} contentHeight={layout.height} />
+        {activeNetworkId !== null ? (
+          <button
+            type="button"
+            className={css.groupButton}
+            onClick={() => { hostRef.current?.exitSubNetwork() }}
+          >
+            {t('subnetwork.back')}
+          </button>
+        ) : null}
+        <ZoomControls t={t} zoom={zoom} hostRef={hostRef} />
         <div className={css.legend} aria-label={t('legend.title')}>
           <span><i className={`${css.swatch} ${css.swatchRunning}`} />{t('status.running')}</span>
           <span><i className={`${css.swatch} ${css.swatchIdle}`} />{t('status.idle')}</span>
@@ -123,74 +168,18 @@ function FleetPane(props: Props): ReactElement {
         </div>
         <span className={css.hint}>{t('hint.zoom')}</span>
       </div>
-      {groupMode === 'teams' ? (
+      {groupMode === 'teams' && !adapted.hasTeamNetworks ? (
         <div className={css.teamsNote}>{t('group.teams.unavailable')}</div>
       ) : null}
-      <ZoomStage viewport={viewport} label={t('view.canvas')}>
-        <defs>
-          <marker id="agent-canvas-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-            <path d="M0,0 L6,3 L0,6 Z" fill="#5a6478" />
-          </marker>
-        </defs>
-        {layout.groups.map(group => (
-          <g key={group.key}>
-            <rect className={css.groupRect} x={group.x} y={group.y} width={group.width} height={group.height} />
-            <text className={css.groupTitle} x={group.x + 14} y={group.y + 18}>{group.label}</text>
-          </g>
-        ))}
-        {snapshot.edges.map(edge => {
-          const from = nodeById.get(edge.from as string)
-          const to = nodeById.get(edge.to as string)
-          if (from === undefined || to === undefined) return null
-          const x1 = from.x + NODE_SIZE.width / 2
-          const y1 = from.y + NODE_SIZE.height
-          const x2 = to.x + NODE_SIZE.width / 2
-          const y2 = to.y
-          return (
-            <path
-              key={`${edge.kind}:${edge.from}:${edge.to}`}
-              className={css.edge}
-              d={`M ${x1} ${y1} C ${x1} ${(y1 + y2) / 2}, ${x2} ${(y1 + y2) / 2}, ${x2} ${y2}`}
-            />
-          )
-        })}
-        {layout.nodes.map(node => {
-          const statusClass = node.status === 'running'
-            ? css.nodeRunning
-            : node.status === 'cold' ? css.nodeCold : css.nodeIdle
-          const current = node.id === sessionId
-          return (
-            <g
-              key={node.id}
-              data-canvas-node="true"
-              transform={`translate(${node.x}, ${node.y})`}
-              onClick={() => { openSession(node.id) }}
-              onDoubleClick={(event) => {
-                event.preventDefault()
-                openFlow(node.id)
-              }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && event.shiftKey) openFlow(node.id)
-                else if (event.key === 'Enter') openSession(node.id)
-              }}
-              role="button"
-              tabIndex={0}
-              aria-label={node.title}
-            >
-              <rect
-                className={`${css.nodeRect} ${statusClass}${current ? ` ${css.nodeCurrent}` : ''}`}
-                width={NODE_SIZE.width}
-                height={NODE_SIZE.height}
-              />
-              <text className={css.nodeTitle} x={12} y={20}>{truncate(node.title, 18)}</text>
-              <text className={css.nodeMeta} x={12} y={36}>
-                {t(`status.${node.status}`)}
-                {node.origin === 'subagent' ? ' · sub' : ''}
-              </text>
-            </g>
-          )
-        })}
-      </ZoomStage>
+      <AITopoHost
+        ref={hostRef}
+        className={css.stage}
+        ariaLabel={t('view.canvas')}
+        document={adapted.document}
+        selectedIds={selectedIds}
+        fitToken={`${groupMode}:${adapted.layout.width}x${adapted.layout.height}`}
+        onEvent={onEvent}
+      />
     </div>
   )
 }
@@ -198,23 +187,49 @@ function FleetPane(props: Props): ReactElement {
 function FlowPane(props: Props): ReactElement {
   const { t, actions, useAgentFlow, sessionId } = props
   const flow = useAgentFlow(state => state)
-  const layout = useMemo(() => layoutAgentFlow(flow), [flow])
-  const nodeById = useMemo(
-    () => new Map(layout.nodes.map(node => [node.id, node])),
-    [layout.nodes],
-  )
-  const viewport = useCanvasViewport()
+  const adapted = useMemo(() => flowToDocument(flow, {
+    join: t('flow.join'),
+    parallel: t('flow.parallel'),
+  }), [flow, t])
+  const hostRef = useRef<AITopoHostHandle>(null)
+  const [zoom, setZoom] = useState(1)
   const [hover, setHover] = useState<{
     node: AgentFlowNode
     clientX: number
     clientY: number
   } | null>(null)
+  const pointerRef = useRef({ x: 0, y: 0 })
+  const nodeById = useMemo(
+    () => new Map(flow.nodes.map(node => [node.id, node])),
+    [flow.nodes],
+  )
 
-  useEffect(() => {
-    if (layout.nodes.length === 0) return
-    viewport.fit(layout.width, layout.height)
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- fit when graph size changes
-  }, [layout.width, layout.height, flow.turn])
+  const onEvent = (event: GraphEvent): void => {
+    switch (event.type) {
+      case 'viewportChanged':
+        setZoom(event.viewport.zoom)
+        break
+      case 'hoverChanged': {
+        if (event.hoverId === undefined) {
+          setHover(null)
+          return
+        }
+        const node = nodeById.get(event.hoverId)
+        if (node === undefined) {
+          setHover(null)
+          return
+        }
+        setHover({
+          node,
+          clientX: pointerRef.current.x,
+          clientY: pointerRef.current.y,
+        })
+        break
+      }
+      default:
+        break
+    }
+  }
 
   return (
     <div className={css.root} data-conversation-composer-overlay="">
@@ -228,7 +243,7 @@ function FlowPane(props: Props): ReactElement {
             : t('flow.title', { turn: String(flow.turn) })}
         </span>
         <span className={css.hint}>{truncate(String(sessionId), 24)}</span>
-        <ZoomControls t={t} viewport={viewport} contentWidth={layout.width} contentHeight={layout.height} />
+        <ZoomControls t={t} zoom={zoom} hostRef={hostRef} />
         <div className={css.legend} aria-label={t('legend.title')}>
           <span><i className={`${css.swatch} ${css.swatchKindInput}`} />{t('flow.kind.client-input')}</span>
           <span><i className={`${css.swatch} ${css.swatchKindAdmit}`} />{t('flow.kind.host-admit')}</span>
@@ -238,52 +253,28 @@ function FlowPane(props: Props): ReactElement {
           <span><i className={`${css.swatch} ${css.swatchFlowActive}`} />{t('flow.legend.active')}</span>
         </div>
       </div>
-      {layout.nodes.length === 0 ? (
+      {adapted.layout.nodes.length === 0 ? (
         <div className={css.empty}>{t('flow.empty')}</div>
       ) : (
-        <div className={css.flowStageWrap}>
-          <ZoomStage viewport={viewport} label={t('flow.title.none')}>
-            <defs>
-              <marker id="agent-flow-arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-                <path d="M0,0 L6,3 L0,6 Z" fill="#5a6478" />
-              </marker>
-            </defs>
-            {layout.groups.map(group => (
-              <g key={group.key}>
-                <rect
-                  className={css.stepGroupRect}
-                  x={group.x}
-                  y={group.y}
-                  width={group.width}
-                  height={group.height}
-                />
-                <text className={css.groupTitle} x={group.x + 14} y={group.y + 18}>{group.label}</text>
-              </g>
-            ))}
-            {layout.edges.map(edge => {
-              const from = nodeById.get(edge.from)
-              const to = nodeById.get(edge.to)
-              if (from === undefined || to === undefined) return null
-              const a = flowAnchor(from, 'right')
-              const b = flowAnchor(to, 'left')
-              return (
-                <path
-                  key={`${edge.from}->${edge.to}`}
-                  className={css.flowEdge}
-                  markerEnd="url(#agent-flow-arrow)"
-                  d={`M ${a.x} ${a.y} C ${(a.x + b.x) / 2} ${a.y}, ${(a.x + b.x) / 2} ${b.y}, ${b.x} ${b.y}`}
-                />
-              )
-            })}
-            {layout.nodes.map(node => (
-              <FlowNodeGlyph
-                key={node.id}
-                node={node}
-                onHover={(clientX, clientY) => { setHover({ node, clientX, clientY }) }}
-                onLeave={() => { setHover(null) }}
-              />
-            ))}
-          </ZoomStage>
+        <div
+          className={css.flowStageWrap}
+          onMouseMove={event => {
+            pointerRef.current = { x: event.clientX, y: event.clientY }
+            if (hover !== null) {
+              setHover(prev => prev === null
+                ? null
+                : { ...prev, clientX: event.clientX, clientY: event.clientY })
+            }
+          }}
+        >
+          <AITopoHost
+            ref={hostRef}
+            className={css.stage}
+            ariaLabel={t('flow.title.none')}
+            document={adapted.document}
+            fitToken={`${flow.turn ?? 0}:${adapted.layout.width}x${adapted.layout.height}`}
+            onEvent={onEvent}
+          />
           {hover !== null ? (
             <FlowIoTooltip
               t={t}
@@ -295,68 +286,6 @@ function FlowPane(props: Props): ReactElement {
         </div>
       )}
     </div>
-  )
-}
-
-function FlowNodeGlyph(props: {
-  node: LaidOutFlowNode
-  onHover: (clientX: number, clientY: number) => void
-  onLeave: () => void
-}): ReactElement {
-  const { node, onHover, onLeave } = props
-  const kindClass = kindCss(node.kind)
-  const statusClass = node.status === 'active' ? css.flowStatusActive
-    : node.status === 'done' ? css.flowStatusDone
-      : node.status === 'error' ? css.flowStatusError
-        : css.flowStatusPending
-  const pulse = node.status === 'active' ? ` ${css.flowPulse}` : ''
-
-  const handlers = {
-    onMouseEnter: (event: ReactMouseEvent) => { onHover(event.clientX, event.clientY) },
-    onMouseMove: (event: ReactMouseEvent) => { onHover(event.clientX, event.clientY) },
-    onMouseLeave: () => { onLeave() },
-  }
-
-  if (node.kind === 'tool' && node.radius !== undefined) {
-    return (
-      <g
-        data-canvas-node="true"
-        className={css.flowNodeHit}
-        {...handlers}
-      >
-        <circle
-          className={`${css.flowTool} ${kindClass} ${statusClass}${pulse}`}
-          cx={node.x}
-          cy={node.y}
-          r={node.radius}
-        />
-        <text
-          className={css.flowToolLabel}
-          x={node.x}
-          y={node.y + 4}
-          textAnchor="middle"
-        >
-          {truncate(node.label, 8)}
-        </text>
-      </g>
-    )
-  }
-
-  return (
-    <g
-      data-canvas-node="true"
-      className={css.flowNodeHit}
-      transform={`translate(${node.x}, ${node.y})`}
-      {...handlers}
-    >
-      <rect
-        className={`${css.flowNode} ${kindClass} ${statusClass}${pulse}`}
-        width={node.width}
-        height={node.height}
-      />
-      <text className={css.nodeTitle} x={10} y={22}>{truncate(node.label, 16)}</text>
-      <text className={css.nodeMeta} x={10} y={40}>{truncate(node.detail ?? node.kind, 18)}</text>
-    </g>
   )
 }
 
@@ -384,64 +313,22 @@ function FlowIoTooltip(props: {
   )
 }
 
-function kindCss(kind: FlowNodeKind): string {
-  switch (kind) {
-    case 'client-input': return css.kindClientInput!
-    case 'host-admit': return css.kindHostAdmit!
-    case 'step': return css.kindStep!
-    case 'model': return css.kindModel!
-    case 'tool': return css.kindTool!
-    case 'turn-end': return css.kindTurnEnd!
-    case 'client-render': return css.kindClientRender!
-  }
-}
-
 function ZoomControls(props: {
   t: Props['t']
-  viewport: ReturnType<typeof useCanvasViewport>
-  contentWidth: number
-  contentHeight: number
+  zoom: number
+  hostRef: RefObject<AITopoHostHandle | null>
 }): ReactElement {
-  const { t, viewport, contentWidth, contentHeight } = props
+  const { t, zoom, hostRef } = props
   return (
     <div className={css.zoomControls} role="group" aria-label={t('zoom.group')}>
-      <button type="button" className={css.groupButton} onClick={() => { viewport.zoomOut() }} aria-label={t('zoom.out')}>−</button>
-      <span className={css.zoomBadge}>{formatZoomPercent(viewport.viewport.zoom)}</span>
-      <button type="button" className={css.groupButton} onClick={() => { viewport.zoomIn() }} aria-label={t('zoom.in')}>+</button>
-      <button type="button" className={css.groupButton} onClick={() => { viewport.reset() }}>{t('zoom.reset')}</button>
-      <button
-        type="button"
-        className={css.groupButton}
-        onClick={() => { viewport.fit(contentWidth, contentHeight) }}
-      >
+      <button type="button" className={css.groupButton} onClick={() => { hostRef.current?.zoomOut() }} aria-label={t('zoom.out')}>−</button>
+      <span className={css.zoomBadge}>{formatZoomPercent(zoom)}</span>
+      <button type="button" className={css.groupButton} onClick={() => { hostRef.current?.zoomIn() }} aria-label={t('zoom.in')}>+</button>
+      <button type="button" className={css.groupButton} onClick={() => { hostRef.current?.resetZoom() }}>{t('zoom.reset')}</button>
+      <button type="button" className={css.groupButton} onClick={() => { hostRef.current?.fitContent() }}>
         {t('zoom.fit')}
       </button>
     </div>
-  )
-}
-
-function ZoomStage(props: {
-  viewport: ReturnType<typeof useCanvasViewport>
-  label: string
-  children: ReactNode
-}): ReactElement {
-  const { viewport, label, children } = props
-  return (
-    <svg
-      ref={viewport.stageRef as RefObject<SVGSVGElement>}
-      className={`${css.stageSvg}${viewport.dragging ? ` ${css.stageDragging}` : ''}`}
-      viewBox={viewport.viewBox}
-      preserveAspectRatio="xMidYMid meet"
-      onWheel={viewport.onWheel}
-      onPointerDown={viewport.onPointerDown}
-      onPointerMove={viewport.onPointerMove}
-      onPointerUp={viewport.onPointerUp}
-      onPointerCancel={viewport.onPointerUp}
-      role="region"
-      aria-label={label}
-    >
-      {children}
-    </svg>
   )
 }
 
