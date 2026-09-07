@@ -1,0 +1,153 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--dsw-surface-base, #0f1115);
+  color: var(--dsw-text-primary, #e8eaed);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--dsw-border-subtle, #2a2f3a);
+  flex-shrink: 0;
+}
+
+.groupLabel {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.groupButtons {
+  display: flex;
+  gap: 6px;
+}
+
+.groupButton {
+  appearance: none;
+  border: 1px solid var(--dsw-border-subtle, #3a4150);
+  background: transparent;
+  color: inherit;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.groupButton[data-active='true'] {
+  background: var(--dsw-surface-raised, #1c2230);
+  border-color: var(--dsw-accent, #5b8def);
+}
+
+.hint {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+.legend {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 11px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.swatchRunning { background: #3dd68c; }
+.swatchIdle { background: #5b8def; }
+.swatchCold { background: #8b93a7; }
+
+.stage {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+}
+
+.svg {
+  display: block;
+}
+
+.groupRect {
+  fill: var(--dsw-surface-raised, #161b26);
+  stroke: var(--dsw-border-subtle, #2a2f3a);
+  stroke-width: 1;
+  rx: 10;
+}
+
+.groupTitle {
+  fill: var(--dsw-text-secondary, #a8b0c0);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.nodeRect {
+  stroke-width: 1.5;
+  cursor: pointer;
+  rx: 8;
+}
+
+.nodeRunning {
+  fill: #143528;
+  stroke: #3dd68c;
+}
+
+.nodeIdle {
+  fill: #1a2438;
+  stroke: #5b8def;
+}
+
+.nodeCold {
+  fill: #1a1d24;
+  stroke: #8b93a7;
+}
+
+.nodeCurrent {
+  stroke-width: 2.5;
+  filter: drop-shadow(0 0 4px rgba(91, 141, 239, 0.45));
+}
+
+.nodeTitle {
+  fill: var(--dsw-text-primary, #e8eaed);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.nodeMeta {
+  fill: var(--dsw-text-secondary, #a8b0c0);
+  font-size: 10px;
+  pointer-events: none;
+}
+
+.edge {
+  fill: none;
+  stroke: #5a6478;
+  stroke-width: 1.25;
+  marker-end: url(#agent-canvas-arrow);
+  pointer-events: none;
+}
+
+.empty {
+  padding: 48px 16px;
+  text-align: center;
+  opacity: 0.6;
+  font-size: 14px;
+}
+
+.teamsNote {
+  font-size: 12px;
+  opacity: 0.7;
+  padding: 0 14px 8px;
+}
