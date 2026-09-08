@@ -173,7 +173,9 @@ export function deriveAgentFlow(
   const inputIds: string[] = []
   let aggregatedInput = ''
   let clientSurface: 'web' | 'cli' = 'web'
-  if (inputs.length === 0 && session.pendingSubmissions.length > 0 && live) {
+  // Gate on turn openness, not Session.running: an open Turn with running:false
+  // still owns the pending Web echo; an ended pin must not inherit a newer queue.
+  if (inputs.length === 0 && session.pendingSubmissions.length > 0 && !turnEnded) {
     // Pending echo from this Observe tab (Web Client plugin).
     const pending = session.pendingSubmissions[session.pendingSubmissions.length - 1]!
     const id = `input:pending:${pending.requestId}`

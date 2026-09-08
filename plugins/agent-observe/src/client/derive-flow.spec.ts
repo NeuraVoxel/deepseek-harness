@@ -463,4 +463,75 @@ describe('deriveAgentFlow focusTurn', () => {
     expect(flow.nodes.find(n => n.kind === 'client-render')?.status).toBe('done')
     expect(flow.nodes.find(n => n.kind === 'model')?.status).toBe('done')
   })
+
+  it('open non-running Turn still echoes pending Web submissions as client-input', () => {
+    const openTurn = [
+      {
+        type: 'turn/start',
+        seq: seq(0),
+        time: 1,
+        data: { turn: 1, trigger: { kind: 'message', source: { kind: 'user' } } },
+      },
+    ] as SessionEvent[]
+
+    const flow = deriveAgentFlow(
+      windowOf(openTurn),
+      sessionSnap({
+        running: false,
+        pendingSubmissions: [{
+          requestId: 'req-pending' as never,
+          placement: 'transcript',
+          time: 1,
+          text: 'queued from browser',
+          attachments: [],
+        }],
+      }),
+    )
+
+    expect(flow.turn).toBe(1)
+    expect(flow.running).toBe(false)
+    const input = flow.nodes.find(n => n.kind === 'client-input')
+    expect(input?.id).toBe('input:pending:req-pending')
+    expect(input?.label).toBe('Web input')
+    expect(input?.detail).toContain('queued from browser')
+    expect(input?.status).toBe('active')
+    expect(flow.clientSurface).toBe('web')
+  })
+
+  it('pinned ended Turn does not echo pending submissions from a newer queue', () => {
+    const endedThenOpen = [
+      ...completedTurn({
+        turn: 1,
+        startSeq: 0,
+        userText: 'first question',
+        assistantText: 'first answer',
+      }),
+      {
+        type: 'turn/start',
+        seq: seq(10),
+        time: 10,
+        data: { turn: 2, trigger: { kind: 'message', source: { kind: 'user' } } },
+      },
+    ] as SessionEvent[]
+
+    const flow = deriveAgentFlow(
+      windowOf(endedThenOpen),
+      sessionSnap({
+        running: true,
+        pendingSubmissions: [{
+          requestId: 'req-newer' as never,
+          placement: 'transcript',
+          time: 2,
+          text: 'belongs to turn 2',
+          attachments: [],
+        }],
+      }),
+      1,
+    )
+
+    expect(flow.turn).toBe(1)
+    expect(flow.nodes.find(n => n.kind === 'client-input')?.detail).toContain('first question')
+    expect(flow.nodes.some(n => n.id.startsWith('input:pending:'))).toBe(false)
+    expect(flow.nodes.some(n => n.detail?.includes('belongs to turn 2') ?? false)).toBe(false)
+  })
 })
