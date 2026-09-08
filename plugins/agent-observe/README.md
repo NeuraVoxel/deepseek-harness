@@ -8,6 +8,7 @@ Opt-in plugin: a **Observe** tab beside Chat / Trajectory that shows Session / A
 - Edges: subagent `parentId` links
 - Groups: **Workspace** (default), **Parent tree**, **Agent Teams** (SubNetwork when `teamId` exists)
 - Click a node → `sessions.open(id)`
+- **Turn shortcut:** a 28px icon on `conversation.chat.assistant-actions` (beside Turn usage) opens this tab; Turn-scoped payload injection is deferred
 - **Double-click** a node → process Canvas for that Agent’s **latest turn**, banded as
   `Client · Web/CLI (Input · session.prompt · session.follow · Render) → Host · Frame → Host · Step N`
 - **Client↔Host wire nodes:** `session.prompt` (unary Remote) and `session.follow` (stream Remote); Host-local buses stay inside Host admit / Session
@@ -43,7 +44,8 @@ Open any Session → switch to the **Observe** tab.
 |---|---|
 | `src/index.ts` | Host `ctx.agentObserve.snapshot()` |
 | `src/topology.ts` | Live Host topology fold |
-| `src/client/index.ts` | Registers `conversation.view` id `canvas` |
+| `src/client/index.ts` | Registers `conversation.view` id `observe` + composer shortcut |
+| `src/client/ViewShortcut.tsx` | Turn-tail icon that opens the Observe tab |
 | `src/client/ObserveView.tsx` | Toolbar + AITopo fleet / flow panes |
 | `src/client/aitopo/` | `AITopoHost` + snapshot/flow → `GraphDocument` adapters |
 | `src/client/derive-topology.ts` | Client list → fleet snapshot |

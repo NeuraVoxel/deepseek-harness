@@ -2,8 +2,9 @@
  * Agent Observe plugin — browser half.
  *
  * Registers an Observe tab on the conversation view ring (alongside Chat and
- * Trajectory). Fleet overview lists Agents; double-click opens a process
- * topology for the current Agent's latest turn.
+ * Trajectory), plus a per-Turn shortcut on `conversation.chat.assistant-actions`
+ * (beside Turn usage) that opens that tab. Fleet overview lists Agents;
+ * double-click opens a process topology for the current Agent's latest turn.
  */
 
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
@@ -11,11 +12,13 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SessionBinding } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
+import type {} from '@deepseek-ai/dsh-client-ui-chat/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-api-session-controller/client'
 import { ObserveView, type ObserveViewInjected } from './ObserveView.tsx'
+import { ViewShortcut } from './ViewShortcut.tsx'
 import { createAgentFlowSource } from './flow-source.ts'
 import type { AgentFlowSnapshot } from './derive-flow.ts'
 import { emptyAgentFlow } from './derive-flow.ts'
@@ -33,7 +36,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 export const inject = ['slots', 'locale', 'sessions']
 
 /**
- * Client plugin body: dictionaries + Observe conversation tab.
+ * Client plugin body: dictionaries, Observe conversation tab, per-Turn shortcut.
  * @param ctx - client root context.
  */
 export function apply(ctx: ClientContext): void {
@@ -71,4 +74,11 @@ export function apply(ctx: ClientContext): void {
       }
     },
   }, ObserveView))
+
+  ctx.slots.inject('conversation.chat.assistant-actions', () => ctx.slots.register({
+    name: 'conversation.chat.assistant-actions',
+    id: 'agent-observe',
+    order: 30,
+    locale: NS,
+  }, ViewShortcut))
 }

@@ -8,6 +8,7 @@
 - 边：subagent 的 `parentId`
 - 分组：默认 **Workspace**，可切 **父子树** / **Agent Teams**（有 `teamId` 时用 SubNetwork）
 - 单击节点 → `sessions.open(id)`
+- **Turn 快捷入口：** `conversation.chat.assistant-actions`（与 Turn usage 同行）上的 28px 图标打开本 Tab；按 Turn 灌数延后
 - **双击**节点 → 打开该 Agent **最近一轮**流程 Canvas，分区为
   `Client · Web/CLI（Input · session.prompt · session.follow · Render）→ Host · Frame → Host · Step N`
 - **Client↔Host 通信节点：** `session.prompt`（一元 Remote）与 `session.follow`（流式 Remote）；Host 本地总线留在 Host admit / Session 内
@@ -43,7 +44,8 @@ pnpm dsh --profile web-observe-demo
 |---|---|
 | `src/index.ts` | Host `ctx.agentObserve.snapshot()` |
 | `src/topology.ts` | Host 侧 live 拓扑 |
-| `src/client/index.ts` | 注册 `conversation.view`（id `canvas`） |
+| `src/client/index.ts` | 注册 `conversation.view`（id `observe`）+ 输入框快捷图标 |
+| `src/client/ViewShortcut.tsx` | Turn 尾栏打开观察 Tab 的图标 |
 | `src/client/ObserveView.tsx` | 工具条 + AITopo 总览 / 流程 |
 | `src/client/aitopo/` | `AITopoHost` + snapshot/flow → `GraphDocument` 适配 |
 | `src/client/derive-topology.ts` | Client 列表 → 总览 snapshot |

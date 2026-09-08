@@ -42,6 +42,9 @@
       "path": "../../packages/client/ui-conversation"
     },
     {
+      "path": "../../packages/client/ui-chat"
+    },
+    {
       "path": "../../packages/client/ui-primitives"
     },
     {

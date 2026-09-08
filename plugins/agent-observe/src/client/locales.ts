@@ -6,6 +6,7 @@ export const NS = 'agent-observe'
 /** Simplified Chinese dictionary (key-set source of truth). */
 export const zh = {
   'view.observe': '观察',
+  'dock.open': '打开观察',
   'toolbar.group': '分组',
   'group.workspace': 'Workspace',
   'group.tree': '父子树',
@@ -58,6 +59,7 @@ export const zh = {
 /** English dictionary (same key set). */
 export const en: Record<AgentObserveKey, string> = {
   'view.observe': 'Observe',
+  'dock.open': 'Open Observe',
   'toolbar.group': 'Group by',
   'group.workspace': 'Workspace',
   'group.tree': 'Parent tree',

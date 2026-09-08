@@ -6,6 +6,7 @@ export const NS = 'agent-orchestrator'
 /** Simplified Chinese dictionary (key-set source of truth). */
 export const zh = {
   'view.orchestrator': '编排',
+  'dock.open': '打开编排',
   'toolbar.preset': 'Preset',
   'hint.readonly': '只读投影 · 点击节点查看详情 · 编辑待 AITopo Editor',
   'hint.live': '会话执行中 · 已高亮 {count} 个相关插件',
@@ -63,6 +64,7 @@ export const zh = {
 /** English dictionary (same key set). */
 export const en: Record<AgentOrchestratorKey, string> = {
   'view.orchestrator': 'Orchestrate',
+  'dock.open': 'Open Orchestrate',
   'toolbar.preset': 'Preset',
   'hint.readonly': 'Read-only · click a node for details · editing waits on AITopo Editor',
   'hint.live': 'Session running · highlighting {count} related plugins',

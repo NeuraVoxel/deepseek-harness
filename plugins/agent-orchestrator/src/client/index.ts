@@ -1,9 +1,11 @@
 /**
  * Agent Orchestrator plugin — browser half.
  *
- * Registers an Orchestrate tab on the conversation view ring. Loads
- * composition via remote.pluginInventory.list and highlights units whose
- * tools are in flight on the current Session (observe stays on flow/data).
+ * Registers an Orchestrate tab on the conversation view ring, plus a per-Turn
+ * shortcut on `conversation.chat.assistant-actions` (beside Turn usage) that
+ * opens that tab. Loads composition via remote.pluginInventory.list and
+ * highlights units whose tools are in flight on the current Session (observe
+ * stays on flow/data).
  */
 
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
@@ -11,6 +13,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { SessionBinding } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
+import type {} from '@deepseek-ai/dsh-client-ui-chat/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
@@ -20,6 +23,7 @@ import {
   OrchestratorView,
   type OrchestratorViewInjected,
 } from './OrchestratorView.tsx'
+import { ViewShortcut } from './ViewShortcut.tsx'
 import { createCompositionActivitySource } from './activity-source.ts'
 import type { CompositionActivity } from './derive-activity.ts'
 import { en, NS, zh, type AgentOrchestratorKey } from './locales.ts'
@@ -35,7 +39,7 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
 export const inject = ['slots', 'locale', 'remote', 'remote.pluginInventory', 'sessions']
 
 /**
- * Client plugin body: dictionaries + Orchestrate conversation tab.
+ * Client plugin body: dictionaries, Orchestrate conversation tab, per-Turn shortcut.
  * @param ctx - client root context.
  */
 export function apply(ctx: ClientContext): void {
@@ -80,4 +84,11 @@ export function apply(ctx: ClientContext): void {
       }
     },
   }, OrchestratorView))
+
+  ctx.slots.inject('conversation.chat.assistant-actions', () => ctx.slots.register({
+    name: 'conversation.chat.assistant-actions',
+    id: 'agent-orchestrator',
+    order: 40,
+    locale: NS,
+  }, ViewShortcut))
 }
