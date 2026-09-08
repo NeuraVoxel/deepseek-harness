@@ -18,11 +18,13 @@ import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-api-session-controller/client'
 import { ObserveView, type ObserveViewInjected } from './ObserveView.tsx'
-import { ViewShortcut } from './ViewShortcut.tsx'
+import { ViewShortcut, type ViewShortcutInjected } from './ViewShortcut.tsx'
 import { createAgentFlowSource, type ObserveNavInstance } from './flow-source.ts'
 import type { AgentFlowSnapshot } from './derive-flow.ts'
 import { emptyAgentFlow } from './derive-flow.ts'
 import { createObserveNavStore } from './nav-store.ts'
+import { openConversationViewTab } from './open-view-tab.ts'
+import { resolveTurnFromMessageId } from './resolve-turn.ts'
 import { en, NS, zh, type AgentObserveKey } from './locales.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
@@ -84,5 +86,17 @@ export function apply(ctx: ClientContext): void {
     id: 'agent-observe',
     order: 30,
     locale: NS,
+    inject: (sessionId): ViewShortcutInjected => ({
+      openObserveFlow: (messageId) => {
+        const binding = ctx.sessions.binding(sessionId)
+        const turn = binding === undefined
+          ? undefined
+          : resolveTurnFromMessageId(binding.eventSource.getSnapshot(), messageId)
+        const nav = navStore.create(sessionId)
+        if (turn === undefined) nav.actions.showFlow()
+        else nav.actions.showFlow(turn)
+        openConversationViewTab(t('view.observe'))
+      },
+    }),
   }, ViewShortcut))
 }

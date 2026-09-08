@@ -24,6 +24,9 @@
       "path": "../../packages/core/agent"
     },
     {
+      "path": "../../packages/llm/llm"
+    },
+    {
       "path": "../../packages/api/session-controller/tsconfig.client.json"
     },
     {

@@ -8,7 +8,7 @@
 - 边：subagent 的 `parentId`
 - 分组：默认 **Workspace**，可切 **父子树** / **Agent Teams**（有 `teamId` 时用 SubNetwork）
 - 单击节点 → `sessions.open(id)`
-- **Turn 快捷入口：** `conversation.chat.assistant-actions`（与 Turn usage 同行）上的 28px 图标打开本 Tab；按 Turn 灌数延后
+- **Turn 快捷入口：** `conversation.chat.assistant-actions`（与 Turn usage 同行）上的 28px 图标打开本 Tab，并钉到该消息所属 Turn
 - **双击**节点 → 打开该 Agent **最近一轮**流程 Canvas，分区为
   `Client · Web/CLI（Input · session.prompt · session.follow · Render）→ Host · Frame → Host · Step N`
 - **Client↔Host 通信节点：** `session.prompt`（一元 Remote）与 `session.follow`（流式 Remote）；Host 本地总线留在 Host admit / Session 内

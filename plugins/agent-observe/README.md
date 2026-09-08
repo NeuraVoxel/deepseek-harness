@@ -8,7 +8,7 @@ Opt-in plugin: a **Observe** tab beside Chat / Trajectory that shows Session / A
 - Edges: subagent `parentId` links
 - Groups: **Workspace** (default), **Parent tree**, **Agent Teams** (SubNetwork when `teamId` exists)
 - Click a node → `sessions.open(id)`
-- **Turn shortcut:** a 28px icon on `conversation.chat.assistant-actions` (beside Turn usage) opens this tab; Turn-scoped payload injection is deferred
+- **Turn shortcut:** a 28px icon on `conversation.chat.assistant-actions` (beside Turn usage) opens this tab pinned to that message's Turn
 - **Double-click** a node → process Canvas for that Agent’s **latest turn**, banded as
   `Client · Web/CLI (Input · session.prompt · session.follow · Render) → Host · Frame → Host · Step N`
 - **Client↔Host wire nodes:** `session.prompt` (unary Remote) and `session.follow` (stream Remote); Host-local buses stay inside Host admit / Session
