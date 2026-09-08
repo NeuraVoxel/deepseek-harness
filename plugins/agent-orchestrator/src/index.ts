@@ -31,6 +31,7 @@ export {
   unitIdForHostEntry,
   type HostLoaderEntryInput,
 } from './from-inventory.ts'
+export { modulesForEventType, unitIdsForModules } from './participation-map.ts'
 export {
   layoutByArchitecturalLayer,
   layoutComposition,
