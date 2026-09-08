@@ -69,6 +69,7 @@
 .swatchRunning { background: #3dd68c; }
 .swatchIdle { background: #5b8def; }
 .swatchCold { background: #8b93a7; }
+.swatchArchived { background: #6b7280; border: 1px solid #9ca3af; box-sizing: border-box; }
 
 .swatchFlowActive { background: #f5a524; }
 .swatchFlowDone { background: #3dd68c; }

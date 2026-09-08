@@ -4,7 +4,7 @@
 
 可选插件：在 Chat / Trajectory **平级**增加 **Canvas** Tab，展示 Session / Agent 拓扑。
 
-- 节点：列表中的全部 Session，状态 `running` / `idle`
+- 节点：列表中的全部 Session，状态 `running` / `idle` / `archived`（`cold` 留给 Host 或后续 Remote）
 - 边：subagent 的 `parentId`
 - 分组：默认 **Workspace**，可切 **父子树** / **Agent Teams**（有 `teamId` 时用 SubNetwork）
 - 单击节点 → `sessions.open(id)`
@@ -52,7 +52,7 @@ pnpm dsh --profile web-canvas-demo
 
 ## 说明
 
-- Client 状态是近似的：只有 `running` 精确；冷会话与 idle live Agent 都会显示为 **idle**，除非后续加 Host Remote。
+- Client 状态是近似的：`running` 与 workspace **已归档**精确；非归档的冷会话在挂 Host Remote 前仍显示为 **idle**。
 - Agent Teams 分组依赖成员 `teamId`；没有时提示不可用。有 `teamId` 时双击进入 SubNetwork。
 - 图形渲染使用 `@neuravoxel/aitopo`（源码在 `vendor/aitopo`）。
 

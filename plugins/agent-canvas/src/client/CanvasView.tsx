@@ -166,6 +166,7 @@ function FleetPane(props: Props): ReactElement {
           <span><i className={`${css.swatch} ${css.swatchRunning}`} />{t('status.running')}</span>
           <span><i className={`${css.swatch} ${css.swatchIdle}`} />{t('status.idle')}</span>
           <span><i className={`${css.swatch} ${css.swatchCold}`} />{t('status.cold')}</span>
+          <span><i className={`${css.swatch} ${css.swatchArchived}`} />{t('status.archived')}</span>
         </div>
         <span className={css.hint}>{t('hint.zoom')}</span>
       </div>

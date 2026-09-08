@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 Opt-in plugin: a **Canvas** tab beside Chat / Trajectory that shows Session / Agent topology.
 
-- Nodes: every listed Session (Client list) with `running` / `idle` status
+- Nodes: every listed Session (Client list) with `running` / `idle` / `archived` status (`cold` reserved for Host or future Remote)
 - Edges: subagent `parentId` links
 - Groups: **Workspace** (default), **Parent tree**, **Agent Teams** (SubNetwork when `teamId` exists)
 - Click a node → `sessions.open(id)`
@@ -52,7 +52,7 @@ Open any Session → switch to the **Canvas** tab.
 
 ## Notes
 
-- Client status is approximate: only `running` is exact; cold vs idle live Agents both appear as **idle** until a Host Remote is added.
+- Client status is approximate: `running` and workspace **archived** are exact; non-archived cold Sessions still appear as **idle** until a Host Remote exposes Agent attachment.
 - Agent Teams grouping needs membership (`teamId`); without it the tab shows the unavailable hint. With `teamId`, double-click enters a SubNetwork.
 - Graph rendering uses `@neuravoxel/aitopo` (vendored under `vendor/aitopo`).
 

@@ -113,4 +113,26 @@ describe('aitopo adapters', () => {
     expect(alarmsFromStatus('active', 'n1')).toBeUndefined()
     expect(alarmsFromStatus('error', 'n1', 'fail')?.[0]?.message).toBe('fail')
   })
+
+  it('maps archived fleet nodes to cold paint while keeping archived in meta', () => {
+    const snapshot: AgentCanvasSnapshot = {
+      updatedAt: '2026-09-07T00:00:00.000Z',
+      nodes: [
+        {
+          id: sid('archived'),
+          title: 'Old',
+          status: 'archived',
+          blank: false,
+        },
+      ],
+      edges: [],
+    }
+    const { document } = snapshotToDocument({
+      snapshot,
+      groupMode: 'workspace',
+      labels: { ungrouped: 'Ungrouped', workspaceTitle: id => id },
+    })
+    expect(document.nodes[0]?.status).toBe('cold')
+    expect(document.nodes[0]?.data?.meta).toBe('archived')
+  })
 })

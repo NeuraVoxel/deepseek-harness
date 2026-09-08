@@ -37,11 +37,13 @@ export function snapshotToDocument(options: SnapshotToDocumentOptions): FleetDoc
     const networkId = groupMode === 'teams' && node.teamId !== undefined
       ? `team:${node.teamId}`
       : undefined
+    // AITopo paints running/idle/cold; archive reuses cold chrome (gray).
+    const paintStatus = node.status === 'archived' ? 'cold' : node.status
     return {
       id,
       type: 'agent',
       label: node.title,
-      status: node.status,
+      status: paintStatus,
       x: node.x,
       y: node.y,
       w: NODE_SIZE.width,
