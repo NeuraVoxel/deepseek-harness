@@ -34,6 +34,12 @@
   min-width: 10rem;
 }
 
+.pluginCounts {
+  font-size: 12px;
+  opacity: 0.75;
+  white-space: nowrap;
+}
+
 .hostCatalogToggle {
   display: inline-flex;
   align-items: center;

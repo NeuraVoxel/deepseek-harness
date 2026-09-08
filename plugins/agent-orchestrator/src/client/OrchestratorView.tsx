@@ -12,6 +12,7 @@ import type { AgentPresetPluginGroup, PluginInventorySnapshot } from '@deepseek-
 import type { ArchitecturalLayerId } from '../architectural-layer.ts'
 import { fromInventory } from '../from-inventory.ts'
 import { documentForCanvas } from '../document-for-canvas.ts'
+import { pluginCountsFromDocument } from '../plugin-counts.ts'
 import { liveUnitIds, withLiveActivity } from '../map-tool-activity.ts'
 import { unitIdsForModules } from '../participation-map.ts'
 import { toGraphDocument, type GraphUnitMembership } from '../to-graph.ts'
@@ -228,6 +229,10 @@ export function OrchestratorView(props: Props): ReactElement {
       ? t('hint.liveIdle')
       : `${t('hint.readonly')} · ${t(showHostCatalog ? 'hint.membership' : 'hint.membershipPreset')}`
 
+  const counts = orchestrationDoc === null
+    ? null
+    : pluginCountsFromDocument(orchestrationDoc)
+
   return (
     <div className={css.root} data-conversation-composer-overlay="">
       <div className={css.toolbar}>
@@ -246,6 +251,14 @@ export function OrchestratorView(props: Props): ReactElement {
             </option>
           ))}
         </select>
+        {counts !== null ? (
+          <span className={css.pluginCounts} aria-live="polite">
+            {t('toolbar.pluginCounts', {
+              composition: counts.composition,
+              catalog: counts.catalog,
+            })}
+          </span>
+        ) : null}
         <label className={css.hostCatalogToggle}>
           <input
             type="checkbox"

@@ -32,6 +32,7 @@ export {
   type HostLoaderEntryInput,
 } from './from-inventory.ts'
 export { documentForCanvas } from './document-for-canvas.ts'
+export { pluginCountsFromDocument, type PluginCounts } from './plugin-counts.ts'
 export { modulesForEventType, unitIdsForModules } from './participation-map.ts'
 export {
   layoutByArchitecturalLayer,
