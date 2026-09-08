@@ -272,6 +272,7 @@ Profile 组装插件树
 | [005 · AgentLoop](./005-解剖AgentLoop.md) | 本篇「ReAct」的源码解剖 |
 | [006 · Presets](./006-四种Agent-Presets对比.md) | Composition 之后「本会话有哪些 Consumer」 |
 | [004 · 双进程](./004-Web-UI双进程与dual-face.md) | Host 跑 loop/seam；浏览器消费投影与 Remote |
+| [008 · dsh-base 插件](./008-dsh-base挂载了哪些插件.md) | Composition 第一层实际 insert 了哪些 seam / 工具行 |
 
 ---
 

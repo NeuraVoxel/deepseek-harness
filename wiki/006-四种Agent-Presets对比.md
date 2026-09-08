@@ -219,6 +219,7 @@ pnpm dsh web                                         # UI 里切换四个 preset
 | [005 · AgentLoop](./005-解剖AgentLoop.md) | Loop 跑 Turn/Step；**本篇**决定司机手里有哪些工具与提示词 |
 | [004 · 双进程](./004-Web-UI双进程与dual-face.md) | preset 挂载与 AgentLoop 一样只在 Host；浏览器只选 id / 看投影 |
 | [007 · Agent 设计模式](./007-Agent设计模式流程图.md) | Preset / Loop / Seam 在设计模式图中的位置 |
+| [008 · dsh-base 插件](./008-dsh-base挂载了哪些插件.md) | Host 共享核心（base）挂了什么；preset 再叠 Agent 平面 |
 
 ---
 
