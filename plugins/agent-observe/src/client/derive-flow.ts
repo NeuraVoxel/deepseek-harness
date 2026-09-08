@@ -61,9 +61,11 @@ export interface AgentFlowEdge {
   readonly label?: string
 }
 
-/** Flow snapshot for one Agent Session (latest turn focus). */
+/** Flow snapshot for one Agent Session (focus Turn or latest). */
 export interface AgentFlowSnapshot {
   readonly turn: number | null
+  /** Session max Turn (for Jump to latest); independent of the focused fold. */
+  readonly latestTurn: number | null
   /** Latest `agent-preset/selected` id when known (Host · Frame band label). */
   readonly agentPreset?: string
   /**
@@ -79,6 +81,7 @@ export interface AgentFlowSnapshot {
 
 const EMPTY: AgentFlowSnapshot = {
   turn: null,
+  latestTurn: null,
   nodes: [],
   edges: [],
   running: false,
@@ -95,14 +98,16 @@ export function emptyAgentFlow(): AgentFlowSnapshot {
 }
 
 /**
- * Fold the event window into a process topology for the latest turn.
+ * Fold the event window into a process topology for the focus Turn or latest.
  * @param window - Session event window from the Client binding.
  * @param session - Session lifecycle snapshot (running / pending).
+ * @param focusTurn - Pinned Turn number, or `null`/omitted for the Session latest.
  * @returns flow graph with active highlights.
  */
 export function deriveAgentFlow(
   window: SessionEventWindow,
   session: SessionSnapshot,
+  focusTurn: number | null = null,
 ): AgentFlowSnapshot {
   const durable: SessionEvent[] = []
   for (const entry of window.entries) {
@@ -110,12 +115,28 @@ export function deriveAgentFlow(
   }
 
   const latestTurn = findLatestTurn(durable)
-  if (latestTurn === null) {
+  if (latestTurn === null && focusTurn === null) {
     return deriveEngagingFlow(session)
+  }
+  const targetTurn = focusTurn ?? latestTurn
+  if (targetTurn === null) {
+    return { ...EMPTY, latestTurn, running: session.running, updatedAt: new Date().toISOString() }
+  }
+  if (focusTurn !== null && !durable.some(e =>
+    (e.type === 'turn/start' || e.type === 'turn/end') && e.data.turn === focusTurn
+  )) {
+    return {
+      turn: focusTurn,
+      latestTurn,
+      nodes: [],
+      edges: [],
+      running: session.running,
+      updatedAt: new Date().toISOString(),
+    }
   }
 
   // user/message and some injections carry no turn field — scope by turn/start…turn/end seq range.
-  const inTurn = eventsInTurn(durable, latestTurn)
+  const inTurn = eventsInTurn(durable, targetTurn)
   const nodes: AgentFlowNode[] = []
   const edges: AgentFlowEdge[] = []
   const add = (node: AgentFlowNode): void => { nodes.push(node) }
@@ -131,9 +152,11 @@ export function deriveAgentFlow(
   const turnEnded = inTurn.some(e => e.type === 'turn/end')
   const turnError = inTurn.find(e => e.type === 'turn/end'
     && (e.data.reason.kind === 'error' || e.data.reason.kind === 'aborted'))
+  // Pinned historical turns settle from their own turn/end even while Session runs a newer turn.
+  const live = session.running && !turnEnded
   const frameStatus: FlowNodeStatus = turnEnded
     ? (turnError ? 'error' : 'done')
-    : session.running ? 'active' : 'done'
+    : live ? 'active' : 'done'
 
   const { sessionId, envelopeId, agentPreset } = addHarnessFrame({
     add,
@@ -141,15 +164,16 @@ export function deriveAgentFlow(
     session,
     durable,
     inTurn,
-    turn: latestTurn,
+    turn: targetTurn,
     status: frameStatus,
+    live,
   })
 
   const inputs = inTurn.filter(isUserPromptMessage)
   const inputIds: string[] = []
   let aggregatedInput = ''
   let clientSurface: 'web' | 'cli' = 'web'
-  if (inputs.length === 0 && session.pendingSubmissions.length > 0) {
+  if (inputs.length === 0 && session.pendingSubmissions.length > 0 && live) {
     // Pending echo from this Observe tab (Web Client plugin).
     const pending = session.pendingSubmissions[session.pendingSubmissions.length - 1]!
     const id = `input:pending:${pending.requestId}`
@@ -167,7 +191,7 @@ export function deriveAgentFlow(
       ].join('\n')),
       outputText: clipIo('Queued for Host admit'),
       status: 'active',
-      turn: latestTurn,
+      turn: targetTurn,
     })
   } else {
     inputs.forEach((event, index) => {
@@ -190,14 +214,14 @@ export function deriveAgentFlow(
         ].join('\n')),
         outputText: clipIo(`Remote prompt accepted → Host inbox (seq ${event.seq})`),
         status: 'done',
-        turn: latestTurn,
+        turn: targetTurn,
       })
     })
   }
 
-  const admitId = `admit:${latestTurn}`
-  const promptId = `remote-prompt:${latestTurn}`
-  const followId = `remote-follow:${latestTurn}`
+  const admitId = `admit:${targetTurn}`
+  const promptId = `remote-prompt:${targetTurn}`
+  const followId = `remote-follow:${targetTurn}`
 
   if (inputIds.length > 0) {
     add({
@@ -213,7 +237,7 @@ export function deriveAgentFlow(
       ].join('\n')),
       outputText: clipIo('SessionPromptValue { accepted: true } → Host SessionController.prompt'),
       status: 'done',
-      turn: latestTurn,
+      turn: targetTurn,
     })
   }
 
@@ -228,10 +252,10 @@ export function deriveAgentFlow(
       aggregatedInput || '(no user message yet)',
     ].join('\n')),
     outputText: clipIo(turnEnded
-      ? `turn/end · Turn ${latestTurn} closed`
+      ? `turn/end · Turn ${targetTurn} closed`
       : `turn/start open · running=${session.running}`),
     status: frameStatus,
-    turn: latestTurn,
+    turn: targetTurn,
   })
   // Client packs prompt → Remote session.prompt → Host admit (Host-local inbox).
   for (const inputId of inputIds) {
@@ -250,7 +274,7 @@ export function deriveAgentFlow(
     const pending = addStepAssembly({
       add,
       link,
-      turn: latestTurn,
+      turn: targetTurn,
       step: 0,
       stepKey: 'pending',
       envelopeId,
@@ -260,6 +284,7 @@ export function deriveAgentFlow(
       stepEvents: inTurn,
       stepEnded: false,
       pendingStep: true,
+      live,
     })
     previousAnchor = pending.previousAnchor
   }
@@ -270,7 +295,7 @@ export function deriveAgentFlow(
     const assembled = addStepAssembly({
       add,
       link,
-      turn: latestTurn,
+      turn: targetTurn,
       step,
       stepKey: String(step),
       envelopeId,
@@ -280,14 +305,15 @@ export function deriveAgentFlow(
       stepEvents,
       stepEnded,
       pendingStep: false,
+      live,
     })
     previousAnchor = assembled.previousAnchor
 
     const assistants = stepEvents.filter(e => e.type === 'assistant/message')
-    const modelId = `model:${latestTurn}:${step}`
+    const modelId = `model:${targetTurn}:${step}`
     modelIds.push(modelId)
     const hasAssistant = assistants.length > 0
-    const streaming = session.running && !stepEnded && !hasAssistant
+    const streaming = live && !stepEnded && !hasAssistant
     const lastAssistant = assistants[assistants.length - 1]
     const toolCallsFromAssistant = lastAssistant?.type === 'assistant/message'
       ? contentToolCalls(lastAssistant.data.message.content)
@@ -314,8 +340,8 @@ export function deriveAgentFlow(
       outputText: clipIo(streaming
         ? '(streaming… Host-local agent/assistant-stream; settles as assistant/message)'
         : assistantFull || '(no assistant/message yet)'),
-      status: streaming ? 'active' : hasAssistant || stepEnded ? 'done' : session.running ? 'active' : 'pending',
-      turn: latestTurn,
+      status: streaming ? 'active' : hasAssistant || stepEnded ? 'done' : live ? 'active' : 'pending',
+      turn: targetTurn,
       step,
     })
     // Context → Model: assembled request payload. Model → Session: assistant/message surface.
@@ -379,8 +405,8 @@ export function deriveAgentFlow(
         detail: done ? (info.error ? 'Error' : 'Result') : 'Running',
         inputText: clipIo(info.args ?? '(no arguments captured)'),
         outputText: clipIo(info.result ?? (done ? '(empty result)' : '(running…)')),
-        status: done ? (info.error ? 'error' : 'done') : session.running ? 'active' : 'pending',
-        turn: latestTurn,
+        status: done ? (info.error ? 'error' : 'done') : live ? 'active' : 'pending',
+        turn: targetTurn,
         step,
         callId,
       })
@@ -391,7 +417,7 @@ export function deriveAgentFlow(
 
     previousAnchor = toolIds.length > 0 ? toolIds[toolIds.length - 1]! : modelId
     if (toolIds.length > 1) {
-      const joinId = `join:${latestTurn}:${step}`
+      const joinId = `join:${targetTurn}:${step}`
       add({
         id: joinId,
         kind: 'join',
@@ -402,8 +428,8 @@ export function deriveAgentFlow(
         status: toolIds.every(id => nodes.find(n => n.id === id)?.status === 'done'
           || nodes.find(n => n.id === id)?.status === 'error')
           ? 'done'
-          : session.running ? 'active' : 'pending',
-        turn: latestTurn,
+          : live ? 'active' : 'pending',
+        turn: targetTurn,
         step,
       })
       for (const toolId of toolIds) link(toolId, joinId, 'flow')
@@ -412,8 +438,8 @@ export function deriveAgentFlow(
   }
 
   const endReason = turnError?.type === 'turn/end' ? turnError.data.reason.kind
-    : turnEnded ? 'completed' : session.running ? 'in-progress' : 'open'
-  const renderId = `client-render:${latestTurn}`
+    : turnEnded ? 'completed' : live ? 'in-progress' : 'open'
+  const renderId = `client-render:${targetTurn}`
 
   add({
     id: followId,
@@ -428,8 +454,8 @@ export function deriveAgentFlow(
       'history.follow repackages them onto this Remote stream.',
     ].join('\n')),
     outputText: clipIo('Client SessionEventStream applies journal → Conversation / Canvas UI'),
-    status: turnEnded ? 'done' : session.running ? 'active' : 'done',
-    turn: latestTurn,
+    status: turnEnded ? 'done' : live ? 'active' : 'done',
+    turn: targetTurn,
   })
 
   add({
@@ -439,11 +465,11 @@ export function deriveAgentFlow(
     detail: turnEnded ? 'Settled' : 'Live UI',
     inputText: clipIo([
       'UI binds SessionBinding.eventSource (follow frames), not llm.stream.',
-      `turn=${latestTurn} reason=${endReason}`,
+      `turn=${targetTurn} reason=${endReason}`,
     ].join('\n')),
     outputText: clipIo(turnEnded ? 'Chat / Trajectory settled' : 'Live stream / cards'),
-    status: turnError ? 'error' : turnEnded ? 'done' : session.running ? 'active' : 'done',
-    turn: latestTurn,
+    status: turnError ? 'error' : turnEnded ? 'done' : live ? 'active' : 'done',
+    turn: targetTurn,
   })
   // Durable log + Model transcript feed follow; follow feeds Client render.
   link(sessionId, followId, 'data')
@@ -457,7 +483,8 @@ export function deriveAgentFlow(
   }
 
   return {
-    turn: latestTurn,
+    turn: targetTurn,
+    latestTurn,
     ...(agentPreset === undefined ? {} : { agentPreset }),
     clientSurface,
     nodes,
@@ -475,8 +502,9 @@ function addHarnessFrame(args: {
   inTurn: readonly SessionEvent[]
   turn: number
   status: FlowNodeStatus
+  live: boolean
 }): { profileId: string; sessionId: string; envelopeId: string; agentPreset?: string } {
-  const { add, link, session, durable, inTurn, turn, status } = args
+  const { add, link, session, durable, inTurn, turn, status, live } = args
   const profileId = `profile:${session.sessionId}`
   const sessionNodeId = `session:${session.sessionId}`
   const envelopeId = `envelope:${turn}`
@@ -543,7 +571,7 @@ function addHarnessFrame(args: {
     outputText: clipIo(systemPreview
       ? `system prompt (${systemPreview.length} chars)\n${systemPreview}`
       : '(no request/header system yet — logged at first step assembly)'),
-    status: hasEnvelopeEvidence ? 'done' : session.running ? 'active' : 'pending',
+    status: hasEnvelopeEvidence ? 'done' : live ? 'active' : 'pending',
     turn,
   })
   // Header is Session-logged state (foldRequestHeader), not a separate Resource service.
@@ -570,10 +598,11 @@ function addStepAssembly(args: {
   stepEvents: readonly SessionEvent[]
   stepEnded: boolean
   pendingStep: boolean
+  live: boolean
 }): { previousAnchor: string; contextId: string } {
   const {
     add, link, turn, step, stepKey, envelopeId, previousAnchor, session,
-    durable, stepEvents, stepEnded, pendingStep,
+    durable, stepEvents, stepEnded, pendingStep, live,
   } = args
   // Pending (no step/start yet) still paints in the Host · Step band via step: 0.
   const stepOpt = pendingStep ? 0 : step
@@ -585,7 +614,7 @@ function addStepAssembly(args: {
   const memoryDetail = compaction === undefined
     ? `Session surface · ${surfaceBefore} msg`
     : `compaction · Session surface · ${surfaceBefore} msg`
-  const memoryActive = session.running && !stepEnded && compaction !== undefined && compaction.open
+  const memoryActive = live && !stepEnded && compaction !== undefined && compaction.open
   add({
     id: memoryId,
     kind: 'memory',
@@ -602,7 +631,7 @@ function addStepAssembly(args: {
       ?? 'session.deriveMessages() → Message[] history for GenerateOptions'),
     status: memoryActive ? 'active'
       : stepEnded || surfaceBefore > 0 || compaction !== undefined ? 'done'
-        : session.running ? 'active' : 'pending',
+        : live ? 'active' : 'pending',
     turn,
     step: stepOpt,
   })
@@ -653,7 +682,7 @@ function addStepAssembly(args: {
           `provider/model=${header.data.header.config.provider}/${header.data.header.config.model}`,
         ].join('\n')
       : '(awaiting assemble / request/header)'),
-    status: contextReady ? 'done' : session.running ? 'active' : 'pending',
+    status: contextReady ? 'done' : live ? 'active' : 'pending',
     turn,
     step: stepOpt,
   })
@@ -744,6 +773,7 @@ function deriveEngagingFlow(session: SessionSnapshot): AgentFlowSnapshot {
   }]
   return {
     turn: 0,
+    latestTurn: null,
     clientSurface: 'web',
     nodes,
     edges: [

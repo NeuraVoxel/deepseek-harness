@@ -20,6 +20,7 @@ describe('layoutAgentFlow Client / Host bands', () => {
   it('stacks sibling tools on the same X with distinct Y', () => {
     const snapshot: AgentFlowSnapshot = {
       turn: 1,
+      latestTurn: 1,
       running: false,
       updatedAt: '2026-09-07T00:00:00.000Z',
       nodes: [
@@ -81,6 +82,7 @@ describe('layoutAgentFlow Client / Host bands', () => {
   it('orders Client above Host · Frame above Host · Step with wire nodes in Client', () => {
     const snapshot: AgentFlowSnapshot = {
       turn: 1,
+      latestTurn: 1,
       clientSurface: 'web',
       running: false,
       updatedAt: '2026-09-07T00:00:00.000Z',
@@ -148,6 +150,7 @@ describe('layoutAgentFlow Client / Host bands', () => {
   it('labels Host · Frame with Turn and agent preset', () => {
     const snapshot: AgentFlowSnapshot = {
       turn: 1,
+      latestTurn: 1,
       agentPreset: 'standard',
       running: false,
       updatedAt: '2026-09-07T00:00:00.000Z',
@@ -170,6 +173,7 @@ describe('layoutAgentFlow Client / Host bands', () => {
   it('labels Client · Web when clientSurface is web', () => {
     const snapshot: AgentFlowSnapshot = {
       turn: 1,
+      latestTurn: 1,
       clientSurface: 'web',
       running: false,
       updatedAt: '2026-09-07T00:00:00.000Z',
@@ -192,6 +196,7 @@ describe('layoutAgentFlow Client / Host bands', () => {
   it('aligns Envelope and Context centers on one vertical spine', () => {
     const snapshot: AgentFlowSnapshot = {
       turn: 1,
+      latestTurn: 1,
       running: false,
       updatedAt: '2026-09-07T00:00:00.000Z',
       nodes: [
@@ -245,6 +250,7 @@ describe('layoutAgentFlow Client / Host bands', () => {
   it('places Join above the next Host · Step band', () => {
     const snapshot: AgentFlowSnapshot = {
       turn: 1,
+      latestTurn: 1,
       running: false,
       updatedAt: '2026-09-07T00:00:00.000Z',
       nodes: [

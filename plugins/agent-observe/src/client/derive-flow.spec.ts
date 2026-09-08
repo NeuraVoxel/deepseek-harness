@@ -305,3 +305,162 @@ describe('deriveAgentFlow harness nodes', () => {
     expect(flow.nodes.find(n => n.kind === 'client-input')?.label).toBe('Web input')
   })
 })
+
+/** Minimal completed turn with distinct user/assistant text for focusTurn cases. */
+function completedTurn(args: {
+  turn: number
+  startSeq: number
+  userText: string
+  assistantText: string
+}): SessionEvent[] {
+  const { turn, startSeq: s, userText, assistantText } = args
+  return [
+    {
+      type: 'turn/start',
+      seq: seq(s),
+      time: s,
+      data: { turn, trigger: { kind: 'message', source: { kind: 'user' } } },
+    },
+    {
+      type: 'user/message',
+      seq: seq(s + 1),
+      time: s + 1,
+      data: {
+        id: `u${turn}`,
+        role: 'user',
+        content: [{ type: 'text', text: userText }],
+        source: { kind: 'user' },
+      },
+      surfaceOp: 'append',
+    },
+    {
+      type: 'step/start',
+      seq: seq(s + 2),
+      time: s + 2,
+      data: { turn, step: 1 },
+    },
+    {
+      type: 'assistant/message',
+      seq: seq(s + 3),
+      time: s + 3,
+      data: {
+        turn,
+        step: 1,
+        message: {
+          id: `a${turn}`,
+          role: 'assistant',
+          content: [{ type: 'text', text: assistantText }],
+          source: { kind: 'model', provider: 'mock', model: 'm1' },
+        },
+      },
+      surfaceOp: 'append',
+    },
+    {
+      type: 'step/end',
+      seq: seq(s + 4),
+      time: s + 4,
+      data: { turn, step: 1 },
+    },
+    {
+      type: 'turn/end',
+      seq: seq(s + 5),
+      time: s + 5,
+      data: { turn, reason: { kind: 'completed' } },
+    },
+  ] as SessionEvent[]
+}
+
+describe('deriveAgentFlow focusTurn', () => {
+  const twoTurns = [
+    ...completedTurn({
+      turn: 1,
+      startSeq: 0,
+      userText: 'first question',
+      assistantText: 'first answer',
+    }),
+    ...completedTurn({
+      turn: 2,
+      startSeq: 10,
+      userText: 'second question',
+      assistantText: 'second answer',
+    }),
+  ]
+
+  it('pins Turn 1 while Turn 2 is latest', () => {
+    const flow = deriveAgentFlow(windowOf(twoTurns), sessionSnap(), 1)
+    expect(flow.turn).toBe(1)
+    expect(flow.latestTurn).toBe(2)
+    expect(flow.nodes.every(n => n.turn === 1)).toBe(true)
+    expect(flow.nodes.find(n => n.kind === 'client-input')?.detail).toContain('first question')
+    expect(flow.nodes.find(n => n.kind === 'model')?.outputText).toContain('first answer')
+    expect(flow.nodes.some(n =>
+      (n.detail?.includes('second') ?? false) || n.outputText.includes('second'),
+    )).toBe(false)
+  })
+
+  it('null or omitted focusTurn folds the latest Turn', () => {
+    const omitted = deriveAgentFlow(windowOf(twoTurns), sessionSnap())
+    expect(omitted.turn).toBe(2)
+    expect(omitted.latestTurn).toBe(2)
+    expect(omitted.nodes.find(n => n.kind === 'client-input')?.detail).toContain('second question')
+
+    const explicitNull = deriveAgentFlow(windowOf(twoTurns), sessionSnap(), null)
+    expect(explicitNull.turn).toBe(2)
+    expect(explicitNull.latestTurn).toBe(2)
+    expect(explicitNull.nodes.find(n => n.kind === 'model')?.outputText).toContain('second answer')
+  })
+
+  it('missing focusTurn yields an empty placeholder without retargeting', () => {
+    const flow = deriveAgentFlow(windowOf(twoTurns), sessionSnap(), 99)
+    expect(flow.turn).toBe(99)
+    expect(flow.latestTurn).toBe(2)
+    expect(flow.nodes).toEqual([])
+    expect(flow.edges).toEqual([])
+  })
+
+  it('pinned ended Turn settles even when Session is running a newer Turn', () => {
+    const liveTurn2 = [
+      ...completedTurn({
+        turn: 1,
+        startSeq: 0,
+        userText: 'first question',
+        assistantText: 'first answer',
+      }),
+      {
+        type: 'turn/start',
+        seq: seq(10),
+        time: 10,
+        data: { turn: 2, trigger: { kind: 'message', source: { kind: 'user' } } },
+      },
+      {
+        type: 'user/message',
+        seq: seq(11),
+        time: 11,
+        data: {
+          id: 'u2',
+          role: 'user',
+          content: [{ type: 'text', text: 'second question' }],
+          source: { kind: 'user' },
+        },
+        surfaceOp: 'append',
+      },
+      {
+        type: 'step/start',
+        seq: seq(12),
+        time: 12,
+        data: { turn: 2, step: 1 },
+      },
+    ] as SessionEvent[]
+
+    const flow = deriveAgentFlow(windowOf(liveTurn2), sessionSnap({ running: true }), 1)
+    expect(flow.turn).toBe(1)
+    expect(flow.latestTurn).toBe(2)
+    expect(flow.running).toBe(true)
+    expect(flow.nodes.length).toBeGreaterThan(0)
+    expect(flow.nodes.every(n => n.turn === 1)).toBe(true)
+    // Ended Turn must not pick up live-active from Session.running on a newer Turn.
+    expect(flow.nodes.some(n => n.status === 'active')).toBe(false)
+    expect(flow.nodes.find(n => n.kind === 'client-render')?.status).toBe('done')
+    expect(flow.nodes.find(n => n.kind === 'model')?.status).toBe('done')
+  })
+})

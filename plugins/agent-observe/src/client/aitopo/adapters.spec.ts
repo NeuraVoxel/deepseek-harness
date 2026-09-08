@@ -73,6 +73,7 @@ describe('aitopo adapters', () => {
   it('maps flow errors to alarms and tool circles to top-left bounds', () => {
     const snapshot: AgentFlowSnapshot = {
       turn: 1,
+      latestTurn: 1,
       running: false,
       updatedAt: '2026-09-07T00:00:00.000Z',
       nodes: [
