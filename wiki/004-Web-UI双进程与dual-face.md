@@ -291,6 +291,7 @@ Host 权威状态
 | [001](./001-一次hi对话的源码之旅.md) | 把「浏览器半边」钉在 connection + Client Session 上 |
 | [002](./002-目录结构与架构图.md) | 分清 `host/` 组 vs Host 进程 vs `client/` 组 |
 | [003](./003-解剖apps-web前端仓库.md) | 003 拆货架；本篇拆**进程与线** |
+| [010 · Host 启动顺序](./010-Host端内部启动顺序.md) | Host 进程从 argv 到 appReady（再到首个 preset）的时序 |
 
 ---
 

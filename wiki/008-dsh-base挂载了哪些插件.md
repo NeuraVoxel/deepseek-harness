@@ -182,6 +182,9 @@ less packages/bundle/base/cordis.patch.yml
 | [006 · Presets](./006-四种Agent-Presets对比.md) | Host（多在 base）vs Agent 平面（preset 清单） |
 | [007 · 设计模式](./007-Agent设计模式流程图.md) | Profile 组装 → Seam；base 即共享 Composition 第一层 |
 | [000 · 流程](./000-当前项目开发流程.md) | 改组合行时证据与 doc 同步落点 |
+| [009 · patch vs agent.cordis](./009-cordis.patch与agent.cordis的区别.md) | 本篇是典型 `cordis.patch.yml`；与 `agent.cordis.yml` 的平面差 |
+| [010 · Host 启动顺序](./010-Host端内部启动顺序.md) | base 行在 Loader 并发窗口里何时相对 listen / appReady |
+| [011 · 插件分组](./011-插件分组与主要作用.md) | 仓库全量包分组速查（本篇只列 base 实际挂上的子集） |
 
 ---
 
