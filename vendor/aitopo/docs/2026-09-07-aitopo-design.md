@@ -3,21 +3,21 @@
 **Package:** `@neuravoxel/aitopo`
 **Location:** `vendor/aitopo/`
 **Status:** approved design (2026-09-07)
-**Audience:** engine authors; `plugins/agent-canvas` integrators (phase 2)
+**Audience:** engine authors; `plugins/agent-observe` integrators (phase 2)
 **Implementation plan:** [2026-09-07-aitopo-implementation-plan.md](./2026-09-07-aitopo-implementation-plan.md)
 
 ## Summary
 
 AITopo is a Canvas topology engine for AI graphs (fleet, flow, teams, and later custom kinds). Humans and models share a versioned **Document / Patch / Events** protocol. Internally, a lean Scene + View layer (invalidate / validate / dirty-rect paint) drives a pluggable **Renderer** (Canvas 2D first; WebGL later). Design ideas come from `twaver.vector` in `vendor/SDK2D`; implementation is a clean-room TypeScript rewrite with no twaver source, runtime dependency, or public API names.
 
-Phase 1 ships the engine and a vanilla DOM demo. Phase 2 adapts `plugins/agent-canvas` behind a feature flag and retires the SVG path once behavior matches.
+Phase 1 ships the engine and a vanilla DOM demo. Phase 2 adapts `plugins/agent-observe` behind a feature flag and retires the SVG path once behavior matches.
 
 ## Goals
 
 1. General AI graph library: topology, tool/step flow, teams, extensible node kinds.
 2. Model-drivable surface: full document, incremental patch, structured event readback.
 3. Borrow twaver.vector ideas only: dual canvas, dirty validate loop, view cache, interaction plugins, zoom/viewport — new names and APIs.
-4. Prove the engine with unit tests + demo before changing `plugins/agent-canvas`.
+4. Prove the engine with unit tests + demo before changing `plugins/agent-observe`.
 
 ## Non-goals (phase 1)
 
@@ -40,7 +40,7 @@ Phase 1 ships the engine and a vanilla DOM demo. Phase 2 adapts `plugins/agent-c
 | Alarm | In scope — workflow errors / node alerts |
 | SubNetwork | In scope — Agent Teams drill-down (single level in phase 1) |
 | React | Deferred to plugin adapter |
-| Delivery | Engine + demo first; agent-canvas integration second |
+| Delivery | Engine + demo first; agent-observe integration second |
 
 ## Architecture
 
@@ -229,17 +229,17 @@ Phase 1: `PanZoomInteraction`, `SelectActivateInteraction` (click / dblclick →
 
 ### Layout
 
-- `layoutGrid`, `layoutFlowColumns` (cover agent-canvas fleet and flow).
+- `layoutGrid`, `layoutFlowColumns` (cover agent-observe fleet and flow).
 - Writes scene coordinates, marks dirty, emits `layoutCompleted`.
 
-## Phase 2 — agent-canvas integration
+## Phase 2 — agent-observe integration
 
 Plugin remains a patch mount; Host topology types stay in the plugin.
 
 ### Dependency
 
 ```
-plugins/agent-canvas → @neuravoxel/aitopo  (workspace / file: ../../vendor/aitopo)
+plugins/agent-observe → @neuravoxel/aitopo  (workspace / file: ../../vendor/aitopo)
 ```
 
 Bundle AITopo into the client entry (or a dedicated chunk) via existing tsdown config.
@@ -250,10 +250,10 @@ Bundle AITopo into the client entry (or a dedicated chunk) via existing tsdown c
 |---|---|
 | `derive-topology` / `derive-flow` | Keep |
 | `layout.ts` / `layout-flow.ts` | Call `network.layout` or precompute x/y then `load` |
-| SVG in `CanvasView.tsx` | `AITopoHost` React shell: mount / destroy / load / apply |
+| SVG in `ObserveView.tsx` | `AITopoHost` React shell: mount / destroy / load / apply |
 | `use-canvas-viewport` | Retire once Network owns the camera |
 
-Suggested files under `plugins/agent-canvas/src/client/aitopo/`:
+Suggested files under `plugins/agent-observe/src/client/aitopo/`:
 
 - `snapshot-to-document.ts`
 - `flow-to-document.ts`
@@ -280,7 +280,7 @@ Suggested files under `plugins/agent-canvas/src/client/aitopo/`:
 |---|---|---|
 | P0 | Skeleton: protocol zod, Scene, Canvas2D, dirty-rect loop, PanZoom/Select | Units + demo loads a static document |
 | P1 | Patch, Events, Alarm badges, SubNetwork enter/exit, grid/flow layout | Demo shows patch stream, alarms, drill-down |
-| P2 | agent-canvas Fleet via `AITopoHost` + flag | Fleet matches SVG behavior |
+| P2 | agent-observe Fleet via `AITopoHost` + flag | Fleet matches SVG behavior |
 | P3 | Flow + Teams SubNetwork; delete SVG | Flow highlight + error Alarm + team drill-down |
 
 ### P1 success criteria

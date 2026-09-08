@@ -6,7 +6,7 @@ English | [中文](2026-09-07-aitopo-dual-face-canvas-engine.zh.md)
 
 ## Problem
 
-`plugins/agent-canvas` renders Session and Agent topology with hand-rolled SVG. That path does not scale to a shared graphics library that both humans and models can drive, and it leaves no clean path to Agent Teams drill-down or workflow alarms. `vendor/SDK2D` (twaver) contains a mature vector Network stack, but copying its source or public APIs is unacceptable for licensing and ownership reasons.
+`plugins/agent-observe` renders Session and Agent topology with hand-rolled SVG. That path does not scale to a shared graphics library that both humans and models can drive, and it leaves no clean path to Agent Teams drill-down or workflow alarms. `vendor/SDK2D` (twaver) contains a mature vector Network stack, but copying its source or public APIs is unacceptable for licensing and ownership reasons.
 
 ## Proposal
 
@@ -16,10 +16,10 @@ Ship `@neuravoxel/aitopo` as a first-party TypeScript package under `vendor/aito
 2. Clean-room rewrite of twaver.vector ideas (dual canvas, dirty validate, interaction plugins) with new names and APIs; zero SDK2D imports.
 3. Dirty-rect paint from day one; full-frame invalidate on camera or resize.
 4. Alarm badges and single-level SubNetwork in the first engine milestone.
-5. Engine plus vanilla DOM demo before any `plugins/agent-canvas` integration.
+5. Engine plus vanilla DOM demo before any `plugins/agent-observe` integration.
 6. Canvas 2D renderer behind a `Renderer` interface reserved for WebGL later; no React in the engine package.
 
-Design: [vendor/aitopo/docs/2026-09-07-aitopo-design.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-design.md). Plan: [vendor/aitopo/docs/2026-09-07-aitopo-implementation-plan.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-implementation-plan.md). Plugin integration: [vendor/aitopo/docs/2026-09-07-aitopo-agent-canvas-integration.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-agent-canvas-integration.md).
+Design: [vendor/aitopo/docs/2026-09-07-aitopo-design.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-design.md). Plan: [vendor/aitopo/docs/2026-09-07-aitopo-implementation-plan.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-implementation-plan.md). Plugin integration: [vendor/aitopo/docs/2026-09-07-aitopo-agent-observe-integration.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-agent-observe-integration.md).
 
 ## Alternatives considered
 
@@ -35,7 +35,7 @@ Design: [vendor/aitopo/docs/2026-09-07-aitopo-design.md](../../../../vendor/aito
 - No React, Cordis, or `@deepseek-ai/dsh-*` dependencies in the engine package.
 - No imports from `vendor/SDK2D`.
 - `vendor/README.md` documents the first-party exception.
-- `plugins/agent-canvas` renders Fleet and Flow through `AITopoHost` only (no SVG stage / feature flag).
+- `plugins/agent-observe` renders Fleet and Flow through `AITopoHost` only (no SVG stage / feature flag).
 
 ## Risks
 

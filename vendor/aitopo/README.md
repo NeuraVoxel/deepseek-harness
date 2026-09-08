@@ -14,7 +14,7 @@ Design ideas come from `twaver.vector` in `vendor/SDK2D`. This package is a **cl
 
 ## Status
 
-First-party library under `vendor/` (not an upstream pin). Engine + vanilla demo ship before `plugins/agent-canvas` integration.
+First-party library under `vendor/` (not an upstream pin). Engine + vanilla demo ship before `plugins/agent-observe` integration.
 
 ## Commands
 

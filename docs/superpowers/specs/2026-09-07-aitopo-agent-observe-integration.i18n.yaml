@@ -1,0 +1,6 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): the git blob hash of each
+# side as of the last confirmed-consistent state. Both languages carry equal authority;
+# after editing either side, bring the other along and re-record with:
+#   pnpm run verify-translation-pairing --write docs/superpowers/specs/2026-09-07-aitopo-agent-observe-integration.md
+2026-09-07-aitopo-agent-observe-integration.md: 30cdac203e032da4b80beaf3e74e9aaf5129f747
+2026-09-07-aitopo-agent-observe-integration.zh.md: 09b02e87a74d1916d3e3afeb1ef7394a39ffef59

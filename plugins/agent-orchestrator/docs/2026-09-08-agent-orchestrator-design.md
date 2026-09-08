@@ -5,7 +5,7 @@
 **Audience:** plugin authors; harness composition maintainers
 **Graphics engine:** [`@neuravoxel/aitopo`](../../../vendor/aitopo/README.md)
 **AITopo editor requirements:** [2026-09-08-aitopo-editor-requirements.md](../../../vendor/aitopo/docs/2026-09-08-aitopo-editor-requirements.md)
-**Related (observation only):** [`plugins/agent-canvas`](../../agent-canvas/README.md)
+**Related (observation only):** [`plugins/agent-observe`](../../agent-observe/README.md)
 
 ## Summary
 
@@ -25,7 +25,7 @@
 - Changing `packages/core/agent-loop` or treating Cordis plugins as ordered loop steps.
 - Persisting orchestration through session-scoped dynamic Cordis.
 - Implementing node drag, marquee, dashed groups, or undo inside the plugin.
-- Merging with or replacing `agent-canvas` (runtime observation stays there).
+- Merging with or replacing `agent-observe` (runtime observation stays there).
 - Installing new Host bundles without process restart (document the limit; do not fake it).
 
 ## Decisions
@@ -35,7 +35,7 @@
 | Package home | `plugins/agent-orchestrator/` (npm name `dsh-agent-orchestrator`) |
 | Authority | `OrchestrationDocument` in the plugin; AITopo holds display/edit projection only |
 | First `OrchestrationKind` | `agent-preset-composition` |
-| Relation to agent-canvas | Sibling plugins; canvas observes, orchestrator authors |
+| Relation to agent-observe | Sibling plugins; canvas observes, orchestrator authors |
 | Graph editing | Blocked on AITopo Editor milestone ([requirements](../../../vendor/aitopo/docs/2026-09-08-aitopo-editor-requirements.md)) |
 | Hot load | Commit uses existing preset / patch paths; no new process composition engine |
 
@@ -131,7 +131,7 @@ Editable orchestration (drag into composition, lock, marquee, dashed composition
 | Authors treat nodes as loop steps | Document + kind naming; no step-order sink |
 | Plugin invents drag/undo ahead of AITopo | Hard rule in this design; block F1 on Editor APIs |
 | Commit implies mid-turn preset swap | Sink returns structured limitation; UI offers new-session / blank-select only |
-| Drift from agent-canvas AITopoHost | Share patterns by copy or later extract; do not put Cordis into AITopo |
+| Drift from agent-observe AITopoHost | Share patterns by copy or later extract; do not put Cordis into AITopo |
 
 ## Open choices (not blockers)
 

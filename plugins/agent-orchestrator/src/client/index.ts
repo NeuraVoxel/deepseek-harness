@@ -1,0 +1,51 @@
+/**
+ * Agent Orchestrator plugin — browser half.
+ *
+ * Registers an Orchestrate tab on the conversation view ring. F0 loads
+ * composition via remote.pluginInventory.list (no dedicated orchestrator Remote).
+ */
+
+import type { Context as ClientContext } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-client-locale/client'
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
+import type {} from '@deepseek-ai/dsh-client-ui-session/client'
+import type {} from '@deepseek-ai/dsh-api-remotes/client'
+import { OrchestratorView, type OrchestratorViewInjected } from './OrchestratorView.tsx'
+import { en, NS, zh, type AgentOrchestratorKey } from './locales.ts'
+
+declare module '@deepseek-ai/dsh-client-ui-slots' {
+  interface LocaleNamespaceMap {
+    /** Agent Orchestrator copy. */
+    'agent-orchestrator': AgentOrchestratorKey
+  }
+}
+
+/** Required services for slot registration, locale, and inventory Remote. */
+export const inject = ['slots', 'locale', 'remote', 'remote.pluginInventory']
+
+/**
+ * Client plugin body: dictionaries + Orchestrate conversation tab.
+ * @param ctx - client root context.
+ */
+export function apply(ctx: ClientContext): void {
+  ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'agent-orchestrator: dictionaries')
+  const t = ctx.locale.bind(NS)
+
+  const listInventory: OrchestratorViewInjected['listInventory'] = async () => {
+    const result = await ctx.remote.pluginInventory.list()
+    if (!result.ok) {
+      throw new Error(`pluginInventory.list failed: ${result.error.code}: ${result.error.message}`)
+    }
+    return result.value
+  }
+
+  ctx.slots.inject('conversation.view', () => ctx.slots.register({
+    name: 'conversation.view',
+    id: 'orchestrator',
+    order: 25,
+    locale: NS,
+    label: () => t('view.orchestrator'),
+    inject: (): OrchestratorViewInjected => ({ listInventory }),
+  }, OrchestratorView))
+}

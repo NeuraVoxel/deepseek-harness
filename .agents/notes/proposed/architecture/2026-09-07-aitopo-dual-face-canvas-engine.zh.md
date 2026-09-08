@@ -6,7 +6,7 @@ Status: proposed
 
 ## Problem
 
-`plugins/agent-canvas` 用手工 SVG 渲染 Session / Agent 拓扑。该路径难以扩展为人类与模型共用的图形库，也缺少 Agent Teams 下钻与工作流告警的干净接法。`vendor/SDK2D`（twaver）虽有成熟的 vector Network，但复制其源码或公开 API 在授权与所有权上不可接受。
+`plugins/agent-observe` 用手工 SVG 渲染 Session / Agent 拓扑。该路径难以扩展为人类与模型共用的图形库，也缺少 Agent Teams 下钻与工作流告警的干净接法。`vendor/SDK2D`（twaver）虽有成熟的 vector Network，但复制其源码或公开 API 在授权与所有权上不可接受。
 
 ## Proposal
 
@@ -16,10 +16,10 @@ Status: proposed
 2. 干净室重写 twaver.vector 思想（双 canvas、脏校验、交互插件），使用新命名与 API；零 SDK2D 导入。
 3. 第一期即按 dirty-rect 绘制；相机或尺寸变化时全帧失效。
 4. 第一期引擎包含 Alarm 角标与单层 SubNetwork。
-5. 先交付引擎与 vanilla DOM demo，再集成 `plugins/agent-canvas`。
+5. 先交付引擎与 vanilla DOM demo，再集成 `plugins/agent-observe`。
 6. Canvas 2D 实现放在可替换的 `Renderer` 接口之后（预留 WebGL）；引擎包不含 React。
 
-设计：[vendor/aitopo/docs/2026-09-07-aitopo-design.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-design.md)。计划：[vendor/aitopo/docs/2026-09-07-aitopo-implementation-plan.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-implementation-plan.md)。插件集成：[vendor/aitopo/docs/2026-09-07-aitopo-agent-canvas-integration.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-agent-canvas-integration.md)。
+设计：[vendor/aitopo/docs/2026-09-07-aitopo-design.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-design.md)。计划：[vendor/aitopo/docs/2026-09-07-aitopo-implementation-plan.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-implementation-plan.md)。插件集成：[vendor/aitopo/docs/2026-09-07-aitopo-agent-observe-integration.md](../../../../vendor/aitopo/docs/2026-09-07-aitopo-agent-observe-integration.md)。
 
 ## Alternatives considered
 
@@ -35,7 +35,7 @@ Status: proposed
 - 引擎包无 React、Cordis、`@deepseek-ai/dsh-*` 依赖。
 - 无 `vendor/SDK2D` 导入。
 - `vendor/README.md` 写明第一方例外。
-- `plugins/agent-canvas` 仅通过 `AITopoHost` 渲染 Fleet / Flow（无 SVG 舞台 / feature flag）。
+- `plugins/agent-observe` 仅通过 `AITopoHost` 渲染 Fleet / Flow（无 SVG 舞台 / feature flag）。
 
 ## Risks
 

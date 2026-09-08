@@ -1,0 +1,80 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--dsw-surface-base, #0f1115);
+  color: var(--dsw-text-primary, #e8eaed);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--dsw-border-subtle, #2a2f3a);
+  flex-shrink: 0;
+}
+
+.presetLabel {
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.presetSelect {
+  appearance: none;
+  border: 1px solid var(--dsw-border-subtle, #3a4150);
+  background: var(--dsw-surface-raised, #1a1f2a);
+  color: inherit;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  min-width: 10rem;
+}
+
+.hint {
+  font-size: 12px;
+  opacity: 0.65;
+  margin-left: auto;
+}
+
+.zoomGroup {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.zoomButton {
+  appearance: none;
+  border: 1px solid var(--dsw-border-subtle, #3a4150);
+  background: transparent;
+  color: inherit;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.zoomBadge {
+  font-size: 12px;
+  opacity: 0.8;
+  min-width: 3rem;
+  text-align: center;
+}
+
+.stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.message {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  opacity: 0.8;
+  padding: 24px;
+}

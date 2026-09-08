@@ -19,7 +19,7 @@ In `vendor/aitopo`:
 - When `scene.hover` is a **node** id, incident edges with `kind === 'data'` also paint as hovered so payload routes light up without keeping bright idle data strokes.
 - Highlighted (hovered / selected) edges paint on the **overlay** canvas so node fills on the root layer cannot cover them.
 
-`plugins/agent-canvas` sets muted idle `data.stroke` (`#3a4846`) and teal `strokeHover` (`#5eead4`) for data edges; flow edges keep gray / blue.
+`plugins/agent-observe` sets muted idle `data.stroke` (`#3a4846`) and teal `strokeHover` (`#5eead4`) for data edges; flow edges keep gray / blue.
 
 Logged under `vendor/README.md` local modification #20.
 

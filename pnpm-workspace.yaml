@@ -3,7 +3,8 @@ packages:
   - packages/*/*
   # Opt-in example plugins under plugins/ (not part of shipped profiles).
   - plugins/turn-cost
-  - plugins/agent-canvas
+  - plugins/agent-observe
+  - plugins/agent-orchestrator
   # The Landlock launcher is developed with its harness consumers but keeps
   # its native build and publication scripts under native/landlock-run.
   - native/landlock-run

@@ -1,8 +1,8 @@
 # AITopo implementation plan
 
-> **For agentic workers:** Implement task-by-task. Steps use checkbox (`- [ ]`) syntax. Do not skip Verify gates. Do not edit `plugins/agent-canvas` until Part II.
+> **For agentic workers:** Implement task-by-task. Steps use checkbox (`- [ ]`) syntax. Do not skip Verify gates. Do not edit `plugins/agent-observe` until Part II.
 
-**Goal:** Ship `@neuravoxel/aitopo` under `vendor/aitopo` — dual-face Canvas topology engine (Protocol + Scene/View/Renderer), dirty-rect paint, Alarm + single-level SubNetwork, vanilla demo. Then integrate into `plugins/agent-canvas` (Part II).
+**Goal:** Ship `@neuravoxel/aitopo` under `vendor/aitopo` — dual-face Canvas topology engine (Protocol + Scene/View/Renderer), dirty-rect paint, Alarm + single-level SubNetwork, vanilla demo. Then integrate into `plugins/agent-observe` (Part II).
 
 **Design:** [vendor/aitopo/docs/2026-09-07-aitopo-design.md](./2026-09-07-aitopo-design.md)
 
@@ -326,7 +326,7 @@
 - [ ] **Step 1:** `pnpm --filter @neuravoxel/aitopo test` (or vitest path) green.
 - [ ] **Step 2:** Root typecheck includes the project reference.
 - [ ] **Step 3:** `rg "SDK2D|twaver" vendor/aitopo/src` is empty (comments may mention twaver only in README/docs).
-- [ ] **Step 4:** No changes under `plugins/agent-canvas`.
+- [ ] **Step 4:** No changes under `plugins/agent-observe`.
 
 **Suggested Part I commits:**
 1. Scaffold + vendor README + tsconfig
@@ -339,30 +339,30 @@ Keep `vendor/README.md` staged in every commit that touches `vendor/aitopo/src/*
 
 ---
 
-## Part II — agent-canvas integration (P2 → P3)
+## Part II — agent-observe integration (P2 → P3)
 
 > Start only after Part I P1 acceptance is signed off.
-> **Integration design (approved):** [2026-09-07-aitopo-agent-canvas-integration.md](./2026-09-07-aitopo-agent-canvas-integration.md)
+> **Integration design (approved):** [2026-09-07-aitopo-agent-observe-integration.md](./2026-09-07-aitopo-agent-observe-integration.md)
 > **Scope decision:** Chunks 12 + 13 in one delivery; **no feature flag**; SVG path removed in the same change.
 
 ### Chunk 12 — Dependency + Fleet host
 
 **Files:**
-- Modify `plugins/agent-canvas/package.json` (dependency `@neuravoxel/aitopo`)
-- Create `plugins/agent-canvas/src/client/aitopo/AITopoHost.tsx`
-- Create `plugins/agent-canvas/src/client/aitopo/snapshot-to-document.ts`
-- Create `plugins/agent-canvas/src/client/aitopo/flow-to-document.ts`
-- Create `plugins/agent-canvas/src/client/aitopo/alarms-from-status.ts`
-- Modify `plugins/agent-canvas/src/client/CanvasView.tsx` (Fleet stage → AITopoHost)
+- Modify `plugins/agent-observe/package.json` (dependency `@neuravoxel/aitopo`)
+- Create `plugins/agent-observe/src/client/aitopo/AITopoHost.tsx`
+- Create `plugins/agent-observe/src/client/aitopo/snapshot-to-document.ts`
+- Create `plugins/agent-observe/src/client/aitopo/flow-to-document.ts`
+- Create `plugins/agent-observe/src/client/aitopo/alarms-from-status.ts`
+- Modify `plugins/agent-observe/src/client/ObserveView.tsx` (Fleet stage → AITopoHost)
 - Modify client locales if new strings appear (i18n gate)
 
 - [ ] **Step 1:** Add workspace dependency; ensure client bundle resolves/inlines `@neuravoxel/aitopo`.
 - [ ] **Step 2:** `AITopoHost`: `useEffect` mount/destroy; props `document` / `patch` / event callbacks / zoom bridge; no Session brands inside engine.
-- [ ] **Step 3:** Adapters: `AgentCanvasSnapshot` → `GraphDocument`; flow snapshot → document; map error/active → alarms/styles.
+- [ ] **Step 3:** Adapters: `AgentObserveSnapshot` → `GraphDocument`; flow snapshot → document; map error/active → alarms/styles.
 - [ ] **Step 4:** Wire Fleet click/dblclick to existing `openSession` / `showFlow`.
 - [ ] **Step 5:** Toolbar zoom ± / fit / reset forward to Network viewport (replace `use-canvas-viewport` for Fleet).
 
-**Verify:** `pnpm --filter dsh-agent-canvas bundle`; manual Fleet open + dblclick flow.
+**Verify:** `pnpm --filter dsh-agent-observe bundle`; manual Fleet open + dblclick flow.
 
 ### Chunk 13 — Flow + Teams + retire SVG
 

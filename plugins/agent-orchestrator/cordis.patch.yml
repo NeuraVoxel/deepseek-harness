@@ -1,0 +1,9 @@
+# Opt-in Agent Orchestrator: Host half mounts the orchestration service;
+# browser half joins via package.json dsh.client once this row is in the Loader.
+#
+# Use a path relative to THIS file (not the bare package name). Bare names
+# resolve from $DSH_HOME/profiles/<profile>/, which has no workspace link unless
+# you `dsh plugin add` first.
+- insert:
+    - id: agent-orchestrator
+      name: './src/index.ts'
