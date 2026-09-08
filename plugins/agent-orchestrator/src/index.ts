@@ -36,8 +36,10 @@ export {
   layoutComposition,
   metaForEnablement,
   statusForEnablement,
+  styleForCatalog,
   styleForEnablement,
   toGraphDocument,
+  type GraphUnitMembership,
   type NodePaintStyle,
   type OrchestrationGraphLabels,
 } from './to-graph.ts'

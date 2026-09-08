@@ -73,8 +73,8 @@ export function layoutComposition(
 
 /**
  * Stack units into wiki-layer bands (①→⑨, then other); empty layers omitted.
- * Inventory order is preserved within each layer.
- * @param units - composition units.
+ * Caller order is preserved within each layer (composition before catalog when concatenated).
+ * @param units - canvas units.
  * @param columns - column count inside each band.
  * @returns id → coordinates.
  */
@@ -142,12 +142,45 @@ export function styleForEnablement(enabled: OrchestrationUnit['enabled']): NodeP
   }
 }
 
+/**
+ * Flat Host-catalog palette (muted vs composition enablement paint).
+ * @param enabled - unit enablement.
+ * @returns fill / stroke / label colors.
+ */
+export function styleForCatalog(enabled: OrchestrationUnit['enabled']): NodePaintStyle {
+  if (enabled === true) {
+    return {
+      fill: '#141416',
+      stroke: '#2A2A30',
+      labelColor: '#71717A',
+      metaColor: '#52525B',
+    }
+  }
+  if (enabled === 'conditional') {
+    return {
+      fill: '#121214',
+      stroke: '#25252A',
+      labelColor: '#63636B',
+      metaColor: '#3F3F46',
+    }
+  }
+  return {
+    fill: '#101012',
+    stroke: '#1F1F23',
+    labelColor: '#3F3F46',
+    metaColor: '#27272A',
+  }
+}
+
 /** Quiet second-line caption for enablement (avoids loud status tokens). */
 export function metaForEnablement(enabled: OrchestrationUnit['enabled']): string {
   if (enabled === true) return 'on'
   if (enabled === 'conditional') return 'if'
   return 'off'
 }
+
+/** Canvas membership for a projected unit. */
+export type GraphUnitMembership = 'composition' | 'catalog'
 
 /**
  * Explicit band geometry wrapping laid-out nodes (required by AITopo paint).
@@ -183,6 +216,7 @@ export function groupBandForNodes(
 
 /**
  * Convert an orchestration document into a loadable GraphDocument.
+ * Projects composition and Host catalog into the same wiki/011 layer bands.
  * @param document - authoritative orchestration document.
  * @param labels - localized group / empty strings.
  * @returns GraphDocument for Network.load.
@@ -222,7 +256,7 @@ export function toGraphDocument(
     }
   }
 
-  if (document.composition.length === 0) {
+  if (document.composition.length === 0 && document.catalog.length === 0) {
     const idle = styleForEnablement(false)
     return {
       version: 1,
@@ -248,8 +282,13 @@ export function toGraphDocument(
     }
   }
 
-  const positions = document.layout?.positions ?? layoutByArchitecturalLayer(document.composition)
-  const byLayer = groupUnitsByLayer(document.composition)
+  // Composition first, then catalog — layer grouping preserves that order within each band.
+  const canvasUnits = [...document.composition, ...document.catalog]
+  const positions = document.layout?.positions ?? layoutByArchitecturalLayer(canvasUnits)
+  const byLayer = groupUnitsByLayer(canvasUnits)
+  const membershipById = new Map<string, GraphUnitMembership>()
+  for (const unit of document.composition) membershipById.set(unit.id, 'composition')
+  for (const unit of document.catalog) membershipById.set(unit.id, 'catalog')
   const nodes: GraphNode[] = []
   const groups: GraphGroup[] = []
 
@@ -258,7 +297,10 @@ export function toGraphDocument(
     if (members === undefined || members.length === 0) continue
     const layerNodes: GraphNode[] = members.map(unit => {
       const pos = positions[unit.id] ?? { x: ORIGIN_X, y: ORIGIN_Y }
-      const paint = styleForEnablement(unit.enabled)
+      const membership = membershipById.get(unit.id) ?? 'composition'
+      const paint = membership === 'catalog'
+        ? styleForCatalog(unit.enabled)
+        : styleForEnablement(unit.enabled)
       return {
         id: unit.id,
         type: 'composition-unit',
@@ -276,7 +318,8 @@ export function toGraphDocument(
           locked: unit.locked,
           layer: unit.layer,
           packageGroup: unit.packageGroup,
-          meta: metaForEnablement(unit.enabled),
+          membership,
+          meta: membership === 'catalog' ? 'host' : metaForEnablement(unit.enabled),
           ...paint,
           ...(unit.condition !== undefined ? { condition: unit.condition } : {}),
           ...(unit.fiberPhase !== undefined ? { fiberPhase: unit.fiberPhase } : {}),

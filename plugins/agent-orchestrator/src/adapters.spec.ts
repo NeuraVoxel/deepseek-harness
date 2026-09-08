@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { resolveArchitecturalLayer } from './architectural-layer.ts'
+import { fromInventory } from './from-inventory.ts'
 import { displayLabelForRow, fromPresetComposition, unitIdForRow } from './from-preset.ts'
 import {
   layoutByArchitecturalLayer,
@@ -138,6 +139,7 @@ describe('toGraphDocument', () => {
       fiberPhase: 'active',
       layer: 'model-context',
       packageGroup: 'preset',
+      membership: 'composition',
       fill: '#1F1F23',
       stroke: '#3F3F46',
       meta: 'on',
@@ -181,6 +183,26 @@ describe('toGraphDocument', () => {
     const doc = fromPresetComposition({ ...sample, rows: [] })
     const graph = toGraphDocument(doc, labels)
     expect(graph.nodes[0]?.id).toBe('empty')
+  })
+
+  it('lays out catalog units in the same layer bands with host paint', () => {
+    const doc = fromInventory(sample, [
+      { entryId: 'host-ui', moduleName: '@deepseek-ai/dsh-client', enabled: true, fiberPhase: 'active' },
+    ])
+    const graph = toGraphDocument(doc, labels)
+    const host = graph.nodes.find(node => node.id === 'host:host-ui')
+    expect(host).toBeDefined()
+    expect(host?.data).toMatchObject({ membership: 'catalog', meta: 'host' })
+    expect(host?.data?.fill).not.toBe(styleForEnablement(true).fill)
+  })
+
+  it('draws Host-only bands when composition is empty but catalog is not', () => {
+    const doc = fromInventory({ ...sample, rows: [] }, [
+      { entryId: 'host-ui', moduleName: '@deepseek-ai/dsh-client', enabled: true, fiberPhase: 'active' },
+    ])
+    const graph = toGraphDocument(doc, labels)
+    expect(graph.nodes.some(node => node.id === 'empty')).toBe(false)
+    expect(graph.nodes.some(node => node.id === 'host:host-ui')).toBe(true)
   })
 
   it('layoutComposition assigns distinct grid positions', () => {
