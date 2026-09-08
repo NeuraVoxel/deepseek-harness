@@ -101,44 +101,52 @@ export function layoutByArchitecturalLayer(
 
 /**
  * Map enablement to a node status string for AITopo styling.
+ * Enabled units intentionally avoid `active` — AITopo thickens that stroke.
  * @param enabled - unit enablement.
  * @returns status token.
  */
 export function statusForEnablement(enabled: OrchestrationUnit['enabled']): string {
-  if (enabled === true) return 'active'
+  if (enabled === true) return 'done'
   if (enabled === 'conditional') return 'pending'
   return 'idle'
 }
 
 /**
- * Flat enablement palette: active → green, idle → gray, conditional → muted slate.
- * Applied via node.data so AITopo paint overrides built-in status colors.
+ * Flat enablement palette (paint via node.data).
+ * 未加载退后 · 已加载默认可读 · 激活态见 live highlight（反白实心）.
  * @param enabled - unit enablement.
  * @returns fill / stroke / label colors.
  */
 export function styleForEnablement(enabled: OrchestrationUnit['enabled']): NodePaintStyle {
   if (enabled === true) {
     return {
-      fill: '#143528',
-      stroke: '#3dd68c',
-      labelColor: '#d8f3e4',
-      metaColor: '#7dba9a',
+      fill: '#1F1F23',
+      stroke: '#3F3F46',
+      labelColor: '#E4E4E7',
+      metaColor: '#A1A1AA',
     }
   }
   if (enabled === 'conditional') {
     return {
-      fill: '#22262e',
-      stroke: '#8b939e',
-      labelColor: '#d0d4dc',
-      metaColor: '#9aa3b2',
+      fill: '#1C1C20',
+      stroke: '#36363C',
+      labelColor: '#D4D4D8',
+      metaColor: '#71717A',
     }
   }
   return {
-    fill: '#1a1d24',
-    stroke: '#6b7280',
-    labelColor: '#c4c9d4',
-    metaColor: '#8b919c',
+    fill: '#18181B',
+    stroke: '#27272A',
+    labelColor: '#52525B',
+    metaColor: '#3F3F46',
   }
+}
+
+/** Quiet second-line caption for enablement (avoids loud status tokens). */
+export function metaForEnablement(enabled: OrchestrationUnit['enabled']): string {
+  if (enabled === true) return 'on'
+  if (enabled === 'conditional') return 'if'
+  return 'off'
 }
 
 /**
@@ -268,6 +276,7 @@ export function toGraphDocument(
           locked: unit.locked,
           layer: unit.layer,
           packageGroup: unit.packageGroup,
+          meta: metaForEnablement(unit.enabled),
           ...paint,
           ...(unit.condition !== undefined ? { condition: unit.condition } : {}),
           ...(unit.fiberPhase !== undefined ? { fiberPhase: unit.fiberPhase } : {}),

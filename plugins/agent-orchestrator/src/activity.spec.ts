@@ -115,4 +115,53 @@ describe('deriveCompositionActivity', () => {
     expect(idle.runningToolNames).toEqual([])
     expect(idle.turnToolNames).toEqual([])
   })
+
+  it('does not inherit prior-turn tools when the latest turn has none', () => {
+    const events = {
+      entries: [
+        {
+          type: 'event',
+          event: { type: 'turn/start', seq: 1, time: 1, data: { turn: 1 } },
+        },
+        {
+          type: 'event',
+          event: {
+            type: 'tool/call',
+            seq: 2,
+            time: 2,
+            data: { turn: 1, step: 1, callId: 'c1', name: 'bash', arguments: '{}' },
+          },
+        },
+        {
+          type: 'event',
+          event: {
+            type: 'tool/result',
+            seq: 3,
+            time: 3,
+            data: {
+              turn: 1,
+              step: 1,
+              message: {
+                source: { type: 'tool-result', callId: 'c1' },
+                content: [{ type: 'tool-result', toolCallId: 'c1', content: [], isError: false }],
+                isError: false,
+              },
+            },
+          },
+        },
+        {
+          type: 'event',
+          event: { type: 'turn/end', seq: 4, time: 4, data: { turn: 1 } },
+        },
+        {
+          type: 'event',
+          event: { type: 'turn/start', seq: 5, time: 5, data: { turn: 2 } },
+        },
+      ],
+      hasMore: false,
+    } as never
+    const activity = deriveCompositionActivity(events, { running: true } as never, 'standard')
+    expect(activity.runningToolNames).toEqual([])
+    expect(activity.turnToolNames).toEqual([])
+  })
 })

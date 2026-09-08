@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>极简配色方案 · Tool Panel</title>
+<style>
+  /* ============ Design Tokens ============ */
+  :root {
+    --bg:            #FFFFFF;   /* 页面背景 */
+    --group-bg:      #FAFAFA;   /* 分组大框背景 */
+    --group-border:  #E5E5E5;   /* 分组大框描边 */
+    --group-title:   #9CA3AF;   /* 分组标题文字 */
+
+    /* 三态小卡片 */
+    --off-bg:        #F4F4F5;   /* 未加载：浅灰底 */
+    --off-border:    #E4E4E7;
+    --off-title:     #9CA3AF;
+    --off-tag:       #C4C4C8;
+
+    --on-bg:         #FFFFFF;   /* 已加载：白底细边 */
+    --on-border:     #D4D4D8;
+    --on-title:      #27272A;
+    --on-tag:        #9CA3AF;
+
+    --active-bg:     #18181B;   /* 激活中：纯黑实心 */
+    --active-title:  #FFFFFF;
+    --active-tag:    #A1A1AA;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    font-family: -apple-system, "SF Mono", "Menlo", "Consolas", monospace;
+    padding: 40px;
+    color: var(--on-title);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ============ Group ============ */
+  .group {
+    border: 1px solid var(--group-border);
+    background: var(--group-bg);
+    border-radius: 12px;
+    padding: 16px 18px 18px;
+    margin-bottom: 20px;
+    max-width: 1080px;
+  }
+  .group.small { max-width: 360px; }
+
+  .group-title {
+    font-size: 13px;
+    color: var(--group-title);
+    font-weight: 500;
+    margin-bottom: 12px;
+    letter-spacing: 0.2px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+  }
+  .group.small .grid { grid-template-columns: 1fr; }
+
+  /* ============ Card (base) ============ */
+  .card {
+    border-radius: 8px;
+    padding: 10px 14px 8px;
+    font-size: 14px;
+    line-height: 1.3;
+    transition: none;
+  }
+  .card .name { font-weight: 500; }
+  .card .tag  { font-size: 11px; margin-top: 4px; }
+
+  /* ============ Three states ============ */
+  .card.off {
+    background: var(--off-bg);
+    border: 1px solid var(--off-border);
+  }
+  .card.off .name { color: var(--off-title); }
+  .card.off .tag  { color: var(--off-tag); }
+
+  .card.on {
+    background: var(--on-bg);
+    border: 1px solid var(--on-border);
+  }
+  .card.on .name { color: var(--on-title); }
+  .card.on .tag  { color: var(--on-tag); }
+
+  .card.active {
+    background: var(--active-bg);
+    border: 1px solid var(--active-bg);
+  }
+  .card.active .name { color: var(--active-title); }
+  .card.active .tag  { color: var(--active-tag); }
+
+  /* ============ Legend ============ */
+  .legend {
+    max-width: 1080px;
+    margin-bottom: 28px;
+    padding: 16px 18px;
+    border: 1px solid var(--group-border);
+    border-radius: 12px;
+    background: #FFFFFF;
+  }
+  .legend h2 {
+    font-size: 13px;
+    color: var(--group-title);
+    font-weight: 500;
+    margin-bottom: 12px;
+  }
+  .legend-row {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 12px;
+    color: #52525B;
+  }
+  .legend-row:last-child { margin-bottom: 0; }
+  .swatch {
+    height: 36px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px;
+  }
+  .swatch.off    { background: var(--off-bg);    border: 1px solid var(--off-border); color: var(--off-title); }
+  .swatch.on     { background: var(--on-bg);     border: 1px solid var(--on-border);  color: var(--on-title); }
+  .swatch.active { background: var(--active-bg);  border: 1px solid var(--active-bg); color: var(--active-title); }
+  .hex { font-family: "SF Mono", Menlo, monospace; color: #71717A; }
+</style>
+</head>
+<body>
+
+<!-- ===== Legend ===== -->
+<div class="legend">
+  <h2>三态配色规范（极简 · 灰度层级）</h2>
+  <div class="legend-row">
+    <div class="swatch off">未加载 · off</div>
+    <div>背景 <span class="hex">#F4F4F5</span> · 边框 <span class="hex">#E4E4E7</span> · 文字 <span class="hex">#9CA3AF</span>　<span style="color:#A1A1AA">低对比度，视觉后退</span></div>
+  </div>
+  <div class="legend-row">
+    <div class="swatch on">已加载 · on</div>
+    <div>背景 <span class="hex">#FFFFFF</span> · 边框 <span class="hex">#D4D4D8</span> · 文字 <span class="hex">#27272A</span>　<span style="color:#A1A1AA">白底细边，默认可读态</span></div>
+  </div>
+  <div class="legend-row">
+    <div class="swatch active">激活中 · active</div>
+    <div>背景 <span class="hex">#18181B</span> 实心 · 文字 <span class="hex">#FFFFFF</span>　<span style="color:#A1A1AA">反色实心，视觉最强</span></div>
+  </div>
+</div>
+
+<!-- ===== ③ ===== -->
+<div class="group small">
+  <div class="group-title">③ Config, identity &amp; interaction</div>
+  <div class="grid">
+    <div class="card on"><div class="name">tool-ask-user</div><div class="tag">on</div></div>
+  </div>
+</div>
+
+<!-- ===== ④ ===== -->
+<div class="group">
+  <div class="group-title">④ Model context &amp; loop hygiene</div>
+  <div class="grid">
+    <div class="card on"><div class="name">persona</div><div class="tag">on</div></div>
+    <div class="card on"><div class="name">agent-instructions</div><div class="tag">on</div></div>
+    <div class="card on"><div class="name">skill-filesystem</div><div class="tag">on</div></div>
+    <div class="card active"><div class="name">tool-skill</div><div class="tag">on</div></div>
+
+    <div class="card on"><div class="name">command-goal</div><div class="tag">on</div></div>
+    <div class="card on"><div class="name">tool-goal</div><div class="tag">on</div></div>
+    <div class="card active"><div class="name">tool-todo</div><div class="tag">on</div></div>
+    <div class="card on"><div class="name">plan-mode</div><div class="tag">on</div></div>
+
+    <div class="card on"><div class="name">compaction-basic</div><div class="tag">on</div></div>
+    <div class="card on"><div class="name">command-compact</div><div class="tag">on</div></div>
+    <div class="card on"><div class="name">tool-result-pruner</div><div class="tag">on</div></div>
+  </div>
+</div>
+
+<!-- ===== ⑤ ===== -->
+<div class="group">
+  <div class="group-title">⑤ Execution world</div>
+  <div class="grid">
+    <div class="card active"><div class="name">tool-bash</div><div class="tag">on</div></div>
+    <div class="card off"><div class="name">tool-pwsh</div><div class="tag">off</div></div>
+    <div class="card on"><div class="name">tool-fs</div><div class="tag">on</div></div>
+    <div class="card on"><div class="name">tool-fs-search</div><div class="tag">on</div></div>
+
+    <div class="card on"><div class="name">tool-jobs</div><div class="tag">on</div></div>
+    <div class="card on"><div class="name">tool-web</div><div class="tag">on</div></div>
+    <div class="card on"><div class="name">tool-subagent-con…</div><div class="tag">on</div></div>
+    <div class="card active"><div class="name">tool-subagent</div><div class="tag">on</div></div>
+
+    <div class="card on"><div class="name">tool-subagent-fork</div><div class="tag">on</div></div>
+    <div class="card off"><div class="name">tool-subagent-cod…</div><div class="tag">off</div></div>
+    <div class="card off"><div class="name">tool-subagent-cla…</div><div class="tag">off</div></div>
+    <div class="card on"><div class="name">workflow-worker-t…</div><div class="tag">on</div></div>
+
+    <div class="card on"><div class="name">tool-workflow</div><div class="tag">on</div></div>
+    <div class="card on"><div class="name">tool-ralph</div><div class="tag">on</div></div>
+  </div>
+</div>
+
+<!-- ===== Other ===== -->
+<div class="group small">
+  <div class="group-title">Other / unknown</div>
+  <div class="grid">
+    <div class="card on"><div class="name">tool-subagent-lis…</div><div class="tag">on</div></div>
+  </div>
+</div>
+
+</body>
+</html>

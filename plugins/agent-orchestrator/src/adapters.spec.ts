@@ -138,18 +138,20 @@ describe('toGraphDocument', () => {
       fiberPhase: 'active',
       layer: 'model-context',
       packageGroup: 'preset',
-      fill: '#143528',
-      stroke: '#3dd68c',
+      fill: '#1F1F23',
+      stroke: '#3F3F46',
+      meta: 'on',
     })
-    expect(statusForEnablement(true)).toBe('active')
+    expect(statusForEnablement(true)).toBe('done')
     expect(statusForEnablement(false)).toBe('idle')
     expect(statusForEnablement('conditional')).toBe('pending')
-    expect(styleForEnablement(true).stroke).toBe('#3dd68c')
-    expect(styleForEnablement(false).stroke).toBe('#6b7280')
-    expect(graph.nodes.find(node => node.id === 'standard:persona')?.status).toBe('active')
+    expect(styleForEnablement(true).stroke).toBe('#3F3F46')
+    expect(styleForEnablement(false).stroke).toBe('#27272A')
+    expect(graph.nodes.find(node => node.id === 'standard:persona')?.status).toBe('done')
     expect(graph.nodes.find(node => node.id === 'standard:tool-fs')?.data).toMatchObject({
-      fill: '#1a1d24',
-      stroke: '#6b7280',
+      fill: '#18181B',
+      stroke: '#27272A',
+      labelColor: '#52525B',
     })
     expect(graph.nodes.find(node => node.id === 'standard:tool-fs')?.status).toBe('idle')
     expect(graph.nodes.find(node => node.id === 'standard:row:2')?.status).toBe('pending')

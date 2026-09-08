@@ -7,20 +7,20 @@ import { displayLabelForRow } from './from-preset.ts'
 import type { NodePaintStyle } from './to-graph.ts'
 import type { OrchestrationUnit } from './types.ts'
 
-/** Bright running paint (overrides enablement colors while the tool is in flight). */
+/** In-flight tool paint — 反白实心，视觉最强. */
 export const LIVE_RUNNING_STYLE: NodePaintStyle = {
-  fill: '#3b2410',
-  stroke: '#f97316',
-  labelColor: '#fff7ed',
-  metaColor: '#fdba74',
+  fill: '#F4F4F5',
+  stroke: '#E4E4E7',
+  labelColor: '#0A0A0A',
+  metaColor: '#27272A',
 }
 
-/** Softer “used this turn” paint for tools that already returned. */
+/** Used-this-turn paint — same inverted solid, quieter stroke. */
 export const LIVE_TURN_STYLE: NodePaintStyle = {
-  fill: '#2f1c0c',
-  stroke: '#fb923c',
-  labelColor: '#ffedd5',
-  metaColor: '#fdba74',
+  fill: '#F4F4F5',
+  stroke: '#D4D4D8',
+  labelColor: '#0A0A0A',
+  metaColor: '#3F3F46',
 }
 
 /**

@@ -92,7 +92,9 @@ export function deriveCompositionActivity(
       }
     }
   }
-  if (turnNames.size === 0) {
+  // Only when the window has no turn/start: otherwise an empty latest turn
+  // (text-only reply) must not inherit every tool from earlier turns.
+  if (turnNames.size === 0 && latestTurnStartSeq < 0) {
     for (const name of namesByCall.values()) turnNames.add(name)
   }
 

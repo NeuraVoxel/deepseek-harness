@@ -28,6 +28,7 @@ export { fromPresetComposition, unitIdForRow, displayLabelForRow } from './from-
 export {
   layoutByArchitecturalLayer,
   layoutComposition,
+  metaForEnablement,
   statusForEnablement,
   styleForEnablement,
   toGraphDocument,
