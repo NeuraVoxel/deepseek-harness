@@ -1,10 +1,11 @@
 /**
- * Derive which model tools are active on the current Session turn.
- * Used by the orchestrator composition canvas (not the observe flow graph).
+ * Derive which model tools and event-backed modules are active on the current
+ * Session turn. Used by the orchestrator composition canvas.
  */
 
 import type { SessionEventWindow, SessionSnapshot } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import { modulesForEventType } from '../participation-map.ts'
 
 /** Live composition activity for one Session. */
 export interface CompositionActivity {
@@ -22,6 +23,11 @@ export interface CompositionActivity {
    * While the Session is running these stay lit so short tools remain visible.
    */
   readonly turnToolNames: readonly string[]
+  /**
+   * Package module names implicated by curated Session events on the latest turn.
+   * Empty when the Session is not running.
+   */
+  readonly turnModuleNames: readonly string[]
 }
 
 const EMPTY: CompositionActivity = {
@@ -29,6 +35,7 @@ const EMPTY: CompositionActivity = {
   sessionRunning: false,
   runningToolNames: [],
   turnToolNames: [],
+  turnModuleNames: [],
 }
 
 /**
@@ -80,6 +87,7 @@ export function deriveCompositionActivity(
   }
 
   const turnNames = new Set<string>()
+  const turnModules = new Set<string>()
   for (const event of durable) {
     if (latestTurnStartSeq >= 0 && event.seq < latestTurnStartSeq) continue
     if (event.type === 'tool/call') {
@@ -90,6 +98,10 @@ export function deriveCompositionActivity(
       for (const part of event.data.message.content) {
         if (part.type === 'tool-call') turnNames.add(String(part.name))
       }
+      continue
+    }
+    for (const moduleName of modulesForEventType(event.type)) {
+      turnModules.add(moduleName)
     }
   }
   // Only when the window has no turn/start: otherwise an empty latest turn
@@ -103,6 +115,7 @@ export function deriveCompositionActivity(
     sessionRunning: session.running,
     runningToolNames: session.running ? [...openNames] : [],
     turnToolNames: session.running ? [...turnNames] : [],
+    turnModuleNames: session.running ? [...turnModules] : [],
   }
 }
 

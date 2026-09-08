@@ -10,6 +10,7 @@ import {
   LIVE_RUNNING_STYLE,
   LIVE_TURN_STYLE,
 } from './map-tool-activity.ts'
+import { unitIdsForModules } from './participation-map.ts'
 import { toGraphDocument } from './to-graph.ts'
 import type { PresetCompositionInput } from './types.ts'
 
@@ -132,6 +133,21 @@ describe('deriveCompositionActivity', () => {
     const idle = deriveCompositionActivity(events, { running: false } as never, null)
     expect(idle.runningToolNames).toEqual([])
     expect(idle.turnToolNames).toEqual([])
+    expect(idle.turnModuleNames).toEqual([])
+  })
+
+  it('collects turnModuleNames from compaction events on the latest turn', () => {
+    const events = {
+      entries: [
+        { type: 'event', event: { type: 'turn/start', seq: 1, time: 1, data: { turn: 1 } } },
+        { type: 'event', event: { type: 'compaction/start', seq: 2, time: 2, data: {} } },
+      ],
+      hasMore: false,
+    } as never
+    const activity = deriveCompositionActivity(events, { running: true } as never, 'standard')
+    expect(activity.turnModuleNames).toContain('@deepseek-ai/dsh-compaction')
+    const idle = deriveCompositionActivity(events, { running: false } as never, 'standard')
+    expect(idle.turnModuleNames).toEqual([])
   })
 
   it('does not inherit prior-turn tools when the latest turn has none', () => {
@@ -181,5 +197,33 @@ describe('deriveCompositionActivity', () => {
     const activity = deriveCompositionActivity(events, { running: true } as never, 'standard')
     expect(activity.runningToolNames).toEqual([])
     expect(activity.turnToolNames).toEqual([])
+    expect(activity.turnModuleNames).toEqual([])
+  })
+})
+
+describe('event module live paint', () => {
+  const labels = {
+    layerGroup: (layer: string) => layer,
+    empty: 'Empty',
+    broken: 'Broken',
+  }
+
+  it('paints composition units matched by turnModuleNames', () => {
+    const doc = fromPresetComposition({
+      id: 'standard',
+      trust: 'system',
+      isDefault: true,
+      rows: [
+        { entryId: 'compaction', moduleName: '@deepseek-ai/dsh-compaction', enabled: true },
+        { entryId: 'tool-bash', moduleName: '@deepseek-ai/dsh-tool-bash', enabled: true },
+      ],
+    })
+    const graph = toGraphDocument(doc, labels)
+    const turnIds = unitIdsForModules(doc.composition, ['@deepseek-ai/dsh-compaction'])
+    const live = withLiveActivity(graph, new Set(), turnIds)
+    const compaction = live.nodes.find(node => node.id === 'standard:compaction')
+    const bash = live.nodes.find(node => node.id === 'standard:tool-bash')
+    expect(compaction?.data).toMatchObject({ ...LIVE_TURN_STYLE, live: true, meta: 'this turn' })
+    expect(bash?.data?.live).not.toBe(true)
   })
 })
