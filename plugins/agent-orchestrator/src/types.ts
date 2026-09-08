@@ -2,6 +2,8 @@
  * Orchestration document types — plugin authority for composition projection.
  */
 
+import type { ArchitecturalLayerId } from './architectural-layer.ts'
+
 /** Schema version for {@link OrchestrationDocument}. */
 export const ORCHESTRATION_DOCUMENT_VERSION = 1 as const
 
@@ -11,10 +13,24 @@ export type OrchestrationKindId = 'agent-preset-composition'
 /** Effective enablement mirrored from inventory. */
 export type OrchestrationEnablement = boolean | 'conditional'
 
+/**
+ * Root-fiber phase for a live composition row, or null when nothing is mounted.
+ * Mirrors plugin-inventory's public vocabulary.
+ */
+export type OrchestrationFiberPhase =
+  | 'pending'
+  | 'loading'
+  | 'active'
+  | 'failed'
+  | 'unloading'
+  | null
+
 /** One catalog or composition unit (never an agent-loop step). */
 export interface OrchestrationUnit {
   /** Stable id within the document (preset row entry id or synthesized). */
   readonly id: string
+  /** Composition row entry id, or null when the row declares none. */
+  readonly entryId: string | null
   /** Module specifier the harness row names. */
   readonly moduleName: string
   /** Display label (defaults to moduleName). */
@@ -23,8 +39,14 @@ export interface OrchestrationUnit {
   readonly enabled: OrchestrationEnablement
   /** Optional !!js disabled expression text. */
   readonly condition?: string
+  /** Root-fiber phase when known from inventory; omitted on Host file-only reads. */
+  readonly fiberPhase?: OrchestrationFiberPhase
   /** When true, editor interactions must skip this unit (F1+). */
   readonly locked: boolean
+  /** Wiki/011 architectural layer for grouped display. */
+  readonly layer: ArchitecturalLayerId
+  /** packages/<group> when resolved from moduleName; null when unknown. */
+  readonly packageGroup: string | null
 }
 
 /** Optional dependency / exclusivity hook (unused in F0). */
@@ -65,6 +87,8 @@ export interface PresetCompositionRowInput {
   readonly moduleName: string
   readonly enabled: OrchestrationEnablement
   readonly condition?: string
+  /** Present on plugin-inventory Remote rows; absent on raw Host file reads. */
+  readonly fiberPhase?: OrchestrationFiberPhase
 }
 
 /** Narrow preset group input for {@link fromPresetComposition}. */

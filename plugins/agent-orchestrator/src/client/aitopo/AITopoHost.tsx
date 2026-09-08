@@ -27,6 +27,8 @@ export interface AITopoHostHandle {
   enterSubNetwork: (id: string) => void
   exitSubNetwork: () => void
   getZoom: () => number
+  /** Update selection without reloading the document. */
+  setSelection: (ids: readonly string[]) => void
 }
 
 export interface AITopoHostProps {
@@ -38,8 +40,6 @@ export interface AITopoHostProps {
   readonly onEvent?: ((event: GraphEvent) => void) | undefined
   /** When this token changes, fit content after load. */
   readonly fitToken?: string | number | undefined
-  /** Selection to apply after each load. */
-  readonly selectedIds?: readonly string[] | undefined
 }
 
 /**
@@ -49,7 +49,7 @@ export const AITopoHost = forwardRef(function AITopoHost(
   props: AITopoHostProps,
   ref: React.Ref<AITopoHostHandle>,
 ): ReactElement {
-  const { document: graphDoc, className, ariaLabel, onEvent, fitToken, selectedIds } = props
+  const { document: graphDoc, className, ariaLabel, onEvent, fitToken } = props
   const containerRef = useRef<HTMLDivElement>(null)
   const networkRef = useRef<Network | null>(null)
   const onEventRef = useRef(onEvent)
@@ -81,6 +81,9 @@ export const AITopoHost = forwardRef(function AITopoHost(
     enterSubNetwork: (id: string) => { networkRef.current?.enterSubNetwork(id) },
     exitSubNetwork: () => { networkRef.current?.exitSubNetwork() },
     getZoom: () => networkRef.current?.viewport.state.zoom ?? 1,
+    setSelection: (ids: readonly string[]) => {
+      networkRef.current?.setSelection(ids)
+    },
   }), [])
 
   useEffect(() => {
@@ -101,9 +104,8 @@ export const AITopoHost = forwardRef(function AITopoHost(
     const network = networkRef.current
     if (network === null) return
     network.load(graphDoc)
-    if (selectedIds !== undefined) network.setSelection(selectedIds)
     fitNetwork(network)
-  }, [graphDoc, selectedIds, fitToken])
+  }, [graphDoc, fitToken])
 
   return (
     <div

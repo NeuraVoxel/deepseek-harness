@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
+import { resolveArchitecturalLayer } from './architectural-layer.ts'
 import { fromPresetComposition, unitIdForRow } from './from-preset.ts'
-import { layoutComposition, statusForEnablement, toGraphDocument } from './to-graph.ts'
+import {
+  layoutByArchitecturalLayer,
+  layoutComposition,
+  statusForEnablement,
+  styleForEnablement,
+  toGraphDocument,
+} from './to-graph.ts'
 import type { PresetCompositionInput } from './types.ts'
 
 const sample: PresetCompositionInput = {
@@ -9,11 +16,35 @@ const sample: PresetCompositionInput = {
   name: 'Standard',
   isDefault: true,
   rows: [
-    { entryId: 'persona', moduleName: '@deepseek-ai/dsh-persona', enabled: true },
-    { entryId: 'tool-fs', moduleName: '@deepseek-ai/dsh-tool-fs', enabled: false },
+    { entryId: 'persona', moduleName: '@deepseek-ai/dsh-persona', enabled: true, fiberPhase: 'active' },
+    { entryId: 'tool-fs', moduleName: '@deepseek-ai/dsh-tool-fs', enabled: false, fiberPhase: null },
     { entryId: null, moduleName: '@deepseek-ai/dsh-tool-bash', enabled: 'conditional', condition: 'process.platform' },
   ],
 }
+
+describe('resolveArchitecturalLayer', () => {
+  it('maps known packages to wiki layers and package groups', () => {
+    expect(resolveArchitecturalLayer('@deepseek-ai/dsh-persona')).toEqual({
+      layer: 'model-context',
+      packageGroup: 'preset',
+    })
+    expect(resolveArchitecturalLayer('@deepseek-ai/dsh-tool-fs')).toEqual({
+      layer: 'execution',
+      packageGroup: 'fs',
+    })
+    expect(resolveArchitecturalLayer('@deepseek-ai/dsh-agent-instructions')).toEqual({
+      layer: 'model-context',
+      packageGroup: 'context',
+    })
+  })
+
+  it('falls back to other for unknown modules', () => {
+    expect(resolveArchitecturalLayer('../../plugins/contribute.js')).toEqual({
+      layer: 'other',
+      packageGroup: null,
+    })
+  })
+})
 
 describe('fromPresetComposition', () => {
   it('maps rows into locked composition units for system presets', () => {
@@ -24,9 +55,24 @@ describe('fromPresetComposition', () => {
     expect(doc.composition).toHaveLength(3)
     expect(doc.composition[0]).toMatchObject({
       id: 'standard:persona',
+      entryId: 'persona',
       moduleName: '@deepseek-ai/dsh-persona',
       enabled: true,
+      fiberPhase: 'active',
       locked: true,
+      layer: 'model-context',
+      packageGroup: 'preset',
+    })
+    expect(doc.composition[1]).toMatchObject({
+      layer: 'execution',
+      packageGroup: 'fs',
+      fiberPhase: null,
+    })
+    expect(doc.composition[2]?.fiberPhase).toBeUndefined()
+    expect(doc.composition[2]?.entryId).toBeNull()
+    expect(doc.composition[2]).toMatchObject({
+      layer: 'execution',
+      packageGroup: 'shell',
     })
     expect(unitIdForRow('standard', sample.rows[2]!, 2)).toBe('standard:row:2')
     expect(doc.composition[2]?.id).toBe('standard:row:2')
@@ -41,29 +87,54 @@ describe('fromPresetComposition', () => {
 
 describe('toGraphDocument', () => {
   const labels = {
-    compositionGroup: 'Composition',
+    layerGroup: (layer: string) => `Layer:${layer}`,
     empty: 'Empty',
     broken: 'Broken',
   }
 
-  it('projects composition units into a group with enablement status', () => {
+  it('projects composition units into architectural layer groups', () => {
     const doc = fromPresetComposition(sample)
     const graph = toGraphDocument(doc, labels)
     expect(graph.version).toBe(1)
     expect(graph.nodes).toHaveLength(3)
-    expect(graph.groups?.[0]?.memberIds).toEqual(graph.nodes.map(node => node.id))
-    expect(graph.groups?.[0]).toMatchObject({
-      x: 24,
-      y: 4,
-      w: 456,
-      h: 172,
+    expect(graph.groups).toHaveLength(2)
+    expect(graph.groups?.map(group => group.id)).toEqual([
+      'layer:model-context',
+      'layer:execution',
+    ])
+    expect(graph.groups?.[0]?.label).toBe('Layer:model-context')
+    expect(graph.groups?.[0]?.memberIds).toEqual(['standard:persona'])
+    expect(graph.groups?.[1]?.memberIds).toEqual(['standard:tool-fs', 'standard:row:2'])
+    expect(graph.nodes[0]?.groupId).toBe('layer:model-context')
+    expect(graph.nodes[0]?.data).toMatchObject({
+      entryId: 'persona',
+      moduleName: '@deepseek-ai/dsh-persona',
+      fiberPhase: 'active',
+      layer: 'model-context',
+      packageGroup: 'preset',
+      fill: '#143528',
+      stroke: '#3dd68c',
     })
     expect(statusForEnablement(true)).toBe('active')
     expect(statusForEnablement(false)).toBe('idle')
     expect(statusForEnablement('conditional')).toBe('pending')
-    expect(graph.nodes[0]?.status).toBe('active')
-    expect(graph.nodes[1]?.status).toBe('idle')
-    expect(graph.nodes[2]?.status).toBe('pending')
+    expect(styleForEnablement(true).stroke).toBe('#3dd68c')
+    expect(styleForEnablement(false).stroke).toBe('#6b7280')
+    expect(graph.nodes.find(node => node.id === 'standard:persona')?.status).toBe('active')
+    expect(graph.nodes.find(node => node.id === 'standard:tool-fs')?.data).toMatchObject({
+      fill: '#1a1d24',
+      stroke: '#6b7280',
+    })
+    expect(graph.nodes.find(node => node.id === 'standard:tool-fs')?.status).toBe('idle')
+    expect(graph.nodes.find(node => node.id === 'standard:row:2')?.status).toBe('pending')
+  })
+
+  it('stacks layer bands vertically', () => {
+    const doc = fromPresetComposition(sample)
+    const graph = toGraphDocument(doc, labels)
+    const modelY = graph.nodes.find(node => node.id === 'standard:persona')?.y ?? 0
+    const execY = graph.nodes.find(node => node.id === 'standard:tool-fs')?.y ?? 0
+    expect(execY).toBeGreaterThan(modelY)
   })
 
   it('renders a broken note when meta.broken is set', () => {
@@ -86,7 +157,28 @@ describe('toGraphDocument', () => {
 
   it('layoutComposition assigns distinct grid positions', () => {
     const positions = layoutComposition(fromPresetComposition(sample).composition, 2)
-    expect(positions['standard:persona']).toEqual({ x: 40, y: 48 })
-    expect(positions['standard:tool-fs']).toEqual({ x: 264, y: 48 })
+    expect(positions['standard:persona']).toEqual({ x: 24, y: 28 })
+    expect(positions['standard:tool-fs']).toEqual({ x: 204, y: 28 })
+  })
+
+  it('layoutByArchitecturalLayer preserves order within a layer', () => {
+    const positions = layoutByArchitecturalLayer(fromPresetComposition(sample).composition, 2)
+    expect(positions['standard:tool-fs']?.y).toBe(positions['standard:row:2']?.y)
+    expect(positions['standard:tool-fs']?.x).toBeLessThan(positions['standard:row:2']?.x ?? 0)
+  })
+
+  it('uses a denser default column count for flat layout', () => {
+    const many = fromPresetComposition({
+      ...sample,
+      rows: Array.from({ length: 5 }, (_, index) => ({
+        entryId: `p${index}`,
+        moduleName: '@deepseek-ai/dsh-persona',
+        enabled: true as const,
+      })),
+    })
+    const positions = layoutByArchitecturalLayer(many.composition)
+    expect(positions['standard:p0']).toEqual({ x: 24, y: 28 })
+    expect(positions['standard:p3']).toEqual({ x: 24 + 3 * (168 + 12), y: 28 })
+    expect(positions['standard:p4']?.y).toBe(28 + 36 + 10)
   })
 })

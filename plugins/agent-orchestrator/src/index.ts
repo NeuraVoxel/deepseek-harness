@@ -16,6 +16,7 @@ export type {
   OrchestrationConstraint,
   OrchestrationDocument,
   OrchestrationEnablement,
+  OrchestrationFiberPhase,
   OrchestrationKindId,
   OrchestrationLayout,
   OrchestrationUnit,
@@ -25,9 +26,12 @@ export type {
 export { ORCHESTRATION_DOCUMENT_VERSION } from './types.ts'
 export { fromPresetComposition, unitIdForRow } from './from-preset.ts'
 export {
+  layoutByArchitecturalLayer,
   layoutComposition,
   statusForEnablement,
+  styleForEnablement,
   toGraphDocument,
+  type NodePaintStyle,
   type OrchestrationGraphLabels,
 } from './to-graph.ts'
 

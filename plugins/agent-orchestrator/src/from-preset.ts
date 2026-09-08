@@ -2,6 +2,7 @@
  * Build an OrchestrationDocument from a preset composition inventory group.
  */
 
+import { resolveArchitecturalLayer } from './architectural-layer.ts'
 import {
   ORCHESTRATION_DOCUMENT_VERSION,
   type OrchestrationDocument,
@@ -29,19 +30,27 @@ export function unitIdForRow(
 /**
  * Map one inventory group into an orchestration document.
  * System-trust rows are marked locked so F1 editors can refuse moves.
+ * Units carry wiki/011 architectural layer for grouped canvas display.
  * @param preset - inventory group.
  * @returns orchestration document (composition = all named rows).
  */
 export function fromPresetComposition(preset: PresetCompositionInput): OrchestrationDocument {
   const locked = preset.trust === 'system'
-  const composition: OrchestrationUnit[] = preset.rows.map((row, index) => ({
-    id: unitIdForRow(preset.id, row, index),
-    moduleName: row.moduleName,
-    label: row.entryId ?? row.moduleName,
-    enabled: row.enabled,
-    ...(row.condition !== undefined ? { condition: row.condition } : {}),
-    locked,
-  }))
+  const composition: OrchestrationUnit[] = preset.rows.map((row, index) => {
+    const { layer, packageGroup } = resolveArchitecturalLayer(row.moduleName)
+    return {
+      id: unitIdForRow(preset.id, row, index),
+      entryId: row.entryId,
+      moduleName: row.moduleName,
+      label: row.entryId ?? row.moduleName,
+      enabled: row.enabled,
+      ...(row.condition !== undefined ? { condition: row.condition } : {}),
+      ...(row.fiberPhase !== undefined ? { fiberPhase: row.fiberPhase } : {}),
+      locked,
+      layer,
+      packageGroup,
+    }
+  })
   return {
     version: ORCHESTRATION_DOCUMENT_VERSION,
     meta: {

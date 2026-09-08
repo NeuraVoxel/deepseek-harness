@@ -1,48 +1,101 @@
 /**
  * Project an OrchestrationDocument to an AITopo GraphDocument.
+ * Composition units are banded by wiki/011 architectural layers.
  */
 
 import type { GraphDocument, GraphGroup, GraphNode } from '@neuravoxel/aitopo'
+import {
+  ARCHITECTURAL_LAYER_ORDER,
+  type ArchitecturalLayerId,
+} from './architectural-layer.ts'
 import type { OrchestrationDocument, OrchestrationUnit } from './types.ts'
 
-const NODE_W = 200
-const NODE_H = 48
-const COL_GAP = 24
-const ROW_GAP = 16
-/** Left/top inset so the Composition band wraps the first grid cell. */
-const ORIGIN_X = 40
-const ORIGIN_Y = 48
+/** Flat card width — denser horizontal packing. */
+const NODE_W = 168
+/** Flat card height. */
+const NODE_H = 36
+const COL_GAP = 12
+const ROW_GAP = 10
+/** Left inset for the first column of every layer band. */
+const ORIGIN_X = 24
+/** Top inset before the first layer band. */
+const ORIGIN_Y = 28
+/** Vertical gap between consecutive layer bands (tight for a flat canvas). */
+const LAYER_GAP = 14
 /** Padding around member nodes for the group band (AITopo does not union members). */
-const GROUP_PAD = 16
+const GROUP_PAD = 8
 /** Space above the first row for the group label. */
-const GROUP_HEADER = 28
+const GROUP_HEADER = 18
+/** Default columns for a wide, flat composition grid. */
+const DEFAULT_COLUMNS = 4
+
+/** AITopo paint overrides carried on node.data. */
+export interface NodePaintStyle {
+  readonly fill: string
+  readonly stroke: string
+  readonly labelColor: string
+  readonly metaColor: string
+}
 
 /** Labels the adapter needs from the Client locale layer. */
 export interface OrchestrationGraphLabels {
-  readonly compositionGroup: string
+  /** Localized title for each architectural layer band. */
+  readonly layerGroup: (layer: ArchitecturalLayerId) => string
   readonly empty: string
   readonly broken: string
 }
 
 /**
- * Grid-layout positions for composition units (column-major).
- * @param units - composition units.
+ * Grid-layout positions for composition units (column-major), optionally offset.
+ * @param units - composition units (order preserved).
  * @param columns - column count.
+ * @param originX - left origin for column 0.
+ * @param originY - top origin for row 0.
  * @returns id → coordinates.
  */
 export function layoutComposition(
   units: readonly OrchestrationUnit[],
-  columns = 2,
+  columns = DEFAULT_COLUMNS,
+  originX = ORIGIN_X,
+  originY = ORIGIN_Y,
 ): Readonly<Record<string, { readonly x: number; readonly y: number }>> {
   const positions: Record<string, { x: number; y: number }> = {}
   units.forEach((unit, index) => {
     const col = index % columns
     const row = Math.floor(index / columns)
     positions[unit.id] = {
-      x: ORIGIN_X + col * (NODE_W + COL_GAP),
-      y: ORIGIN_Y + row * (NODE_H + ROW_GAP),
+      x: originX + col * (NODE_W + COL_GAP),
+      y: originY + row * (NODE_H + ROW_GAP),
     }
   })
+  return positions
+}
+
+/**
+ * Stack units into wiki-layer bands (①→⑨, then other); empty layers omitted.
+ * Inventory order is preserved within each layer.
+ * @param units - composition units.
+ * @param columns - column count inside each band.
+ * @returns id → coordinates.
+ */
+export function layoutByArchitecturalLayer(
+  units: readonly OrchestrationUnit[],
+  columns = DEFAULT_COLUMNS,
+): Readonly<Record<string, { readonly x: number; readonly y: number }>> {
+  const byLayer = groupUnitsByLayer(units)
+  const positions: Record<string, { x: number; y: number }> = {}
+  let cursorY = ORIGIN_Y
+
+  for (const layer of ARCHITECTURAL_LAYER_ORDER) {
+    const members = byLayer.get(layer)
+    if (members === undefined || members.length === 0) continue
+    const band = layoutComposition(members, columns, ORIGIN_X, cursorY)
+    Object.assign(positions, band)
+    const rows = Math.ceil(members.length / columns)
+    const bandHeight = rows * NODE_H + Math.max(0, rows - 1) * ROW_GAP
+    cursorY += bandHeight + GROUP_HEADER + GROUP_PAD * 2 + LAYER_GAP
+  }
+
   return positions
 }
 
@@ -55,6 +108,37 @@ export function statusForEnablement(enabled: OrchestrationUnit['enabled']): stri
   if (enabled === true) return 'active'
   if (enabled === 'conditional') return 'pending'
   return 'idle'
+}
+
+/**
+ * Flat enablement palette: active → green, idle → gray, conditional → muted slate.
+ * Applied via node.data so AITopo paint overrides built-in status colors.
+ * @param enabled - unit enablement.
+ * @returns fill / stroke / label colors.
+ */
+export function styleForEnablement(enabled: OrchestrationUnit['enabled']): NodePaintStyle {
+  if (enabled === true) {
+    return {
+      fill: '#143528',
+      stroke: '#3dd68c',
+      labelColor: '#d8f3e4',
+      metaColor: '#7dba9a',
+    }
+  }
+  if (enabled === 'conditional') {
+    return {
+      fill: '#22262e',
+      stroke: '#8b939e',
+      labelColor: '#d0d4dc',
+      metaColor: '#9aa3b2',
+    }
+  }
+  return {
+    fill: '#1a1d24',
+    stroke: '#6b7280',
+    labelColor: '#c4c9d4',
+    metaColor: '#8b919c',
+  }
 }
 
 /**
@@ -117,7 +201,13 @@ export function toGraphDocument(
         w: NODE_W * 2,
         h: NODE_H,
         status: 'error',
-        data: { message: document.meta.broken },
+        data: {
+          message: document.meta.broken,
+          fill: '#3a1518',
+          stroke: '#f07178',
+          labelColor: '#f5d0d3',
+          metaColor: '#c98a90',
+        },
       }],
       edges: [],
       groups: [],
@@ -125,6 +215,7 @@ export function toGraphDocument(
   }
 
   if (document.composition.length === 0) {
+    const idle = styleForEnablement(false)
     return {
       version: 1,
       meta: {
@@ -142,41 +233,55 @@ export function toGraphDocument(
         w: NODE_W * 2,
         h: NODE_H,
         status: 'idle',
+        data: { ...idle },
       }],
       edges: [],
       groups: [],
     }
   }
 
-  const positions = document.layout?.positions ?? layoutComposition(document.composition)
-  const nodes: GraphNode[] = document.composition.map(unit => {
-    const pos = positions[unit.id] ?? { x: ORIGIN_X, y: ORIGIN_Y }
-    return {
-      id: unit.id,
-      type: 'composition-unit',
-      label: unit.label,
-      status: statusForEnablement(unit.enabled),
-      x: pos.x,
-      y: pos.y,
-      w: NODE_W,
-      h: NODE_H,
-      groupId: 'composition',
-      data: {
-        moduleName: unit.moduleName,
-        enabled: unit.enabled,
-        locked: unit.locked,
-        ...(unit.condition !== undefined ? { condition: unit.condition } : {}),
-      },
-    }
-  })
+  const positions = document.layout?.positions ?? layoutByArchitecturalLayer(document.composition)
+  const byLayer = groupUnitsByLayer(document.composition)
+  const nodes: GraphNode[] = []
+  const groups: GraphGroup[] = []
 
-  // AITopo groupBounds uses only group.x/y/w/h (defaults to a tiny box at 0,0).
-  const groups: GraphGroup[] = [{
-    id: 'composition',
-    label: labels.compositionGroup,
-    memberIds: nodes.map(node => node.id),
-    ...groupBandForNodes(nodes),
-  }]
+  for (const layer of ARCHITECTURAL_LAYER_ORDER) {
+    const members = byLayer.get(layer)
+    if (members === undefined || members.length === 0) continue
+    const layerNodes: GraphNode[] = members.map(unit => {
+      const pos = positions[unit.id] ?? { x: ORIGIN_X, y: ORIGIN_Y }
+      const paint = styleForEnablement(unit.enabled)
+      return {
+        id: unit.id,
+        type: 'composition-unit',
+        label: unit.label,
+        status: statusForEnablement(unit.enabled),
+        x: pos.x,
+        y: pos.y,
+        w: NODE_W,
+        h: NODE_H,
+        groupId: layerGroupId(layer),
+        data: {
+          entryId: unit.entryId,
+          moduleName: unit.moduleName,
+          enabled: unit.enabled,
+          locked: unit.locked,
+          layer: unit.layer,
+          packageGroup: unit.packageGroup,
+          ...paint,
+          ...(unit.condition !== undefined ? { condition: unit.condition } : {}),
+          ...(unit.fiberPhase !== undefined ? { fiberPhase: unit.fiberPhase } : {}),
+        },
+      }
+    })
+    nodes.push(...layerNodes)
+    groups.push({
+      id: layerGroupId(layer),
+      label: labels.layerGroup(layer),
+      memberIds: layerNodes.map(node => node.id),
+      ...groupBandForNodes(layerNodes),
+    })
+  }
 
   return {
     version: 1,
@@ -192,4 +297,20 @@ export function toGraphDocument(
     edges: [],
     groups,
   }
+}
+
+function layerGroupId(layer: ArchitecturalLayerId): string {
+  return `layer:${layer}`
+}
+
+function groupUnitsByLayer(
+  units: readonly OrchestrationUnit[],
+): Map<ArchitecturalLayerId, OrchestrationUnit[]> {
+  const byLayer = new Map<ArchitecturalLayerId, OrchestrationUnit[]>()
+  for (const unit of units) {
+    const list = byLayer.get(unit.layer)
+    if (list === undefined) byLayer.set(unit.layer, [unit])
+    else list.push(unit)
+  }
+  return byLayer
 }

@@ -17,7 +17,7 @@ pnpm --filter dsh-agent-orchestrator bundle
 pnpm dsh web --patch ./plugins/agent-orchestrator/cordis.patch.yml
 ```
 
-打开任意 Session → **编排** Tab，选择 preset 查看组合行（只读）。
+打开任意 Session → **编排** Tab，选择 preset 查看组合行（只读）。画布按 [wiki/011 九层](../../wiki/011-插件分组与主要作用.md) 分带显示（仅展示有成员的层）。点击插件节点可查看条目 ID、模块、架构层、包组、启用状态、条件、Fiber 阶段与锁定。
 
 或装进 profile：
 
@@ -33,6 +33,7 @@ pnpm dsh --profile web-orchestrator-demo
 |---|---|
 | `src/index.ts` | Host `ctx.agentOrchestrator` |
 | `src/types.ts` / `from-preset.ts` / `to-graph.ts` | 文档与适配 |
+| `src/architectural-layer.ts` / `npm-package-group.ts` | wiki/011 分层解析（npm → 包组 → 层） |
 | `src/client/` | 对话 Tab + AITopoHost |
 
 ## 已知限制与延后工作
