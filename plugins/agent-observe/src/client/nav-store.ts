@@ -9,12 +9,15 @@ import { defineStore, type EngineStoreHandle } from '@deepseek-ai/dsh-client-sto
 /** Fleet overview or single-Agent process canvas. */
 export type ObserveViewMode = 'fleet' | 'flow'
 
-interface NavState {
+/** Observe tab navigation state shared by Chat shortcut and the Observe view. */
+export interface NavState {
   mode: ObserveViewMode
+  /** Pinned Turn number, or `null` for the Session latest. */
   focusTurn: number | null
 }
 
-type NavActions = {
+/** Observe navigation write set. */
+export type NavActions = {
   showFleet: (draft: NavState) => void
   showFlow: (draft: NavState, turn?: number) => void
   showLatest: (draft: NavState) => void

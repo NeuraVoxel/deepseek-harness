@@ -19,7 +19,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-api-session-controller/client'
 import { ObserveView, type ObserveViewInjected } from './ObserveView.tsx'
 import { ViewShortcut } from './ViewShortcut.tsx'
-import { createAgentFlowSource } from './flow-source.ts'
+import { createAgentFlowSource, type ObserveNavInstance } from './flow-source.ts'
 import type { AgentFlowSnapshot } from './derive-flow.ts'
 import { emptyAgentFlow } from './derive-flow.ts'
 import { createObserveNavStore } from './nav-store.ts'
@@ -49,11 +49,14 @@ export function apply(ctx: ClientContext): void {
     subscribe: () => () => {},
   }
 
-  const flowSource = (binding: SessionBinding | undefined): ObservableSnapshot<AgentFlowSnapshot> => {
+  const flowSource = (
+    binding: SessionBinding | undefined,
+    nav: ObserveNavInstance,
+  ): ObservableSnapshot<AgentFlowSnapshot> => {
     if (binding === undefined) return emptyFlow
     let source = flowSources.get(binding)
     if (source === undefined) {
-      source = createAgentFlowSource(binding)
+      source = createAgentFlowSource(binding, nav)
       flowSources.set(binding, source)
     }
     return source
@@ -66,11 +69,12 @@ export function apply(ctx: ClientContext): void {
     locale: NS,
     label: () => t('view.observe'),
     store: navStore,
-    inject: (sessionId: SessionId): ObserveViewInjected => {
+    inject: (sessionId: SessionId, _actions): ObserveViewInjected => {
       const binding = ctx.sessions.binding(sessionId)
+      const nav = navStore.create(sessionId)
       return {
         openSession: (id) => { ctx.sessions.open(id) },
-        hooks: { agentFlow: flowSource(binding) },
+        hooks: { agentFlow: flowSource(binding, nav) },
       }
     },
   }, ObserveView))

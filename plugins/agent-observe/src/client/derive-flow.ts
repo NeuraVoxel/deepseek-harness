@@ -281,7 +281,6 @@ export function deriveAgentFlow(
       stepKey: 'pending',
       envelopeId,
       previousAnchor,
-      session,
       durable,
       stepEvents: inTurn,
       stepEnded: false,
@@ -302,7 +301,6 @@ export function deriveAgentFlow(
       stepKey: String(step),
       envelopeId,
       previousAnchor,
-      session,
       durable,
       stepEvents,
       stepEnded,
@@ -595,7 +593,6 @@ function addStepAssembly(args: {
   stepKey: string
   envelopeId: string
   previousAnchor: string
-  session: SessionSnapshot
   durable: readonly SessionEvent[]
   stepEvents: readonly SessionEvent[]
   stepEnded: boolean
@@ -603,7 +600,7 @@ function addStepAssembly(args: {
   live: boolean
 }): { previousAnchor: string; contextId: string } {
   const {
-    add, link, turn, step, stepKey, envelopeId, previousAnchor, session,
+    add, link, turn, step, stepKey, envelopeId, previousAnchor,
     durable, stepEvents, stepEnded, pendingStep, live,
   } = args
   // Pending (no step/start yet) still paints in the Host · Step band via step: 0.
