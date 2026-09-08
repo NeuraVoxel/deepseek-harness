@@ -73,7 +73,7 @@ export interface OrchestrationDocument {
     readonly isDefault?: boolean
     readonly broken?: string
   }
-  /** Available units not necessarily on the composition canvas (empty in F0). */
+  /** Host Loader units not in this Preset's composition (on-canvas, muted). */
   readonly catalog: readonly OrchestrationUnit[]
   /** Selected composition units for the target. */
   readonly composition: readonly OrchestrationUnit[]

@@ -26,6 +26,12 @@ export type {
 export { ORCHESTRATION_DOCUMENT_VERSION } from './types.ts'
 export { fromPresetComposition, unitIdForRow, displayLabelForRow } from './from-preset.ts'
 export {
+  fromInventory,
+  matchesComposition,
+  unitIdForHostEntry,
+  type HostLoaderEntryInput,
+} from './from-inventory.ts'
+export {
   layoutByArchitecturalLayer,
   layoutComposition,
   metaForEnablement,
