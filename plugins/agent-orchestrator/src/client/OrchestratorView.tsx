@@ -12,6 +12,7 @@ import type { AgentPresetPluginGroup, PluginInventorySnapshot } from '@deepseek-
 import type { ArchitecturalLayerId } from '../architectural-layer.ts'
 import { fromInventory } from '../from-inventory.ts'
 import { liveUnitIds, withLiveActivity } from '../map-tool-activity.ts'
+import { unitIdsForModules } from '../participation-map.ts'
 import { toGraphDocument, type GraphUnitMembership } from '../to-graph.ts'
 import type {
   OrchestrationEnablement,
@@ -113,30 +114,36 @@ export function OrchestratorView(props: Props): ReactElement {
     })
   }, [orchestrationDoc, t])
 
-  // Live highlight when tools are active. If we know the Session preset and the
-  // canvas is showing a different one, do not light unrelated composition rows.
+  // Live highlight when Session-log evidence is present. If we know the Session
+  // preset and the canvas is showing a different one, do not light unrelated rows.
   const liveActive = selected !== null
     && activity.sessionRunning
     && (activity.sessionPresetId === null || selected.id === activity.sessionPresetId)
 
-  const highlightNames = activity.runningToolNames.length > 0
-    ? activity.runningToolNames
-    : activity.turnToolNames
-
-  const graphDoc = useMemo(() => {
-    if (baseGraphDoc === null || orchestrationDoc === null) return null
-    if (!liveActive || highlightNames.length === 0) return baseGraphDoc
+  const livePaint = useMemo(() => {
+    if (baseGraphDoc === null || orchestrationDoc === null) {
+      return { graphDoc: baseGraphDoc, hitCount: 0 }
+    }
+    if (!liveActive) return { graphDoc: baseGraphDoc, hitCount: 0 }
     const runningIds = liveUnitIds(orchestrationDoc.composition, activity.runningToolNames)
-    const turnIds = liveUnitIds(orchestrationDoc.composition, activity.turnToolNames)
-    return withLiveActivity(baseGraphDoc, runningIds, turnIds)
+    const turnToolIds = liveUnitIds(orchestrationDoc.composition, activity.turnToolNames)
+    const turnModuleIds = unitIdsForModules(orchestrationDoc.composition, activity.turnModuleNames)
+    const turnIds = new Set([...turnToolIds, ...turnModuleIds])
+    const hitCount = new Set([...runningIds, ...turnIds]).size
+    if (hitCount === 0) return { graphDoc: baseGraphDoc, hitCount: 0 }
+    return {
+      graphDoc: withLiveActivity(baseGraphDoc, runningIds, turnIds),
+      hitCount,
+    }
   }, [
     baseGraphDoc,
     orchestrationDoc,
     liveActive,
-    highlightNames,
     activity.runningToolNames,
     activity.turnToolNames,
+    activity.turnModuleNames,
   ])
+  const graphDoc = livePaint.graphDoc
 
   const unitById = useMemo(() => {
     const map = new Map<string, { unit: OrchestrationUnit; membership: GraphUnitMembership }>()
@@ -199,8 +206,8 @@ export function OrchestratorView(props: Props): ReactElement {
     )
   }
 
-  const hint = liveActive && highlightNames.length > 0
-    ? t('hint.live', { count: highlightNames.length })
+  const hint = liveActive && livePaint.hitCount > 0
+    ? t('hint.live', { count: livePaint.hitCount })
     : liveActive
       ? t('hint.liveIdle')
       : `${t('hint.readonly')} · ${t('hint.membership')}`
@@ -258,6 +265,7 @@ export function OrchestratorView(props: Props): ReactElement {
               && (
                 liveUnitIds([inspected.unit], activity.runningToolNames).has(inspected.unit.id)
                 || liveUnitIds([inspected.unit], activity.turnToolNames).has(inspected.unit.id)
+                || unitIdsForModules([inspected.unit], activity.turnModuleNames).has(inspected.unit.id)
               )}
             onClose={() => {
               setSelectedUnitId(null)
