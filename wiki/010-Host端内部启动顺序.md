@@ -227,6 +227,8 @@ pnpm dsh --profile web --dump-config
 | [008 · dsh-base](./008-dsh-base挂载了哪些插件.md) | 并发窗口里第一层实际 insert 了哪些行 |
 | [009 · patch vs agent.cordis](./009-cordis.patch与agent.cordis的区别.md) | Profile vs patch；叠的是谁；preset 挂的是谁 |
 | [000 · 流程](./000-当前项目开发流程.md) | 改启动路径时证据落点 |
+| [011 · 插件分组](./011-插件分组与主要作用.md) | 仓库全量包速查（≠ 本篇挂载集） |
+| [012 · 插件启动与事件流](./012-插件启动范围顺序与事件流.md) | 是否全挂、inject 序、服务 vs 事件、一回合链 |
 
 ---
 
