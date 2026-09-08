@@ -17,7 +17,7 @@ pnpm --filter dsh-agent-orchestrator bundle
 pnpm dsh web --patch ./plugins/agent-orchestrator/cordis.patch.yml
 ```
 
-Open a Session → **Orchestrate** tab. Pick a preset to view its composition rows (read-only). The canvas bands plugins by the [wiki/011 nine layers](../../wiki/011-插件分组与主要作用.md) (only layers with members appear). Click a plugin node for entry id, module, architecture layer, package group, enablement, condition, fiber phase, and lock.
+Open a Session → **Orchestrate** tab. Pick a preset to view its composition rows (read-only). The canvas bands plugins by the [wiki/011 nine layers](../../wiki/011-插件分组与主要作用.md) (only layers with members appear). When viewing the **session's** preset during a running turn, in-flight `tool/call` names light matching composition units (Observe keeps business flow / data-flow). Click a plugin node for entry id, module, architecture layer, package group, enablement, condition, fiber phase, and lock.
 
 Or install into a profile:
 
@@ -34,7 +34,8 @@ pnpm dsh --profile web-orchestrator-demo
 | `src/index.ts` | Host `ctx.agentOrchestrator` |
 | `src/types.ts` / `from-preset.ts` / `to-graph.ts` | Document + adapters |
 | `src/architectural-layer.ts` / `npm-package-group.ts` | wiki/011 layer resolve (npm → package group → layer) |
-| `src/client/` | Conversation tab + AITopoHost |
+| `src/map-tool-activity.ts` | Running tool → composition-unit highlight |
+| `src/client/` | Conversation tab + AITopoHost + Session activity source |
 
 ## Known Limitations and Deferred Work
 

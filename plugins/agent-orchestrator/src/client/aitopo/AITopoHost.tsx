@@ -104,8 +104,11 @@ export const AITopoHost = forwardRef(function AITopoHost(
     const network = networkRef.current
     if (network === null) return
     network.load(graphDoc)
-    fitNetwork(network)
-  }, [graphDoc, fitToken])
+  }, [graphDoc])
+
+  useEffect(() => {
+    fitNetwork(networkRef.current)
+  }, [fitToken])
 
   return (
     <div
