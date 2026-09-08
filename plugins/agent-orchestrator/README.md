@@ -17,7 +17,7 @@ pnpm --filter dsh-agent-orchestrator bundle
 pnpm dsh web --patch ./plugins/agent-orchestrator/cordis.patch.yml
 ```
 
-Open a Session → **Orchestrate** tab. Pick a preset to view its composition rows (read-only). The canvas bands plugins by the [wiki/011 nine layers](../../wiki/011-插件分组与主要作用.md) (only layers with members appear), stacked with foundation ① at the **bottom** and higher layers toward the top. Each Preset page also shows **Host Loader** plugins that are loaded but not in that Preset as muted nodes in the same bands; solid nodes are the Preset composition, and a plugin present in both appears once as solid. When viewing the **session's** preset during a running turn, in-flight `tool/call` names light matching **composition** units only (Observe keeps business flow / data-flow). Click a plugin node for membership, entry id, module, architecture layer, package group, enablement, condition, fiber phase, and lock. A 28px icon on `conversation.chat.assistant-actions` (beside Turn usage) also opens this tab; Turn-scoped payload injection is deferred.
+Open a Session → **Orchestrate** tab. Pick a preset to view its composition rows (read-only). The canvas bands plugins by the [wiki/011 nine layers](../../wiki/011-插件分组与主要作用.md) (only layers with members appear), stacked with foundation ① at the **bottom** and higher layers toward the top. Each Preset page also shows **Host Loader** plugins that are loaded but not in that Preset as muted nodes in the same bands; solid nodes are the Preset composition, and a plugin present in both appears once as solid. When viewing the **session's** preset during a running turn, Session-log evidence lights matching **composition** units only: `tool/call` names plus curated non-tool events (compaction, approval, hooks, …) via a static event→module map; silent spine plugins stay dark (Observe keeps business flow / data-flow). Click a plugin node for membership, entry id, module, architecture layer, package group, enablement, condition, fiber phase, and lock. A 28px icon on `conversation.chat.assistant-actions` (beside Turn usage) also opens this tab; Turn-scoped payload injection is deferred.
 
 Or install into a profile:
 
@@ -35,6 +35,7 @@ pnpm dsh --profile web-orchestrator-demo
 | `src/types.ts` / `from-preset.ts` / `from-inventory.ts` / `to-graph.ts` | Document + adapters |
 | `src/architectural-layer.ts` / `npm-package-group.ts` | wiki/011 layer resolve (npm → package group → layer) |
 | `src/map-tool-activity.ts` | Running tool → composition-unit highlight |
+| `src/participation-map.ts` | Session event type → module → composition-unit highlight |
 | `src/client/` | Conversation tab + turn-tail shortcut + AITopoHost + Session activity source |
 
 ## Known Limitations and Deferred Work
