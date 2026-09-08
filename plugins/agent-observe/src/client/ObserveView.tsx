@@ -188,7 +188,11 @@ function FleetPane(props: Props): ReactElement {
 
 function FlowPane(props: Props): ReactElement {
   const { t, actions, useAgentFlow, sessionId } = props
+  const focusTurn = props.useStore(state => state.focusTurn)
   const flow = useAgentFlow(state => state)
+  const showJump = focusTurn !== null
+    && flow.latestTurn !== null
+    && focusTurn !== flow.latestTurn
   const adapted = useMemo(() => flowToDocument(flow, {
     join: t('flow.join'),
     parallel: t('flow.parallel'),
@@ -247,6 +251,11 @@ function FlowPane(props: Props): ReactElement {
             ? t('flow.title.none')
             : t('flow.title', { turn: String(flow.turn) })}
         </span>
+        {showJump ? (
+          <button type="button" className={css.groupButton} onClick={() => { actions.showLatest() }}>
+            {t('flow.jumpLatest')}
+          </button>
+        ) : null}
         <span className={css.hint}>{truncate(String(sessionId), 24)}</span>
         <ZoomControls t={t} zoom={zoom} hostRef={hostRef} />
         <div className={css.legend} aria-label={t('legend.title')}>
