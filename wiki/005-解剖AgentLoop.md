@@ -335,6 +335,7 @@ pnpm dsh --profile headless "用 Bash 列出当前目录"
 | [001 · hi](./001-一次hi对话的源码之旅.md) | 最短路径：1 turn · 1 step · 0 tool；本篇补全工厂与多步 |
 | [002 · 目录](./002-目录结构与架构图.md) | `packages/core/agent-loop` 在 core 脊柱上的位置 |
 | [004 · 双进程](./004-Web-UI双进程与dual-face.md) | AgentLoop **只跑在 Host 进程**；浏览器只镜像 |
+| [006 · Agent Presets](./006-四种Agent-Presets对比.md) | Loop 跑起来之后，会话实际挂了哪些工具/人设 |
 
 ---
 
