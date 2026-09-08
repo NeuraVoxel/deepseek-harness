@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { resolveArchitecturalLayer } from './architectural-layer.ts'
-import { fromPresetComposition, unitIdForRow } from './from-preset.ts'
+import { displayLabelForRow, fromPresetComposition, unitIdForRow } from './from-preset.ts'
 import {
   layoutByArchitecturalLayer,
   layoutComposition,
@@ -46,6 +46,18 @@ describe('resolveArchitecturalLayer', () => {
   })
 })
 
+describe('displayLabelForRow', () => {
+  it('uses the leaf of nested Loader entry ids', () => {
+    expect(displayLabelForRow('delegation:tool-subagent-claude-code', '@deepseek-ai/dsh-tool-subagent'))
+      .toBe('tool-subagent-claude-code')
+    expect(displayLabelForRow('persona', '@deepseek-ai/dsh-persona')).toBe('persona')
+  })
+
+  it('falls back to a short package name when entryId is null', () => {
+    expect(displayLabelForRow(null, '@deepseek-ai/dsh-tool-bash')).toBe('tool-bash')
+  })
+})
+
 describe('fromPresetComposition', () => {
   it('maps rows into locked composition units for system presets', () => {
     const doc = fromPresetComposition(sample)
@@ -57,6 +69,7 @@ describe('fromPresetComposition', () => {
       id: 'standard:persona',
       entryId: 'persona',
       moduleName: '@deepseek-ai/dsh-persona',
+      label: 'persona',
       enabled: true,
       fiberPhase: 'active',
       locked: true,
@@ -77,6 +90,19 @@ describe('fromPresetComposition', () => {
     expect(unitIdForRow('standard', sample.rows[2]!, 2)).toBe('standard:row:2')
     expect(doc.composition[2]?.id).toBe('standard:row:2')
     expect(doc.catalog).toEqual([])
+  })
+
+  it('shortens nested mounted entry ids on the canvas label', () => {
+    const doc = fromPresetComposition({
+      ...sample,
+      rows: [{
+        entryId: 'delegation:tool-subagent',
+        moduleName: '@deepseek-ai/dsh-tool-subagent',
+        enabled: true,
+      }],
+    })
+    expect(doc.composition[0]?.entryId).toBe('delegation:tool-subagent')
+    expect(doc.composition[0]?.label).toBe('tool-subagent')
   })
 
   it('leaves user presets unlocked', () => {

@@ -28,6 +28,24 @@ export function unitIdForRow(
 }
 
 /**
+ * Short canvas label for a composition row.
+ * Mounted Loader entry ids nest with `:` (`delegation:tool-subagent`); show the leaf.
+ * When entryId is absent, strip the `@deepseek-ai/dsh-` package prefix.
+ * @param entryId - inventory entry id (may be hierarchical).
+ * @param moduleName - module specifier.
+ * @returns compact display label.
+ */
+export function displayLabelForRow(entryId: string | null, moduleName: string): string {
+  if (entryId !== null && entryId.length > 0) {
+    const leaf = entryId.includes(':') ? entryId.slice(entryId.lastIndexOf(':') + 1) : entryId
+    if (leaf.length > 0) return leaf
+  }
+  const scoped = moduleName.match(/^@deepseek-ai\/dsh-(.+)$/)
+  if (scoped?.[1] !== undefined && scoped[1].length > 0) return scoped[1]
+  return moduleName
+}
+
+/**
  * Map one inventory group into an orchestration document.
  * System-trust rows are marked locked so F1 editors can refuse moves.
  * Units carry wiki/011 architectural layer for grouped canvas display.
@@ -42,7 +60,7 @@ export function fromPresetComposition(preset: PresetCompositionInput): Orchestra
       id: unitIdForRow(preset.id, row, index),
       entryId: row.entryId,
       moduleName: row.moduleName,
-      label: row.entryId ?? row.moduleName,
+      label: displayLabelForRow(row.entryId, row.moduleName),
       enabled: row.enabled,
       ...(row.condition !== undefined ? { condition: row.condition } : {}),
       ...(row.fiberPhase !== undefined ? { fiberPhase: row.fiberPhase } : {}),

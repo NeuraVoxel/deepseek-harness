@@ -24,7 +24,7 @@ export type {
   PresetCompositionRowInput,
 } from './types.ts'
 export { ORCHESTRATION_DOCUMENT_VERSION } from './types.ts'
-export { fromPresetComposition, unitIdForRow } from './from-preset.ts'
+export { fromPresetComposition, unitIdForRow, displayLabelForRow } from './from-preset.ts'
 export {
   layoutByArchitecturalLayer,
   layoutComposition,
