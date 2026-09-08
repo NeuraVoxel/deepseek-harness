@@ -11,6 +11,7 @@ import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type { AgentPresetPluginGroup, PluginInventorySnapshot } from '@deepseek-ai/dsh-host-plugin-inventory/types'
 import type { ArchitecturalLayerId } from '../architectural-layer.ts'
 import { fromInventory } from '../from-inventory.ts'
+import { documentForCanvas } from '../document-for-canvas.ts'
 import { liveUnitIds, withLiveActivity } from '../map-tool-activity.ts'
 import { unitIdsForModules } from '../participation-map.ts'
 import { toGraphDocument, type GraphUnitMembership } from '../to-graph.ts'
@@ -57,6 +58,7 @@ export function OrchestratorView(props: Props): ReactElement {
   const [error, setError] = useState<string | null>(null)
   const [zoom, setZoom] = useState(1)
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
+  const [showHostCatalog, setShowHostCatalog] = useState(false)
   const hostRef = useRef<AITopoHostHandle>(null)
 
   useEffect(() => {
@@ -105,14 +107,21 @@ export function OrchestratorView(props: Props): ReactElement {
     [selected, hostEntries],
   )
 
+  const canvasDoc = useMemo(
+    () => orchestrationDoc === null
+      ? null
+      : documentForCanvas(orchestrationDoc, showHostCatalog),
+    [orchestrationDoc, showHostCatalog],
+  )
+
   const baseGraphDoc = useMemo(() => {
-    if (orchestrationDoc === null) return null
-    return toGraphDocument(orchestrationDoc, {
+    if (canvasDoc === null) return null
+    return toGraphDocument(canvasDoc, {
       layerGroup: (layer: ArchitecturalLayerId) => t(layerGroupKey(layer)),
       empty: t('empty'),
       broken: t('broken'),
     })
-  }, [orchestrationDoc, t])
+  }, [canvasDoc, t])
 
   // Live highlight when Session-log evidence is present. If we know the Session
   // preset and the canvas is showing a different one, do not light unrelated rows.
@@ -121,13 +130,13 @@ export function OrchestratorView(props: Props): ReactElement {
     && (activity.sessionPresetId === null || selected.id === activity.sessionPresetId)
 
   const livePaint = useMemo(() => {
-    if (baseGraphDoc === null || orchestrationDoc === null) {
+    if (baseGraphDoc === null || canvasDoc === null) {
       return { graphDoc: baseGraphDoc, hitCount: 0 }
     }
     if (!liveActive) return { graphDoc: baseGraphDoc, hitCount: 0 }
-    const runningIds = liveUnitIds(orchestrationDoc.composition, activity.runningToolNames)
-    const turnToolIds = liveUnitIds(orchestrationDoc.composition, activity.turnToolNames)
-    const turnModuleIds = unitIdsForModules(orchestrationDoc.composition, activity.turnModuleNames)
+    const runningIds = liveUnitIds(canvasDoc.composition, activity.runningToolNames)
+    const turnToolIds = liveUnitIds(canvasDoc.composition, activity.turnToolNames)
+    const turnModuleIds = unitIdsForModules(canvasDoc.composition, activity.turnModuleNames)
     const turnIds = new Set([...turnToolIds, ...turnModuleIds])
     const hitCount = new Set([...runningIds, ...turnIds]).size
     if (hitCount === 0) return { graphDoc: baseGraphDoc, hitCount: 0 }
@@ -137,7 +146,7 @@ export function OrchestratorView(props: Props): ReactElement {
     }
   }, [
     baseGraphDoc,
-    orchestrationDoc,
+    canvasDoc,
     liveActive,
     activity.runningToolNames,
     activity.turnToolNames,
@@ -147,14 +156,21 @@ export function OrchestratorView(props: Props): ReactElement {
 
   const unitById = useMemo(() => {
     const map = new Map<string, { unit: OrchestrationUnit; membership: GraphUnitMembership }>()
-    for (const unit of orchestrationDoc?.composition ?? []) {
+    for (const unit of canvasDoc?.composition ?? []) {
       map.set(unit.id, { unit, membership: 'composition' })
     }
-    for (const unit of orchestrationDoc?.catalog ?? []) {
+    for (const unit of canvasDoc?.catalog ?? []) {
       map.set(unit.id, { unit, membership: 'catalog' })
     }
     return map
-  }, [orchestrationDoc])
+  }, [canvasDoc])
+
+  useEffect(() => {
+    if (showHostCatalog || selectedUnitId === null || orchestrationDoc === null) return
+    if (!orchestrationDoc.catalog.some(unit => unit.id === selectedUnitId)) return
+    setSelectedUnitId(null)
+    hostRef.current?.setSelection([])
+  }, [showHostCatalog, selectedUnitId, orchestrationDoc])
 
   const inspected = selectedUnitId === null ? null : unitById.get(selectedUnitId) ?? null
 
@@ -210,7 +226,7 @@ export function OrchestratorView(props: Props): ReactElement {
     ? t('hint.live', { count: livePaint.hitCount })
     : liveActive
       ? t('hint.liveIdle')
-      : `${t('hint.readonly')} · ${t('hint.membership')}`
+      : `${t('hint.readonly')} · ${t(showHostCatalog ? 'hint.membership' : 'hint.membershipPreset')}`
 
   return (
     <div className={css.root} data-conversation-composer-overlay="">
@@ -230,6 +246,14 @@ export function OrchestratorView(props: Props): ReactElement {
             </option>
           ))}
         </select>
+        <label className={css.hostCatalogToggle}>
+          <input
+            type="checkbox"
+            checked={showHostCatalog}
+            onChange={event => setShowHostCatalog(event.currentTarget.checked)}
+          />
+          {t('toolbar.showHostCatalog')}
+        </label>
         <div className={css.zoomGroup} role="group" aria-label={t('zoom.group')}>
           <button type="button" className={css.zoomButton} onClick={() => hostRef.current?.zoomOut()}>
             {t('zoom.out')}
@@ -251,7 +275,7 @@ export function OrchestratorView(props: Props): ReactElement {
         <AITopoHost
           ref={hostRef}
           document={graphDoc}
-          fitToken={presetId ?? ''}
+          fitToken={`${presetId ?? ''}:${showHostCatalog ? 'host' : 'preset'}`}
           ariaLabel={t('view.orchestrator')}
           onEvent={onEvent}
         />
