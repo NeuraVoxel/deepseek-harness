@@ -10,9 +10,9 @@ import type { InjectFace, PropsLocale } from '@deepseek-ai/dsh-client-ui-slots'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
 import type { AgentPresetPluginGroup, PluginInventorySnapshot } from '@deepseek-ai/dsh-host-plugin-inventory/types'
 import type { ArchitecturalLayerId } from '../architectural-layer.ts'
-import { fromPresetComposition } from '../from-preset.ts'
+import { fromInventory } from '../from-inventory.ts'
 import { liveUnitIds, withLiveActivity } from '../map-tool-activity.ts'
-import { toGraphDocument } from '../to-graph.ts'
+import { toGraphDocument, type GraphUnitMembership } from '../to-graph.ts'
 import type {
   OrchestrationEnablement,
   OrchestrationFiberPhase,
@@ -51,6 +51,7 @@ export function OrchestratorView(props: Props): ReactElement {
   const sessionPresetRef = useRef(activity.sessionPresetId)
   sessionPresetRef.current = activity.sessionPresetId
   const [presets, setPresets] = useState<readonly AgentPresetPluginGroup[] | null>(null)
+  const [hostEntries, setHostEntries] = useState<PluginInventorySnapshot['entries']>([])
   const [presetId, setPresetId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [zoom, setZoom] = useState(1)
@@ -65,6 +66,7 @@ export function OrchestratorView(props: Props): ReactElement {
         if (cancelled) return
         const groups = snapshot.agentPresets ?? []
         setPresets(groups)
+        setHostEntries(snapshot.entries)
         setPresetId(prev => {
           if (prev !== null && groups.some(group => group.id === prev)) return prev
           const sessionPreset = sessionPresetRef.current
@@ -78,6 +80,7 @@ export function OrchestratorView(props: Props): ReactElement {
         if (!cancelled) {
           setError(t('error.load'))
           setPresets([])
+          setHostEntries([])
         }
       }
     })()
@@ -90,8 +93,15 @@ export function OrchestratorView(props: Props): ReactElement {
   )
 
   const orchestrationDoc = useMemo(
-    () => selected === null ? null : fromPresetComposition(selected),
-    [selected],
+    () => selected === null
+      ? null
+      : fromInventory(selected, hostEntries.map(entry => ({
+        entryId: entry.entryId,
+        moduleName: entry.moduleName,
+        enabled: entry.enabled,
+        fiberPhase: entry.fiberPhase,
+      }))),
+    [selected, hostEntries],
   )
 
   const baseGraphDoc = useMemo(() => {
@@ -129,8 +139,13 @@ export function OrchestratorView(props: Props): ReactElement {
   ])
 
   const unitById = useMemo(() => {
-    const map = new Map<string, OrchestrationUnit>()
-    for (const unit of orchestrationDoc?.composition ?? []) map.set(unit.id, unit)
+    const map = new Map<string, { unit: OrchestrationUnit; membership: GraphUnitMembership }>()
+    for (const unit of orchestrationDoc?.composition ?? []) {
+      map.set(unit.id, { unit, membership: 'composition' })
+    }
+    for (const unit of orchestrationDoc?.catalog ?? []) {
+      map.set(unit.id, { unit, membership: 'catalog' })
+    }
     return map
   }, [orchestrationDoc])
 
@@ -188,7 +203,7 @@ export function OrchestratorView(props: Props): ReactElement {
     ? t('hint.live', { count: highlightNames.length })
     : liveActive
       ? t('hint.liveIdle')
-      : t('hint.readonly')
+      : `${t('hint.readonly')} · ${t('hint.membership')}`
 
   return (
     <div className={css.root}>
@@ -236,11 +251,14 @@ export function OrchestratorView(props: Props): ReactElement {
         {inspected !== null ? (
           <UnitDetailPanel
             t={t}
-            unit={inspected}
-            live={liveActive && (
-              liveUnitIds([inspected], activity.runningToolNames).has(inspected.id)
-              || liveUnitIds([inspected], activity.turnToolNames).has(inspected.id)
-            )}
+            unit={inspected.unit}
+            membership={inspected.membership}
+            live={inspected.membership === 'composition'
+              && liveActive
+              && (
+                liveUnitIds([inspected.unit], activity.runningToolNames).has(inspected.unit.id)
+                || liveUnitIds([inspected.unit], activity.turnToolNames).has(inspected.unit.id)
+              )}
             onClose={() => {
               setSelectedUnitId(null)
               hostRef.current?.setSelection([])
@@ -255,10 +273,11 @@ export function OrchestratorView(props: Props): ReactElement {
 function UnitDetailPanel(props: {
   t: Props['t']
   unit: OrchestrationUnit
+  membership: GraphUnitMembership
   live: boolean
   onClose: () => void
 }): ReactElement {
-  const { t, unit, live, onClose } = props
+  const { t, unit, membership, live, onClose } = props
   const stopCanvasPointer = (event: SyntheticEvent): void => {
     event.stopPropagation()
   }
@@ -280,6 +299,12 @@ function UnitDetailPanel(props: {
         </button>
       </div>
       <dl className={css.detailList}>
+        <dt>{t('detail.membership')}</dt>
+        <dd>
+          {membership === 'catalog'
+            ? t('detail.membership.catalog')
+            : t('detail.membership.composition')}
+        </dd>
         <dt>{t('detail.entryId')}</dt>
         <dd>{unit.entryId ?? t('detail.none')}</dd>
         <dt>{t('detail.module')}</dt>

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { deriveCompositionActivity } from './client/derive-activity.ts'
+import { fromInventory } from './from-inventory.ts'
 import { fromPresetComposition } from './from-preset.ts'
 import {
   liveUnitIds,
@@ -37,6 +38,23 @@ describe('unitIdsForToolName', () => {
     expect(unitIdsForToolName(units, 'bash')).toEqual(['standard:tool-bash'])
     expect(unitIdsForToolName(units, 'read')).toEqual(['standard:tool-fs'])
     expect(unitIdsForToolName(units, 'subagent')).toEqual(['standard:delegation:tool-subagent'])
+  })
+})
+
+describe('live highlight composition-only', () => {
+  it('does not map tools onto catalog-only host units', () => {
+    const doc = fromInventory(sample, [
+      { entryId: 'tool-fs', moduleName: '@deepseek-ai/dsh-tool-fs', enabled: true, fiberPhase: 'active' },
+      { entryId: 'extra-fs', moduleName: '@deepseek-ai/dsh-tool-fs-search', enabled: true, fiberPhase: 'active' },
+    ])
+    // tool-fs overlaps composition → catalog empty for that entry; extra-fs is catalog-only.
+    expect(doc.catalog.some(unit => unit.id === 'host:extra-fs')).toBe(true)
+    // force a catalog unit whose label would match "glob" if scanned
+    const catalogHits = liveUnitIds(doc.catalog, ['glob'])
+    expect(catalogHits.has('host:extra-fs')).toBe(true)
+    // production path must pass composition only — assert OrchestratorView / helper contract:
+    expect(liveUnitIds(doc.composition, ['read']).has('host:tool-fs')).toBe(false)
+    expect(liveUnitIds(doc.composition, ['glob']).has('host:extra-fs')).toBe(false)
   })
 })
 
