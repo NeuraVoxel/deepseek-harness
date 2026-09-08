@@ -52,6 +52,12 @@ describe('toGraphDocument', () => {
     expect(graph.version).toBe(1)
     expect(graph.nodes).toHaveLength(3)
     expect(graph.groups?.[0]?.memberIds).toEqual(graph.nodes.map(node => node.id))
+    expect(graph.groups?.[0]).toMatchObject({
+      x: 24,
+      y: 4,
+      w: 456,
+      h: 172,
+    })
     expect(statusForEnablement(true)).toBe('active')
     expect(statusForEnablement(false)).toBe('idle')
     expect(statusForEnablement('conditional')).toBe('pending')

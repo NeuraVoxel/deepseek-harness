@@ -9,8 +9,13 @@ const NODE_W = 200
 const NODE_H = 48
 const COL_GAP = 24
 const ROW_GAP = 16
+/** Left/top inset so the Composition band wraps the first grid cell. */
 const ORIGIN_X = 40
 const ORIGIN_Y = 48
+/** Padding around member nodes for the group band (AITopo does not union members). */
+const GROUP_PAD = 16
+/** Space above the first row for the group label. */
+const GROUP_HEADER = 28
 
 /** Labels the adapter needs from the Client locale layer. */
 export interface OrchestrationGraphLabels {
@@ -50,6 +55,38 @@ export function statusForEnablement(enabled: OrchestrationUnit['enabled']): stri
   if (enabled === true) return 'active'
   if (enabled === 'conditional') return 'pending'
   return 'idle'
+}
+
+/**
+ * Explicit band geometry wrapping laid-out nodes (required by AITopo paint).
+ * @param nodes - composition unit nodes with x/y/w/h.
+ * @returns group x/y/w/h.
+ */
+export function groupBandForNodes(
+  nodes: readonly Pick<GraphNode, 'x' | 'y' | 'w' | 'h'>[],
+): { readonly x: number; readonly y: number; readonly w: number; readonly h: number } {
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  for (const node of nodes) {
+    const x = node.x ?? 0
+    const y = node.y ?? 0
+    const w = node.w ?? NODE_W
+    const h = node.h ?? NODE_H
+    minX = Math.min(minX, x)
+    minY = Math.min(minY, y)
+    maxX = Math.max(maxX, x + w)
+    maxY = Math.max(maxY, y + h)
+  }
+  const x = minX - GROUP_PAD
+  const y = minY - GROUP_HEADER - GROUP_PAD
+  return {
+    x,
+    y,
+    w: maxX - minX + GROUP_PAD * 2,
+    h: maxY - minY + GROUP_HEADER + GROUP_PAD * 2,
+  }
 }
 
 /**
@@ -133,10 +170,12 @@ export function toGraphDocument(
     }
   })
 
+  // AITopo groupBounds uses only group.x/y/w/h (defaults to a tiny box at 0,0).
   const groups: GraphGroup[] = [{
     id: 'composition',
     label: labels.compositionGroup,
     memberIds: nodes.map(node => node.id),
+    ...groupBandForNodes(nodes),
   }]
 
   return {
