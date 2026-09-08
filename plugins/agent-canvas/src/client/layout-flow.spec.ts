@@ -58,11 +58,11 @@ describe('layoutAgentFlow parallel columns', () => {
         },
       ],
       edges: [
-        { from: 'step:1:1', to: 'model:1:1' },
-        { from: 'model:1:1', to: 'tool:a' },
-        { from: 'model:1:1', to: 'tool:b' },
-        { from: 'tool:a', to: 'join:1:1' },
-        { from: 'tool:b', to: 'join:1:1' },
+        { from: 'step:1:1', to: 'model:1:1', kind: 'flow' },
+        { from: 'model:1:1', to: 'tool:a', kind: 'flow' },
+        { from: 'model:1:1', to: 'tool:b', kind: 'flow' },
+        { from: 'tool:a', to: 'join:1:1', kind: 'flow' },
+        { from: 'tool:b', to: 'join:1:1', kind: 'flow' },
       ],
     }
     const layout = layoutAgentFlow(snapshot)
@@ -114,12 +114,12 @@ describe('layoutAgentFlow parallel columns', () => {
         },
       ],
       edges: [
-        { from: 'step:1:1', to: 'model:1:1' },
-        { from: 'model:1:1', to: 'tool:a' },
-        { from: 'model:1:1', to: 'tool:b' },
-        { from: 'tool:a', to: 'join:1:1' },
-        { from: 'tool:b', to: 'join:1:1' },
-        { from: 'join:1:1', to: 'step:1:2' },
+        { from: 'step:1:1', to: 'model:1:1', kind: 'flow' },
+        { from: 'model:1:1', to: 'tool:a', kind: 'flow' },
+        { from: 'model:1:1', to: 'tool:b', kind: 'flow' },
+        { from: 'tool:a', to: 'join:1:1', kind: 'flow' },
+        { from: 'tool:b', to: 'join:1:1', kind: 'flow' },
+        { from: 'join:1:1', to: 'step:1:2', kind: 'flow' },
       ],
     }
     const layout = layoutAgentFlow(snapshot)
@@ -127,7 +127,7 @@ describe('layoutAgentFlow parallel columns', () => {
     const step2 = layout.nodes.find(n => n.id === 'step:1:2')!
     expect(join.y + join.height).toBeLessThanOrEqual(step2.y)
     expect(layout.edges.filter(e => e.to === 'step:1:2')).toEqual([
-      { from: 'join:1:1', to: 'step:1:2' },
+      { from: 'join:1:1', to: 'step:1:2', kind: 'flow' },
     ])
   })
 })

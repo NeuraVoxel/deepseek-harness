@@ -61,12 +61,20 @@ export function flowToDocument(
     }
   })
 
-  const edges: GraphEdge[] = layout.edges.map(edge => ({
-    id: `${edge.from}->${edge.to}`,
-    from: edge.from,
-    to: edge.to,
-    kind: 'flow',
-  }))
+  const edges: GraphEdge[] = layout.edges.map(edge => {
+    const isData = edge.kind === 'data'
+    return {
+      id: `${edge.from}->${edge.to}`,
+      from: edge.from,
+      to: edge.to,
+      kind: edge.kind,
+      data: {
+        stroke: isData ? '#2dd4bf' : '#5a6478',
+        strokeHover: '#3b82f6',
+        lineWidth: isData ? 1.75 : 1.25,
+      },
+    }
+  })
 
   const groups: GraphGroup[] = layout.groups.map(group => {
     let label = group.label
@@ -107,6 +115,11 @@ function bandKey(node: { step?: number; kind: string }): string {
 
 function flowKindPaint(kind: string): { fill?: string } {
   switch (kind) {
+    case 'profile': return { fill: '#1a2740' }
+    case 'session': return { fill: '#1c2f3a' }
+    case 'envelope': return { fill: '#243018' }
+    case 'memory': return { fill: '#2a2418' }
+    case 'context': return { fill: '#1f2a3a' }
     case 'client-input': return { fill: '#0f3d38' }
     case 'host-admit': return { fill: '#152a48' }
     case 'step': return { fill: '#2a1f4a' }

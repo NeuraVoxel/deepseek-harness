@@ -4,6 +4,7 @@ import {
   useMemo, useRef, useState,
   type ReactElement,
   type RefObject,
+  type SyntheticEvent,
 } from 'react'
 import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type { InjectFace, PropsLocale, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
@@ -248,11 +249,15 @@ function FlowPane(props: Props): ReactElement {
         <span className={css.hint}>{truncate(String(sessionId), 24)}</span>
         <ZoomControls t={t} zoom={zoom} hostRef={hostRef} />
         <div className={css.legend} aria-label={t('legend.title')}>
-          <span><i className={`${css.swatch} ${css.swatchKindInput}`} />{t('flow.kind.client-input')}</span>
-          <span><i className={`${css.swatch} ${css.swatchKindAdmit}`} />{t('flow.kind.host-admit')}</span>
-          <span><i className={`${css.swatch} ${css.swatchKindStep}`} />{t('flow.kind.step')}</span>
+          <span><i className={`${css.swatch} ${css.swatchKindProfile}`} />{t('flow.kind.profile')}</span>
+          <span><i className={`${css.swatch} ${css.swatchKindSession}`} />{t('flow.kind.session')}</span>
+          <span><i className={`${css.swatch} ${css.swatchKindEnvelope}`} />{t('flow.kind.envelope')}</span>
+          <span><i className={`${css.swatch} ${css.swatchKindMemory}`} />{t('flow.kind.memory')}</span>
+          <span><i className={`${css.swatch} ${css.swatchKindContext}`} />{t('flow.kind.context')}</span>
           <span><i className={`${css.swatch} ${css.swatchKindModel}`} />{t('flow.kind.model')}</span>
           <span><i className={`${css.swatch} ${css.swatchKindTool}`} />{t('flow.kind.tool')}</span>
+          <span><i className={`${css.swatch} ${css.swatchEdgeFlow}`} />{t('flow.edge.flow')}</span>
+          <span><i className={`${css.swatch} ${css.swatchEdgeData}`} />{t('flow.edge.data')}</span>
           <span><i className={`${css.swatch} ${css.swatchFlowActive}`} />{t('flow.legend.active')}</span>
         </div>
       </div>
@@ -296,11 +301,21 @@ function FlowIoTooltip(props: {
   const { t, node, clientX, clientY } = props
   const left = Math.min(clientX + 14, typeof window !== 'undefined' ? window.innerWidth - 360 : clientX + 14)
   const top = Math.min(clientY + 14, typeof window !== 'undefined' ? window.innerHeight - 280 : clientY + 14)
+  /** Keep pointer work on the panel (select / copy / scroll) off the canvas stage. */
+  const stopCanvasPointer = (event: SyntheticEvent): void => {
+    event.stopPropagation()
+  }
   return (
     <div
       className={css.ioTooltip}
       style={{ left, top }}
-      role="tooltip"
+      role="dialog"
+      aria-label={node.label}
+      onPointerDown={stopCanvasPointer}
+      onPointerMove={stopCanvasPointer}
+      onPointerUp={stopCanvasPointer}
+      onWheel={stopCanvasPointer}
+      onClick={stopCanvasPointer}
     >
       <div className={css.ioTooltipTitle}>{node.label}</div>
       <div className={css.ioTooltipSection}>{t('flow.hover.input')}</div>

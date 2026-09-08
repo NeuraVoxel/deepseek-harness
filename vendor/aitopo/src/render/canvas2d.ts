@@ -26,6 +26,7 @@ export interface EdgePaintView {
   readonly from: { x: number; y: number }
   readonly to: { x: number; y: number }
   readonly selected: boolean
+  readonly hovered: boolean
   /** Prefer horizontal vs vertical control points for the bezier. */
   readonly orientation?: 'horizontal' | 'vertical'
   /** Orthogonal polyline (includes endpoints); drawn with rounded elbows. */
@@ -143,12 +144,16 @@ export class Canvas2DRenderer implements Renderer {
         ctx.bezierCurveTo(view.from.x, midY, view.to.x, midY, view.to.x, view.to.y)
       }
     }
-    ctx.strokeStyle = view.selected ? '#3b82f6' : '#5a6478'
-    ctx.lineWidth = (view.selected ? 2 : 1.25) / this.viewport.zoom
+    const highlight = view.selected || view.hovered
+    const data = edge.data ?? {}
+    const baseStroke = typeof data.stroke === 'string' ? data.stroke : '#5a6478'
+    const hoverStroke = typeof data.strokeHover === 'string' ? data.strokeHover : '#3b82f6'
+    const baseWidth = typeof data.lineWidth === 'number' ? data.lineWidth : 1.25
+    ctx.strokeStyle = highlight ? hoverStroke : baseStroke
+    ctx.lineWidth = (highlight ? Math.max(baseWidth, 2.5) : baseWidth) / this.viewport.zoom
     ctx.lineJoin = 'round'
     ctx.lineCap = 'round'
     ctx.stroke()
-    void edge
   }
 
   drawNode(node: GraphNode, view: NodePaintView): void {

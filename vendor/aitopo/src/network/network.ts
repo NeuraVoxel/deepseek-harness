@@ -12,6 +12,7 @@ import type { Renderer } from '../render/canvas2d.ts'
 import {
   edgeAnchors,
   groupBounds,
+  hitTestEdges,
   hitTestNodes,
   nodeBounds,
 } from '../ui/bounds.ts'
@@ -250,7 +251,7 @@ export class Network {
   }
 
   /**
-   * @param id - hovered node id or undefined.
+   * @param id - hovered node or edge id, or undefined to clear.
    */
   setHover(id: string | undefined): void {
     this.scene.setHover(id)
@@ -283,12 +284,15 @@ export class Network {
     })
   }
 
-  /** Hit-test at a screen point relative to the hit canvas. */
-  hitTestScreen(screenX: number, screenY: number): { id: string } | undefined {
+  /** Hit-test at a screen point relative to the hit canvas (nodes first, then edges). */
+  hitTestScreen(screenX: number, screenY: number): { id: string; kind: 'node' | 'edge' } | undefined {
     const world = this.viewport.screenToWorld({ x: screenX, y: screenY })
+    const zoom = this.viewport.state.zoom
     const nodes = [...this.scene.nodes.values()]
-    const hit = hitTestNodes(world, nodes, 2 / this.viewport.state.zoom)
-    return hit === undefined ? undefined : { id: hit.id }
+    const nodeHit = hitTestNodes(world, nodes, 2 / zoom)
+    if (nodeHit !== undefined) return { id: nodeHit.id, kind: 'node' }
+    const edgeHit = hitTestEdges(world, [...this.scene.edges.values()], this.scene.nodes, 4 / zoom)
+    return edgeHit === undefined ? undefined : { id: edgeHit.id, kind: 'edge' }
   }
 
   private attachInteractions(): void {
@@ -360,6 +364,7 @@ export class Network {
           from: anchors.from,
           to: anchors.to,
           selected: this.scene.selectedIds.has(edge.id),
+          hovered: this.scene.hover === edge.id,
           orientation: anchors.orientation,
           points: anchors.points,
         })

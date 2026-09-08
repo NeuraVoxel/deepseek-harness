@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { hitRect, unionRect } from '../src/geom.ts'
+import { distanceToPolyline, distanceToSegment, hitRect, unionRect } from '../src/geom.ts'
 import { DirtyAccumulator } from '../src/network/dirty.ts'
 import { layoutGrid, layoutFlowColumns } from '../src/layout/index.ts'
 import { Viewport } from '../src/network/viewport.ts'
-import { edgeAnchors } from '../src/ui/bounds.ts'
+import { edgeAnchors, hitTestEdges } from '../src/ui/bounds.ts'
 
 describe('geom + dirty + viewport + layout', () => {
   it('unions rects and hits points', () => {
@@ -81,5 +81,23 @@ describe('geom + dirty + viewport + layout', () => {
     expect(a.points[0]).toEqual(a.from)
     expect(a.points[a.points.length - 1]).toEqual(a.to)
     expect(a.points.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('measures distance to segments and hits edge polylines', () => {
+    expect(distanceToSegment({ x: 0, y: 1 }, { x: 0, y: 0 }, { x: 10, y: 0 })).toBe(1)
+    expect(distanceToPolyline({ x: 5, y: 2 }, [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+      { x: 10, y: 10 },
+    ])).toBe(2)
+
+    const from = { id: 'a', type: 'step', label: 'A', x: 0, y: 0, w: 100, h: 40 }
+    const to = { id: 'b', type: 'step', label: 'B', x: 200, y: 0, w: 100, h: 40 }
+    const edge = { id: 'e1', from: 'a', to: 'b' }
+    const mid = edgeAnchors(from, to).points
+    const onWire = { x: (mid[0]!.x + mid[1]!.x) / 2, y: mid[0]!.y }
+    const hit = hitTestEdges(onWire, [edge], new Map([['a', from], ['b', to]]), 4)
+    expect(hit?.id).toBe('e1')
+    expect(hitTestEdges({ x: 50, y: 80 }, [edge], new Map([['a', from], ['b', to]]), 4)).toBeUndefined()
   })
 })

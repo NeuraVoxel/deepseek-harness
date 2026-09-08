@@ -98,7 +98,7 @@ describe('aitopo adapters', () => {
           step: 1,
         },
       ],
-      edges: [{ from: 'step:1', to: 'tool:1' }],
+      edges: [{ from: 'step:1', to: 'tool:1', kind: 'flow' }],
     }
     const { document } = flowToDocument(snapshot)
     const step = document.nodes.find(n => n.id === 'step:1')

@@ -72,3 +72,36 @@ export function growRect(rect: Rect, pad: number): Rect {
     height: rect.height + pad * 2,
   }
 }
+
+/**
+ * Distance from a point to a line segment.
+ * @param point - query point.
+ * @param a - segment start.
+ * @param b - segment end.
+ */
+export function distanceToSegment(point: Point, a: Point, b: Point): number {
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const len2 = dx * dx + dy * dy
+  if (len2 === 0) return Math.hypot(point.x - a.x, point.y - a.y)
+  let t = ((point.x - a.x) * dx + (point.y - a.y) * dy) / len2
+  t = Math.max(0, Math.min(1, t))
+  return Math.hypot(point.x - (a.x + t * dx), point.y - (a.y + t * dy))
+}
+
+/**
+ * Minimum distance from a point to a polyline.
+ * @param point - query point.
+ * @param points - polyline vertices.
+ */
+export function distanceToPolyline(point: Point, points: readonly Point[]): number {
+  if (points.length === 0) return Number.POSITIVE_INFINITY
+  if (points.length === 1) {
+    return Math.hypot(point.x - points[0]!.x, point.y - points[0]!.y)
+  }
+  let best = Number.POSITIVE_INFINITY
+  for (let i = 0; i < points.length - 1; i += 1) {
+    best = Math.min(best, distanceToSegment(point, points[i]!, points[i + 1]!))
+  }
+  return best
+}

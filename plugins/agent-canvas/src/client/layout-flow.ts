@@ -71,7 +71,7 @@ export function layoutAgentFlow(snapshot: AgentFlowSnapshot): FlowLayout {
     members: AgentFlowNode[]
   }[] = []
   if (prelude.length > 0) {
-    bands.push({ key: 'prelude', label: 'Client → Host', members: orderBand(prelude) })
+    bands.push({ key: 'prelude', label: 'Harness → Host', members: orderBand(prelude) })
   }
   for (const step of stepNums) {
     const members = orderBand(snapshot.nodes.filter(n => n.step === step))
@@ -191,14 +191,19 @@ function placeColumn(
 
 function orderBand(nodes: readonly AgentFlowNode[]): AgentFlowNode[] {
   const order: Record<string, number> = {
-    'client-input': 0,
-    'host-admit': 1,
-    step: 2,
-    model: 3,
-    tool: 4,
-    join: 5,
-    'turn-end': 6,
-    'client-render': 7,
+    profile: 0,
+    session: 1,
+    envelope: 2,
+    'client-input': 3,
+    'host-admit': 4,
+    memory: 5,
+    context: 6,
+    step: 7,
+    model: 8,
+    tool: 9,
+    join: 10,
+    'turn-end': 11,
+    'client-render': 12,
   }
   return [...nodes].sort((a, b) => {
     const kindDelta = (order[a.kind] ?? 50) - (order[b.kind] ?? 50)

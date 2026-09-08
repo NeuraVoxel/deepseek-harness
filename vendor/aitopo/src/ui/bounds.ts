@@ -2,7 +2,7 @@
  * View helpers: bounds and hit-testing derived from scene elements.
  */
 
-import { hitRect, type Point, type Rect } from '../geom.ts'
+import { distanceToPolyline, hitRect, type Point, type Rect } from '../geom.ts'
 import type { GraphEdge, GraphGroup, GraphNode } from '../protocol/types.ts'
 
 const DEFAULT_W = 160
@@ -168,9 +168,40 @@ export function hitTestNodes(
   return undefined
 }
 
+/**
+ * Hit-test edges by distance to the same orthogonal polyline used for paint.
+ * Closest edge within tolerance wins; nodes must be resolved separately first.
+ * @param point - world point.
+ * @param edges - candidate edges.
+ * @param nodeById - node lookup for endpoints.
+ * @param tolerance - max distance in world units.
+ */
+export function hitTestEdges(
+  point: Point,
+  edges: readonly GraphEdge[],
+  nodeById: ReadonlyMap<string, GraphNode>,
+  tolerance: number,
+): GraphEdge | undefined {
+  let best: GraphEdge | undefined
+  let bestDist = tolerance
+  for (const edge of edges) {
+    const from = nodeById.get(edge.from)
+    const to = nodeById.get(edge.to)
+    if (from === undefined || to === undefined) continue
+    const anchors = edgeAnchors(from, to)
+    if (!hitRect(point, anchors.bounds, tolerance)) continue
+    const dist = distanceToPolyline(point, anchors.points)
+    if (dist <= bestDist) {
+      bestDist = dist
+      best = edge
+    }
+  }
+  return best
+}
+
 export { DEFAULT_H, DEFAULT_W }
 
-/** @param _edge - reserved for future edge hit geometry. */
-export function edgeId(_edge: GraphEdge): string {
-  return _edge.id
+/** @param edge - edge whose id is returned. */
+export function edgeId(edge: GraphEdge): string {
+  return edge.id
 }

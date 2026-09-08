@@ -7,6 +7,7 @@ export {
   DEFAULT_W,
   edgeAnchors,
   groupBounds,
+  hitTestEdges,
   hitTestNodes,
   nodeBounds,
 } from './bounds.ts'

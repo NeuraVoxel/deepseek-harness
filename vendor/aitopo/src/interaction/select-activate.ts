@@ -23,6 +23,7 @@ export class SelectActivateInteraction implements Interaction {
         return
       }
       network.setSelection([hit.id])
+      if (hit.kind !== 'node') return
       const now = performance.now()
       const isDouble = lastClickId === hit.id && now - lastClickAt < 350
       lastClickAt = now

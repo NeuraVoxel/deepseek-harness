@@ -6,7 +6,7 @@
 export interface InteractionHost {
   getViewElement(): HTMLDivElement | null
   getHitElement(): HTMLCanvasElement | null
-  hitTestScreen(screenX: number, screenY: number): { id: string } | undefined
+  hitTestScreen(screenX: number, screenY: number): { id: string; kind: 'node' | 'edge' } | undefined
   setSelection(ids: readonly string[]): void
   setHover(id: string | undefined): void
   activateNode(nodeId: string, detail: 'click' | 'dblclick'): void
