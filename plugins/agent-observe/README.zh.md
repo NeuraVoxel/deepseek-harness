@@ -8,9 +8,11 @@
 - 边：subagent 的 `parentId`
 - 分组：默认 **Workspace**，可切 **父子树** / **Agent Teams**（有 `teamId` 时用 SubNetwork）
 - 单击节点 → `sessions.open(id)`
-- **Turn 快捷入口：** `conversation.chat.assistant-actions`（与 Turn usage 同行）上的 28px 图标打开本 Tab，并钉到该消息所属 Turn
-- **双击**节点 → 打开该 Agent **最近一轮**流程 Canvas，分区为
+- 在某轮 Turn 的 assistant-actions 行点 **打开观察** → 直接进入该 Turn 的 **流程**模式并**钉住**（更新的 Turn 不会自动抢走画布）
+- 总览 **双击** → 打开该 Agent **最新** Turn 的流程 Canvas（`focusTurn = null`），分区为
   `Client · Web/CLI（Input · session.prompt · session.follow · Render）→ Host · Frame → Host · Step N`
+- 钉住的 Turn 不是 Session 最新时，流程工具栏出现 **跳到最新**；点击清除钉住并留在流程模式
+- **限制：** Turn 由快捷入口 `messageId` 对应的持久化 `assistant/message.id` 反查得出（插件内解析）；本轮不扩展 `packages/` 中的 `AssistantActionOwnerProps`
 - **Client↔Host 通信节点：** `session.prompt`（一元 Remote）与 `session.follow`（流式 Remote）；Host 本地总线留在 Host admit / Session 内
 - **Harness 节点（对齐 Host 实现）：** Profile = boot 组合（Client 读不到 profile 名）；Session = 当前日志身份；Envelope = `request/header` 的 EpochHeader（system + tools + call config）加上 `agentPreset`；Memory = Session surface + compaction（**没有**独立 Memory 服务）；Context = 每步 LLM 请求上下文（`request/header` + 非 user 源的 `user/message` 注入）
 - **Turn / Step 只作分区标签**（标题 + `Host · Step N`），不是图节点——Host admit 是 Client→Host 交接；Context 以数据边喂给 Model

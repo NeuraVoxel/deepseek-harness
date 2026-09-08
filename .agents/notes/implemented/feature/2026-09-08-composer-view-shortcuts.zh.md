@@ -15,7 +15,7 @@ Status: implemented
 - `dsh-agent-observe` → id `agent-observe`，order `30`，打开 view id `observe`
 - `dsh-agent-orchestrator` → id `agent-orchestrator`，order `40`，打开 view id `orchestrator`
 
-Owner 的 `messageId` 已接入但暂不使用，以便后续按 Turn 灌数时不必挪挂载点。点击后按本地化的 Tab 文案匹配 Session 顶栏 `[role=tab]` 并触发 click，复用外壳已有的 `selectView` 路径。插件不写 Conversation View store：该 handle 为 `ui-conversation` 私有，且功能插件不得 runtime 导入另一功能包的值。
+Owner 的 `messageId` 已接入，供插件在不挪挂载点的前提下解析按 Turn 的载荷。观察插件用它做按 Turn 钉住的流程（[按 Turn 钉住的观察流程](2026-09-08-agent-observe-turn-scoped-flow.zh.md)）；编排插件仍只打开 Tab、暂不用该 id。点击后按本地化的 Tab 文案匹配 Session 顶栏 `[role=tab]` 并触发 click，复用外壳已有的 `selectView` 路径。插件不写 Conversation View store：该 handle 为 `ui-conversation` 私有，且功能插件不得 runtime 导入另一功能包的值。
 
 ## Alternatives considered
 

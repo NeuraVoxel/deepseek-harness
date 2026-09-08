@@ -15,7 +15,7 @@ Each plugin registers its own compact control on `conversation.chat.assistant-ac
 - `dsh-agent-observe` → id `agent-observe`, order `30`, opens view id `observe`
 - `dsh-agent-orchestrator` → id `agent-orchestrator`, order `40`, opens view id `orchestrator`
 
-The owner prop `messageId` is accepted and currently unused so a later change can inject Turn-scoped data without moving the seat. Clicking the control finds the Session header `[role=tab]` whose visible label matches the plugin’s localized view label and clicks it, reusing the shell’s existing `selectView` path. Plugins do not write the Conversation View store: that handle is private to `ui-conversation`, and feature plugins must not import another feature package’s values.
+The owner prop `messageId` is accepted so plugins can resolve per-Turn payload without moving the seat. Observe consumes it for Turn-scoped flow ([Turn-scoped Observe flow](2026-09-08-agent-observe-turn-scoped-flow.md)); Orchestrate still opens its tab without using the id. Clicking the control finds the Session header `[role=tab]` whose visible label matches the plugin’s localized view label and clicks it, reusing the shell’s existing `selectView` path. Plugins do not write the Conversation View store: that handle is private to `ui-conversation`, and feature plugins must not import another feature package’s values.
 
 ## Alternatives considered
 
