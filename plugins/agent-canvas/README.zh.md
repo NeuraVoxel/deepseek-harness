@@ -8,10 +8,12 @@
 - 边：subagent 的 `parentId`
 - 分组：默认 **Workspace**，可切 **父子树** / **Agent Teams**（有 `teamId` 时用 SubNetwork）
 - 单击节点 → `sessions.open(id)`
-- **双击**节点 → 打开该 Agent **最近一轮**流程 Canvas：
-  `Profile → Session → Envelope → Client 输入 → Host 接纳 → Context → Step → Model → Tools → Turn end → Client 渲染`，**进行中**节点高亮
+- **双击**节点 → 打开该 Agent **最近一轮**流程 Canvas，分区为
+  `Client · Web/CLI（Input · session.prompt · session.follow · Render）→ Host · Frame → Host · Step N`
+- **Client↔Host 通信节点：** `session.prompt`（一元 Remote）与 `session.follow`（流式 Remote）；Host 本地总线留在 Host admit / Session 内
 - **Harness 节点（对齐 Host 实现）：** Profile = boot 组合（Client 读不到 profile 名）；Session = 当前日志身份；Envelope = `request/header` 的 EpochHeader（system + tools + call config）加上 `agentPreset`；Memory = Session surface + compaction（**没有**独立 Memory 服务）；Context = 每步 LLM 请求上下文（`request/header` + 非 user 源的 `user/message` 注入）
-- **边：** 灰色 **flow** 步骤线走控制主轴（`admit → Context → Step → …`）；青色 **data** 数据线汇入 Context（`Memory → Context`、`Envelope → Context`）
+- **Turn / Step 只作分区标签**（标题 + `Host · Step N`），不是图节点——Host admit 是 Client→Host 交接；Context 以数据边喂给 Model
+- **边：** 灰色 **flow** = 控制 / 收束；青色 **data** = 载荷（`Client input → Host admit`、`Session → Envelope`、`Memory/Envelope → Context`、`Context → Model`、`Model → Tool`、`Model/Tool → Session`、`Session → Client render`）
 - 同一条 assistant 里的多个 tool 竖排为**并行列**，再汇入 Join
 - 渲染：[@neuravoxel/aitopo](../../vendor/aitopo) Canvas Network（dirty-rect）；无 SVG 舞台
 

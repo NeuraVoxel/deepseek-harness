@@ -122,14 +122,17 @@ export class Canvas2DRenderer implements Renderer {
     ctx.lineWidth = 1 / this.viewport.zoom
     ctx.stroke()
     ctx.fillStyle = '#5a6478'
-    ctx.font = `${12 / this.viewport.zoom}px sans-serif`
+    // World-space font — scales with viewport zoom (do not divide by zoom).
+    ctx.font = '12px sans-serif'
     ctx.textBaseline = 'top'
     ctx.fillText(group.label, bounds.x + 8, bounds.y + 6)
     void group
   }
 
   drawEdge(edge: GraphEdge, view: EdgePaintView): void {
-    const ctx = this.rootCtx
+    const highlight = view.selected || view.hovered
+    // Highlighted edges paint on the overlay canvas so node fills cannot cover them.
+    const ctx = highlight ? this.overlayCtx : this.rootCtx
     ctx.beginPath()
     const points = view.points
     if (points !== undefined && points.length >= 2) {
@@ -144,7 +147,6 @@ export class Canvas2DRenderer implements Renderer {
         ctx.bezierCurveTo(view.from.x, midY, view.to.x, midY, view.to.x, view.to.y)
       }
     }
-    const highlight = view.selected || view.hovered
     const data = edge.data ?? {}
     const baseStroke = typeof data.stroke === 'string' ? data.stroke : '#5a6478'
     const hoverStroke = typeof data.strokeHover === 'string' ? data.strokeHover : '#3b82f6'
@@ -154,6 +156,27 @@ export class Canvas2DRenderer implements Renderer {
     ctx.lineJoin = 'round'
     ctx.lineCap = 'round'
     ctx.stroke()
+    const label = typeof data.label === 'string' ? data.label : undefined
+    if (label !== undefined && label.length > 0) {
+      let mx: number
+      let my: number
+      if (points !== undefined && points.length >= 2) {
+        const mid = Math.floor((points.length - 1) / 2)
+        const a = points[mid]!
+        const b = points[Math.min(points.length - 1, mid + 1)]!
+        mx = (a.x + b.x) / 2
+        my = (a.y + b.y) / 2
+      } else {
+        mx = (view.from.x + view.to.x) / 2
+        my = (view.from.y + view.to.y) / 2
+      }
+      ctx.font = '9px sans-serif'
+      ctx.fillStyle = highlight ? hoverStroke : '#8b939e'
+      ctx.textAlign = 'center'
+      ctx.textBaseline = 'bottom'
+      ctx.fillText(label, mx, my - 3)
+      ctx.textAlign = 'start'
+    }
   }
 
   drawNode(node: GraphNode, view: NodePaintView): void {
@@ -179,7 +202,7 @@ export class Canvas2DRenderer implements Renderer {
       ctx.lineWidth = (view.selected || node.status === 'active' ? 2.5 : 1.25) / this.viewport.zoom
       ctx.stroke()
       ctx.fillStyle = labelColor
-      ctx.font = `${10 / this.viewport.zoom}px sans-serif`
+      ctx.font = '10px sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
       ctx.fillText(truncate(node.label, 8), cx, cy)
@@ -193,12 +216,12 @@ export class Canvas2DRenderer implements Renderer {
       ctx.lineWidth = (view.selected || node.status === 'active' ? 2.5 : 1.25) / this.viewport.zoom
       ctx.stroke()
       ctx.fillStyle = labelColor
-      ctx.font = `${12 / this.viewport.zoom}px sans-serif`
+      ctx.font = '12px sans-serif'
       ctx.textBaseline = 'middle'
       ctx.fillText(truncate(node.label, 18), bounds.x + 12, bounds.y + bounds.height / 2 - 6)
       if (node.status !== undefined) {
         ctx.fillStyle = metaColor
-        ctx.font = `${10 / this.viewport.zoom}px sans-serif`
+        ctx.font = '10px sans-serif'
         const meta = typeof data.meta === 'string' ? data.meta : node.status
         ctx.fillText(truncate(meta, 18), bounds.x + 12, bounds.y + bounds.height / 2 + 10)
       }

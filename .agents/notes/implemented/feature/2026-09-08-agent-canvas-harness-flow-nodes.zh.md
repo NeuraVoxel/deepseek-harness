@@ -6,29 +6,25 @@ Status: implemented
 
 ## Problem
 
-agent-canvas 过程视图原先只画 Agent Loop 流水线（`client-input → host-admit → step → model → tool → join → turn-end → client-render`）。运维侧看不到真正决定模型输入的 harness 概念：boot 的 Profile 组合、Session 身份、已记录的请求信封（system + tools + call config + preset）、Session surface 的 Memory（含 compaction），以及每步 LLM Context 组装。
+agent-canvas 过程视图原先只画 Agent Loop。运维看不到 harness 概念（Profile / Session / Envelope / Memory / Context）、Client↔Host 线上方法，以及诚实的数据边 vs 控制边。
 
 ## Decision
 
 仅扩展 `plugins/agent-canvas` 的 flow 推导（不改 `packages/`）：
 
-- Prelude：**Profile**（boot 组合；Client 读不到 Host profile 名）→ **Session**（id / 生命周期）→ **Envelope**（证据来自 `agent-preset/selected` + 最近 `request/header` / `EpochHeader`：tools、system、model）。画布 kind 为 `envelope`，不是虚构的 Resource 层——harness 没有 Resource 服务。
-- 每步：**Memory**（Session surface 消息数 + compaction 括号 / compact 摘要；文案标明没有 Memory 服务）→ **Context**（`request/header` + 非 user 源的 `user/message` 注入；compact 摘要归 Memory）→ 原有 Step → Model → Tools。
-- 边：Session → Client input；**admit → Context**（控制）；**Memory → Context** 与 **Envelope → Context**（数据汇入）；主轴继续 Context → Step → …
-- 边种类：`flow`（步骤/控制，灰色）与 `data`（汇入 Context 的载荷，青色）；AITopo `drawEdge` 读取 `data.stroke` / `strokeHover` / `lineWidth`。
-- Client-input 只收 `source.kind === 'user'` 的提示，避免把上下文注入算成用户输入。
-- Turn/step 归属用 `turn/start`…`turn/end` 与 `step/start`…`step/end` 的 seq 区间，因为 surface 消息本身不带 `turn` / `step` 字段。
-- IO 检查面板支持指针交互（选中、复制、滚动）；指针事件在面板内停止冒泡，避免选文字时拖动画布或清选中。
+- 布局分区：**Client · Web/CLI**（`Input → session.prompt → session.follow → Render`）→ **Host · Frame · Turn N · preset** → **Host · Step N**。
+- 通信节点对齐真实 Typert Remote：**`session.prompt`**（Client→Host 一元调用）与 **`session.follow`**（Host→Client 流）。载体是 Connection / Gateway；Host 进程内 `session/event`、`agent/assistant-stream` 不跨进程，由 history.follow 打包装上 follow。
+- 边：Input → `session.prompt` → Host admit；Session + Model → `session.follow` → Render；Memory/Envelope → Context → Model；Model/Tool → Session；admit → Context（flow）。
+- 没有 `step` / `turn-end` 图节点。画布 “Context” = 组装后的 GenerateOptions。Memory = Session surface + compaction。
+- Client 表面启发式：user source 带 `clientTimeZone` → web，否则 cli。
 
 ## Alternatives considered
 
-- **独立 Architecture 视图。** 本次不做：Hybrid 单图让运维继续留在双击打开的当前 turn。
-- **虚构 Memory 服务节点。** 拒绝：仓库没有 Memory 包；画布必须写成 Session surface + compaction。
-- **把信封节点标成 Resource。** 评审后拒绝：Resource 不是 harness 用语；**Envelope** 对齐 `request/header` / EpochHeader。
-- **用 Host Remote 取 Profile 名。** 延后：有用，但不是诚实展示框架所必需。
+- **虚构 BFF / SessionBinding / inbox 线节点。** 拒绝：不是线上符号；Host 端用 admit + Session 即可。
+- **出站路径标成 `session/event`。** 拒绝：那是 Host 本地总线；线上帧是 `session.follow`。
+- **独立 Architecture 视图 / Memory 服务 / Resource 节点。** 此前已拒绝；Envelope 仍对齐 `request/header`。
 
 ## Consequences
 
-- Flow layout 的 prelude 带标签为 `Harness → Host`；配色 / 文案 / 图例覆盖五个新 kind（含 `envelope`）。
-- 在出现 header 或 preset 事件前 Envelope 为 `pending`；在出现 header 或注入前 Context 为组装中。
-- 必验：`pnpm --filter dsh-agent-canvas test`（derive-flow + layout + aitopo adapters）。
+- 图例含 remote-prompt / remote-follow。
+- 必验：`pnpm --filter dsh-agent-canvas test`。

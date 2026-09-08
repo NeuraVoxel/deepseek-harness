@@ -69,9 +69,11 @@ export function flowToDocument(
       to: edge.to,
       kind: edge.kind,
       data: {
-        stroke: isData ? '#2dd4bf' : '#5a6478',
-        strokeHover: '#3b82f6',
-        lineWidth: isData ? 1.75 : 1.25,
+        // Data edges stay muted at rest; strokeHover (teal) fires on edge hit or related-node hover.
+        stroke: isData ? '#3a4846' : '#5a6478',
+        strokeHover: isData ? '#5eead4' : '#3b82f6',
+        lineWidth: isData ? 1.2 : 1.25,
+        ...(edge.label === undefined ? {} : { label: edge.label }),
       },
     }
   })
@@ -79,7 +81,9 @@ export function flowToDocument(
   const groups: GraphGroup[] = layout.groups.map(group => {
     let label = group.label
     if (group.parallelTools === true && labels.parallel !== undefined) {
-      const base = group.step !== undefined ? `Step ${group.step}` : group.label.replace(/ · .*$/, '')
+      const base = group.step !== undefined
+        ? (group.step === 0 ? 'Host · Step …' : `Host · Step ${group.step}`)
+        : group.label.replace(/ · parallel$/, '').replace(/ · .*$/, '')
       label = `${base} · ${labels.parallel}`
     }
     return {
@@ -108,8 +112,15 @@ export function flowToDocument(
 }
 
 function bandKey(node: { step?: number; kind: string }): string {
-  if (node.kind === 'turn-end' || node.kind === 'client-render') return 'epilogue'
-  if (node.step === undefined) return 'prelude'
+  if (node.kind === 'client-input' || node.kind === 'remote-prompt'
+    || node.kind === 'remote-follow' || node.kind === 'client-render') {
+    return 'client'
+  }
+  if (node.kind === 'profile' || node.kind === 'session'
+    || node.kind === 'envelope' || node.kind === 'host-admit') {
+    return 'host-frame'
+  }
+  if (node.step === undefined) return 'host-frame'
   return `step:${node.step}`
 }
 
@@ -121,12 +132,12 @@ function flowKindPaint(kind: string): { fill?: string } {
     case 'memory': return { fill: '#2a2418' }
     case 'context': return { fill: '#1f2a3a' }
     case 'client-input': return { fill: '#0f3d38' }
+    case 'remote-prompt': return { fill: '#16352f' }
+    case 'remote-follow': return { fill: '#1a3a32' }
     case 'host-admit': return { fill: '#152a48' }
-    case 'step': return { fill: '#2a1f4a' }
     case 'model': return { fill: '#3a2a10' }
     case 'tool': return { fill: '#3a1530' }
     case 'join': return { fill: '#1e293b' }
-    case 'turn-end': return { fill: '#1a1d24' }
     case 'client-render': return { fill: '#143528' }
     default: return {}
   }

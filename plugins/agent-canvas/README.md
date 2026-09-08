@@ -8,10 +8,12 @@ Opt-in plugin: a **Canvas** tab beside Chat / Trajectory that shows Session / Ag
 - Edges: subagent `parentId` links
 - Groups: **Workspace** (default), **Parent tree**, **Agent Teams** (SubNetwork when `teamId` exists)
 - Click a node → `sessions.open(id)`
-- **Double-click** a node → process Canvas for that Agent’s **latest turn**:
-  `Profile → Session → Envelope → Client input → Host admit → Context → Step → Model → Tools → Turn end → Client render`, with **active** nodes highlighted while the Session is running
+- **Double-click** a node → process Canvas for that Agent’s **latest turn**, banded as
+  `Client · Web/CLI (Input · session.prompt · session.follow · Render) → Host · Frame → Host · Step N`
+- **Client↔Host wire nodes:** `session.prompt` (unary Remote) and `session.follow` (stream Remote); Host-local buses stay inside Host admit / Session
 - **Harness nodes (honest to Host code):** Profile = boot composition (Client cannot read the profile name); Session = current log identity; Envelope = `request/header` EpochHeader (system + tools + call config) plus `agentPreset`; Memory = Session surface + compaction (there is no Memory service); Context = per-step LLM request context (`request/header` + non-user `user/message` injections)
-- **Edges:** gray **flow** edges follow the control pipeline (`admit → Context → Step → …`); teal **data** edges feed Context (`Memory → Context`, `Envelope → Context`)
+- **Turn / Step are band labels only** (title + `Host · Step N`), not graph nodes — Host admit is the Client→Host handoff; Context feeds Model
+- **Edges:** gray **flow** = control / settle; teal **data** = payload (`Client input → Host admit`, `Session → Envelope`, `Memory/Envelope → Context`, `Context → Model`, `Model → Tool`, `Model/Tool → Session`, `Session → Client render`)
 - Sibling tools from one assistant message stack in a **parallel column** and rejoin at Join
 - Rendering: **[@neuravoxel/aitopo](../../vendor/aitopo)** Canvas Network (dirty-rect); no SVG stage
 

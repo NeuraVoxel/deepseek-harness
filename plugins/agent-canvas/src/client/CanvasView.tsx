@@ -249,6 +249,10 @@ function FlowPane(props: Props): ReactElement {
         <span className={css.hint}>{truncate(String(sessionId), 24)}</span>
         <ZoomControls t={t} zoom={zoom} hostRef={hostRef} />
         <div className={css.legend} aria-label={t('legend.title')}>
+          <span><i className={`${css.swatch} ${css.swatchKindInput}`} />{t('flow.kind.client-input')}</span>
+          <span><i className={`${css.swatch} ${css.swatchKindPrompt}`} />{t('flow.kind.remote-prompt')}</span>
+          <span><i className={`${css.swatch} ${css.swatchKindFollow}`} />{t('flow.kind.remote-follow')}</span>
+          <span><i className={`${css.swatch} ${css.swatchKindAdmit}`} />{t('flow.kind.host-admit')}</span>
           <span><i className={`${css.swatch} ${css.swatchKindProfile}`} />{t('flow.kind.profile')}</span>
           <span><i className={`${css.swatch} ${css.swatchKindSession}`} />{t('flow.kind.session')}</span>
           <span><i className={`${css.swatch} ${css.swatchKindEnvelope}`} />{t('flow.kind.envelope')}</span>
@@ -256,6 +260,7 @@ function FlowPane(props: Props): ReactElement {
           <span><i className={`${css.swatch} ${css.swatchKindContext}`} />{t('flow.kind.context')}</span>
           <span><i className={`${css.swatch} ${css.swatchKindModel}`} />{t('flow.kind.model')}</span>
           <span><i className={`${css.swatch} ${css.swatchKindTool}`} />{t('flow.kind.tool')}</span>
+          <span><i className={`${css.swatch} ${css.swatchKindRender}`} />{t('flow.kind.client-render')}</span>
           <span><i className={`${css.swatch} ${css.swatchEdgeFlow}`} />{t('flow.edge.flow')}</span>
           <span><i className={`${css.swatch} ${css.swatchEdgeData}`} />{t('flow.edge.data')}</span>
           <span><i className={`${css.swatch} ${css.swatchFlowActive}`} />{t('flow.legend.active')}</span>

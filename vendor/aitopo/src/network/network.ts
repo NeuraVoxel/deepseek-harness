@@ -360,11 +360,17 @@ export class Network {
         const to = this.scene.nodes.get(edge.to)
         if (from === undefined || to === undefined) continue
         const anchors = edgeAnchors(from, to)
+        const hoverId = this.scene.hover
+        const hoverIsNode = hoverId !== undefined && this.scene.nodes.has(hoverId)
+        // Node hover lights incident data edges so payload routes stand out without bright idle strokes.
+        const relatedData = hoverIsNode
+          && edge.kind === 'data'
+          && (edge.from === hoverId || edge.to === hoverId)
         renderer.drawEdge(edge, {
           from: anchors.from,
           to: anchors.to,
           selected: this.scene.selectedIds.has(edge.id),
-          hovered: this.scene.hover === edge.id,
+          hovered: hoverId === edge.id || relatedData,
           orientation: anchors.orientation,
           points: anchors.points,
         })

@@ -77,19 +77,21 @@
 
 .swatchKindInput { background: #2dd4bf; }
 .swatchKindAdmit { background: #60a5fa; }
+.swatchKindPrompt { background: #14b8a6; }
+.swatchKindFollow { background: #2dd4bf; border: 1px dashed #5eead4; box-sizing: border-box; }
 .swatchKindProfile { background: #64748b; }
 .swatchKindSession { background: #38bdf8; }
 .swatchKindEnvelope { background: #84cc16; }
 .swatchEdgeFlow { background: #5a6478; }
-.swatchEdgeData { background: #2dd4bf; }
+.swatchEdgeData { background: #3a4846; }
 .swatchKindMemory { background: #d97706; }
 .swatchKindContext { background: #818cf8; }
-.swatchKindStep { background: #a78bfa; }
 .swatchKindModel { background: #fbbf24; }
 .swatchKindTool {
   background: #f472b6;
   border-radius: 50%;
 }
+.swatchKindRender { background: #34d399; }
 
 .flowTitle {
   font-size: 13px;

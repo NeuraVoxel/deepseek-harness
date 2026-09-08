@@ -1,6 +1,7 @@
 /**
- * Step-grouped layout for an Agent process flow graph.
- * Sibling tools in one step stack in a vertical parallel column.
+ * Client / Host banded layout for an Agent process flow graph.
+ * Sibling tools in one Host step stack in a vertical parallel column.
+ * Envelope (Host · Frame) and Context (Host · Step) share one vertical center spine.
  */
 
 import type { AgentFlowEdge, AgentFlowNode, AgentFlowSnapshot } from './derive-flow.ts'
@@ -15,7 +16,7 @@ export interface LaidOutFlowNode extends AgentFlowNode {
   readonly height: number
 }
 
-/** One step (or prelude/epilogue) band. */
+/** One Client / Host / Step band. */
 export interface FlowStepGroup {
   readonly key: string
   readonly label: string
@@ -47,8 +48,25 @@ const GROUP_PAD = 16
 const HEADER = 26
 const BAND_GAP = 28
 
+interface BandPlan {
+  readonly key: string
+  readonly label: string
+  readonly step?: number
+  readonly members: readonly AgentFlowNode[]
+  readonly columns: readonly AgentFlowNode[][]
+  readonly colSizes: readonly { width: number; height: number }[]
+  readonly colLefts: readonly number[]
+  readonly innerW: number
+  readonly innerH: number
+  readonly width: number
+  readonly height: number
+  /** Center X of the alignment target within band content (x=0 at first column left). */
+  readonly alignCenterLocal: number
+}
+
 /**
- * Place nodes in step bands; tools share a vertical parallel column.
+ * Place nodes in Client / Host bands; tools share a vertical parallel column.
+ * Envelope and Context centers share one vertical spine; other bands center on that spine.
  * @param snapshot - flow snapshot.
  * @returns layout geometry.
  */
@@ -57,75 +75,88 @@ export function layoutAgentFlow(snapshot: AgentFlowSnapshot): FlowLayout {
     return { nodes: [], edges: snapshot.edges, groups: [], width: PAD * 2, height: PAD * 2 }
   }
 
-  const prelude = snapshot.nodes.filter(n => n.step === undefined
-    && n.kind !== 'turn-end' && n.kind !== 'client-render')
-  const epilogue = snapshot.nodes.filter(n => n.kind === 'turn-end' || n.kind === 'client-render')
+  const clientNodes = [
+    ...snapshot.nodes.filter(n => n.kind === 'client-input'),
+    ...snapshot.nodes.filter(n => n.kind === 'remote-prompt'),
+    ...snapshot.nodes.filter(n => n.kind === 'remote-follow'),
+    ...snapshot.nodes.filter(n => n.kind === 'client-render'),
+  ]
+  const hostFrame = snapshot.nodes.filter(n =>
+    n.kind === 'profile' || n.kind === 'session' || n.kind === 'envelope' || n.kind === 'host-admit')
   const stepNums = [...new Set(
     snapshot.nodes.filter(n => n.step !== undefined).map(n => n.step!),
   )].sort((a, b) => a - b)
 
-  const bands: {
-    key: string
-    label: string
-    step?: number
-    members: AgentFlowNode[]
-  }[] = []
-  if (prelude.length > 0) {
-    bands.push({ key: 'prelude', label: 'Harness → Host', members: orderBand(prelude) })
+  const plans: BandPlan[] = []
+  // Client band owns both Input and Render — Host sits between them in the loop.
+  if (clientNodes.length > 0) {
+    const surface = snapshot.clientSurface === 'cli' ? 'CLI' : 'Web'
+    plans.push(planBand(
+      'client',
+      `Client · ${surface}`,
+      orderBand(clientNodes),
+      undefined,
+      'center',
+    ))
+  }
+  if (hostFrame.length > 0) {
+    const parts = ['Host · Frame']
+    if (snapshot.turn !== null && snapshot.turn > 0) parts.push(`Turn ${snapshot.turn}`)
+    if (snapshot.agentPreset !== undefined && snapshot.agentPreset !== '') {
+      parts.push(snapshot.agentPreset)
+    }
+    plans.push(planBand('host-frame', parts.join(' · '), orderBand(hostFrame), undefined, 'envelope'))
   }
   for (const step of stepNums) {
     const members = orderBand(snapshot.nodes.filter(n => n.step === step))
-    bands.push({ key: `step:${step}`, label: `Step ${step}`, step, members })
+    const label = step === 0 ? 'Host · Step …' : `Host · Step ${step}`
+    plans.push(planBand(`step:${step}`, label, members, step, 'context'))
   }
-  if (epilogue.length > 0) {
-    bands.push({ key: 'epilogue', label: 'Settle', members: orderBand(epilogue) })
-  }
+
+  // Spine X = shared center of Envelope / Context (fallback: content midpoints).
+  const spineX = Math.max(
+    ...plans.map(plan => PAD + GROUP_PAD + plan.alignCenterLocal),
+    PAD + GROUP_PAD + RECT_W / 2,
+  )
 
   const groups: FlowStepGroup[] = []
   const laid: LaidOutFlowNode[] = []
   let cursorY = PAD
-  let maxWidth = PAD * 2
+  let maxRight = PAD * 2
 
-  for (const band of bands) {
-    const columns = buildColumns(band.members)
-    const colSizes = columns.map(col => columnSize(col))
-    const innerW = colSizes.reduce((sum, size, index) =>
-      sum + size.width + (index > 0 ? GAP_X : 0), 0)
-    const innerH = Math.max(...colSizes.map(size => size.height), RECT_H)
-    const width = innerW + GROUP_PAD * 2
-    const height = HEADER + innerH + GROUP_PAD * 2
-    const groupX = PAD
+  for (const plan of plans) {
+    const contentLeft = spineX - plan.alignCenterLocal
+    const groupX = contentLeft - GROUP_PAD
     const groupY = cursorY
-    const parallelTools = columns.some(col => col.length > 1 && col.every(n => n.kind === 'tool'))
+    const parallelTools = plan.columns.some(col => col.length > 1 && col.every(n => n.kind === 'tool'))
 
     groups.push({
-      key: band.key,
-      label: parallelTools ? `${band.label} · parallel` : band.label,
-      ...(band.step === undefined ? {} : { step: band.step }),
+      key: plan.key,
+      label: parallelTools ? `${plan.label} · parallel` : plan.label,
+      ...(plan.step === undefined ? {} : { step: plan.step }),
       x: groupX,
       y: groupY,
-      width,
-      height,
+      width: plan.width,
+      height: plan.height,
       ...(parallelTools ? { parallelTools: true } : {}),
     })
 
-    let cursorX = groupX + GROUP_PAD
-    columns.forEach((col, colIndex) => {
-      const size = colSizes[colIndex]!
-      const top = groupY + HEADER + GROUP_PAD + (innerH - size.height) / 2
-      placeColumn(laid, col, cursorX, top)
-      cursorX += size.width + GAP_X
+    plan.columns.forEach((col, colIndex) => {
+      const size = plan.colSizes[colIndex]!
+      const left = contentLeft + plan.colLefts[colIndex]!
+      const top = groupY + HEADER + GROUP_PAD + (plan.innerH - size.height) / 2
+      placeColumn(laid, col, left, top)
     })
 
-    maxWidth = Math.max(maxWidth, groupX + width + PAD)
-    cursorY += height + BAND_GAP
+    maxRight = Math.max(maxRight, groupX + plan.width + PAD)
+    cursorY += plan.height + BAND_GAP
   }
 
   return {
     nodes: laid,
     edges: snapshot.edges,
     groups,
-    width: maxWidth,
+    width: maxRight,
     height: cursorY - BAND_GAP + PAD,
   }
 }
@@ -145,6 +176,59 @@ export function buildColumns(members: readonly AgentFlowNode[]): AgentFlowNode[]
     }
   }
   return columns
+}
+
+function planBand(
+  key: string,
+  label: string,
+  members: readonly AgentFlowNode[],
+  step: number | undefined,
+  align: 'envelope' | 'context' | 'center',
+): BandPlan {
+  const columns = buildColumns(members)
+  const colSizes = columns.map(col => columnSize(col))
+  const colLefts: number[] = []
+  let x = 0
+  for (let i = 0; i < colSizes.length; i += 1) {
+    colLefts.push(x)
+    x += colSizes[i]!.width + (i < colSizes.length - 1 ? GAP_X : 0)
+  }
+  const innerW = colSizes.reduce((sum, size, index) =>
+    sum + size.width + (index > 0 ? GAP_X : 0), 0)
+  const innerH = Math.max(...colSizes.map(size => size.height), RECT_H)
+  const alignCenterLocal = columnCenterLocal(columns, colSizes, colLefts, align, innerW)
+  return {
+    key,
+    label,
+    ...(step === undefined ? {} : { step }),
+    members,
+    columns,
+    colSizes,
+    colLefts,
+    innerW,
+    innerH,
+    width: innerW + GROUP_PAD * 2,
+    height: HEADER + innerH + GROUP_PAD * 2,
+    alignCenterLocal,
+  }
+}
+
+/**
+ * Local center X used to pin the band onto the Envelope/Context spine.
+ * @param align - `envelope` / `context` prefer that kind's column; else content midpoint.
+ */
+function columnCenterLocal(
+  columns: readonly AgentFlowNode[][],
+  colSizes: readonly { width: number; height: number }[],
+  colLefts: readonly number[],
+  align: 'envelope' | 'context' | 'center',
+  innerW: number,
+): number {
+  if (align === 'center') return innerW / 2
+  const kind = align
+  const index = columns.findIndex(col => col.some(n => n.kind === kind))
+  if (index < 0) return innerW / 2
+  return colLefts[index]! + colSizes[index]!.width / 2
 }
 
 function columnSize(col: readonly AgentFlowNode[]): { width: number; height: number } {
@@ -191,19 +275,19 @@ function placeColumn(
 
 function orderBand(nodes: readonly AgentFlowNode[]): AgentFlowNode[] {
   const order: Record<string, number> = {
-    profile: 0,
-    session: 1,
-    envelope: 2,
-    'client-input': 3,
-    'host-admit': 4,
-    memory: 5,
-    context: 6,
-    step: 7,
-    model: 8,
-    tool: 9,
-    join: 10,
-    'turn-end': 11,
-    'client-render': 12,
+    'client-input': 0,
+    'remote-prompt': 1,
+    'remote-follow': 2,
+    'client-render': 3,
+    profile: 10,
+    session: 11,
+    envelope: 12,
+    'host-admit': 13,
+    memory: 20,
+    context: 21,
+    model: 22,
+    tool: 23,
+    join: 24,
   }
   return [...nodes].sort((a, b) => {
     const kindDelta = (order[a.kind] ?? 50) - (order[b.kind] ?? 50)

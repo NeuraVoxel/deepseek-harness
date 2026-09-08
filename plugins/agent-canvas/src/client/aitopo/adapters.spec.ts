@@ -77,9 +77,9 @@ describe('aitopo adapters', () => {
       updatedAt: '2026-09-07T00:00:00.000Z',
       nodes: [
         {
-          id: 'step:1',
-          kind: 'step',
-          label: 'Step',
+          id: 'context:1',
+          kind: 'context',
+          label: 'Context',
           inputText: 'in',
           outputText: 'out',
           status: 'error',
@@ -98,12 +98,12 @@ describe('aitopo adapters', () => {
           step: 1,
         },
       ],
-      edges: [{ from: 'step:1', to: 'tool:1', kind: 'flow' }],
+      edges: [{ from: 'context:1', to: 'tool:1', kind: 'flow' }],
     }
     const { document } = flowToDocument(snapshot)
-    const step = document.nodes.find(n => n.id === 'step:1')
+    const context = document.nodes.find(n => n.id === 'context:1')
     const tool = document.nodes.find(n => n.id === 'tool:1')
-    expect(step?.alarms?.[0]?.level).toBe('error')
+    expect(context?.alarms?.[0]?.level).toBe('error')
     expect(tool?.type).toBe('tool')
     expect(tool?.w).toBe(56)
     expect(tool?.h).toBe(56)

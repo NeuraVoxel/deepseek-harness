@@ -1,8 +1,8 @@
 /**
- * Agent turn/step/tool flow graph derived from a Client Session event window.
+ * Agent process flow graph derived from a Client Session event window.
  *
- * Harness frame nodes (Profile / Session / Envelope) sit in the prelude.
- * Per-step Memory + Context feed the existing Step → Model → Tools pipeline.
+ * Bands: Client · Web/CLI (Input + session.prompt + session.follow + Render)
+ * → Host · Frame → Host · Step N. Wire nodes name Typert Remote methods.
  */
 
 import type { SessionEventWindow, SessionSnapshot } from '@deepseek-ai/dsh-api-session-controller/client'
@@ -15,9 +15,9 @@ export type FlowNodeStatus = 'pending' | 'active' | 'done' | 'error'
 /**
  * Kind of pipeline stage.
  *
- * Harness frame: `profile`, `session`, `envelope` (`request/header` + preset).
- * LLM assembly: `memory` (Session surface + compaction), `context` (request envelope + injections).
- * Loop: `client-input` … `client-render`.
+ * Client: `client-input`, `remote-prompt`, `remote-follow`, `client-render`.
+ * Host frame: `profile`, `session`, `envelope`, `host-admit`.
+ * Per-step: `memory`, `context`, `model`, `tool`, `join`.
  */
 export type FlowNodeKind =
   | 'profile'
@@ -26,15 +26,15 @@ export type FlowNodeKind =
   | 'memory'
   | 'context'
   | 'client-input'
+  | 'remote-prompt'
+  | 'remote-follow'
   | 'host-admit'
-  | 'step'
   | 'model'
   | 'tool'
   | 'join'
-  | 'turn-end'
   | 'client-render'
 
-/** One node in the Harness → Loop → Client pipeline. */
+/** One node in the Client ↔ Host process pipeline. */
 export interface AgentFlowNode {
   readonly id: string
   readonly kind: FlowNodeKind
@@ -46,7 +46,7 @@ export interface AgentFlowNode {
   readonly outputText: string
   readonly status: FlowNodeStatus
   readonly turn: number
-  /** Owning step; absent for prelude / epilogue nodes. */
+  /** Owning Host step; absent for Client / Host-frame nodes. */
   readonly step?: number
   readonly callId?: string
 }
@@ -55,13 +55,22 @@ export interface AgentFlowNode {
 export interface AgentFlowEdge {
   readonly from: string
   readonly to: string
-  /** `flow` = control / step pipeline; `data` = payload feed into Context. */
+  /** `flow` = control / handoff; `data` = durable or wire payload. */
   readonly kind: 'flow' | 'data'
+  /** Optional mid-edge caption (Client↔Host wire names). */
+  readonly label?: string
 }
 
 /** Flow snapshot for one Agent Session (latest turn focus). */
 export interface AgentFlowSnapshot {
   readonly turn: number | null
+  /** Latest `agent-preset/selected` id when known (Host · Frame band label). */
+  readonly agentPreset?: string
+  /**
+   * Client surface for this turn's user prompt.
+   * Heuristic: `user` source with `clientTimeZone` → web; otherwise cli/remote.
+   */
+  readonly clientSurface?: 'web' | 'cli'
   readonly nodes: readonly AgentFlowNode[]
   readonly edges: readonly AgentFlowEdge[]
   readonly running: boolean
@@ -110,8 +119,13 @@ export function deriveAgentFlow(
   const nodes: AgentFlowNode[] = []
   const edges: AgentFlowEdge[] = []
   const add = (node: AgentFlowNode): void => { nodes.push(node) }
-  const link = (from: string, to: string, kind: AgentFlowEdge['kind'] = 'flow'): void => {
-    edges.push({ from, to, kind })
+  const link = (
+    from: string,
+    to: string,
+    kind: AgentFlowEdge['kind'] = 'flow',
+    label?: string,
+  ): void => {
+    edges.push(label === undefined ? { from, to, kind } : { from, to, kind, label })
   }
 
   const turnEnded = inTurn.some(e => e.type === 'turn/end')
@@ -121,7 +135,7 @@ export function deriveAgentFlow(
     ? (turnError ? 'error' : 'done')
     : session.running ? 'active' : 'done'
 
-  const { sessionId, envelopeId } = addHarnessFrame({
+  const { sessionId, envelopeId, agentPreset } = addHarnessFrame({
     add,
     link,
     session,
@@ -134,17 +148,23 @@ export function deriveAgentFlow(
   const inputs = inTurn.filter(isUserPromptMessage)
   const inputIds: string[] = []
   let aggregatedInput = ''
+  let clientSurface: 'web' | 'cli' = 'web'
   if (inputs.length === 0 && session.pendingSubmissions.length > 0) {
+    // Pending echo from this Canvas tab (Web Client plugin).
     const pending = session.pendingSubmissions[session.pendingSubmissions.length - 1]!
     const id = `input:pending:${pending.requestId}`
     inputIds.push(id)
     aggregatedInput = pending.text
+    clientSurface = 'web'
     add({
       id,
       kind: 'client-input',
-      label: 'Client input',
+      label: 'Web input',
       detail: truncate(pending.text, 48) || '(attachment)',
-      inputText: clipIo(pending.text || '(attachment)'),
+      inputText: clipIo([
+        'Client surface: web (pending submission from Web Client).',
+        pending.text || '(attachment)',
+      ].join('\n')),
       outputText: clipIo('Queued for Host admit'),
       status: 'active',
       turn: latestTurn,
@@ -156,13 +176,19 @@ export function deriveAgentFlow(
       inputIds.push(id)
       const full = fullContent(event.data.content)
       aggregatedInput = aggregatedInput ? `${aggregatedInput}\n---\n${full}` : full
+      const surface = detectClientSurface(event.data.source)
+      if (index === 0) clientSurface = surface
+      const surfaceLabel = surface === 'web' ? 'Web input' : 'CLI input'
       add({
         id,
         kind: 'client-input',
-        label: index === 0 ? 'Client input' : `Input ${index + 1}`,
+        label: index === 0 ? surfaceLabel : `${surfaceLabel} ${index + 1}`,
         detail: previewContent(event.data.content),
-        inputText: clipIo(full),
-        outputText: clipIo(`Delivered to Host (seq ${event.seq})`),
+        inputText: clipIo([
+          `Client surface: ${surface}${surfaceEvidence(event.data.source)}`,
+          full,
+        ].join('\n')),
+        outputText: clipIo(`Remote prompt accepted → Host inbox (seq ${event.seq})`),
         status: 'done',
         turn: latestTurn,
       })
@@ -170,25 +196,52 @@ export function deriveAgentFlow(
   }
 
   const admitId = `admit:${latestTurn}`
+  const promptId = `remote-prompt:${latestTurn}`
+  const followId = `remote-follow:${latestTurn}`
+
+  if (inputIds.length > 0) {
+    add({
+      id: promptId,
+      kind: 'remote-prompt',
+      label: 'session.prompt',
+      detail: 'Typert Remote',
+      inputText: clipIo([
+        'Client → Host unary Remote: ctx.remote.session.prompt(SessionPromptRequest).',
+        'Carrier: Connection HTTP /api (Typert Gateway).',
+        'Fields: requestId, sessionId, mode, content, optional clientTimeZone.',
+        aggregatedInput || '(no user message yet)',
+      ].join('\n')),
+      outputText: clipIo('SessionPromptValue { accepted: true } → Host SessionController.prompt'),
+      status: 'done',
+      turn: latestTurn,
+    })
+  }
+
   add({
     id: admitId,
     kind: 'host-admit',
-    label: `Turn ${latestTurn}`,
-    detail: 'Host admit',
-    inputText: clipIo(aggregatedInput || '(no user message yet)'),
+    label: 'Host admit',
+    detail: 'SessionController',
+    inputText: clipIo([
+      'Host-local after the wire: SessionController.prompt → agent.followup/steer → inbox.',
+      'followup/steer never cross the process boundary.',
+      aggregatedInput || '(no user message yet)',
+    ].join('\n')),
     outputText: clipIo(turnEnded
-      ? `Turn ${latestTurn} closed`
-      : `Turn ${latestTurn} open · running=${session.running}`),
+      ? `turn/end · Turn ${latestTurn} closed`
+      : `turn/start open · running=${session.running}`),
     status: frameStatus,
     turn: latestTurn,
   })
+  // Client packs prompt → Remote session.prompt → Host admit (Host-local inbox).
   for (const inputId of inputIds) {
-    link(sessionId, inputId)
-    link(inputId, admitId)
+    link(inputId, promptId, 'data')
+    link(promptId, admitId, 'data', 'session.prompt')
   }
-  if (inputIds.length === 0) link(sessionId, admitId)
+  if (inputIds.length === 0) link(sessionId, admitId, 'flow')
 
   let previousAnchor = admitId
+  const modelIds: string[] = []
   const stepStarts = inTurn.filter(e => e.type === 'step/start')
   const stepNumbers = [...new Set(stepStarts.map(e => e.type === 'step/start' ? e.data.step : 0))]
     .sort((a, b) => a - b)
@@ -232,6 +285,7 @@ export function deriveAgentFlow(
 
     const assistants = stepEvents.filter(e => e.type === 'assistant/message')
     const modelId = `model:${latestTurn}:${step}`
+    modelIds.push(modelId)
     const hasAssistant = assistants.length > 0
     const streaming = session.running && !stepEnded && !hasAssistant
     const lastAssistant = assistants[assistants.length - 1]
@@ -244,7 +298,7 @@ export function deriveAgentFlow(
     const header = stepEvents.find(e => e.type === 'request/header')
     const requestSummary = header?.type === 'request/header'
       ? `request/header · reason=${header.data.reason}`
-      : 'Model request (assembled from Session log)'
+      : 'GenerateOptions (awaiting request/header)'
 
     add({
       id: modelId,
@@ -252,13 +306,21 @@ export function deriveAgentFlow(
       label: 'Model',
       detail: streaming ? 'Streaming…'
         : hasAssistant ? previewAssistant(lastAssistant!) : 'Request',
-      inputText: clipIo(requestSummary),
-      outputText: clipIo(streaming ? '(streaming…)' : assistantFull || '(no assistant message)'),
+      inputText: clipIo([
+        'llm.stream(GenerateOptions) = EpochHeader fields + deriveMessages().',
+        'Canvas "Context" = that assembled request (not Cordis Context / request/context).',
+        requestSummary,
+      ].join('\n')),
+      outputText: clipIo(streaming
+        ? '(streaming… Host-local agent/assistant-stream; settles as assistant/message)'
+        : assistantFull || '(no assistant/message yet)'),
       status: streaming ? 'active' : hasAssistant || stepEnded ? 'done' : session.running ? 'active' : 'pending',
       turn: latestTurn,
       step,
     })
-    link(assembled.stepId, modelId)
+    // Context → Model: assembled request payload. Model → Session: assistant/message surface.
+    link(assembled.contextId, modelId, 'data')
+    link(modelId, sessionId, 'data')
 
     const toolEvents = stepEvents.filter(e => e.type === 'tool/call' || e.type === 'tool/result')
     const calls = new Map<string, {
@@ -322,7 +384,9 @@ export function deriveAgentFlow(
         step,
         callId,
       })
-      link(modelId, id)
+      // Args from Model; tool/result appends to Session surface (next Memory / Client follow).
+      link(modelId, id, 'data')
+      link(id, sessionId, 'data')
     }
 
     previousAnchor = toolIds.length > 0 ? toolIds[toolIds.length - 1]! : modelId
@@ -333,8 +397,8 @@ export function deriveAgentFlow(
         kind: 'join',
         label: 'Join',
         detail: `${toolIds.length} parallel tools`,
-        inputText: clipIo(`${toolIds.length} parallel tool branches`),
-        outputText: clipIo('Continue to next step / turn end'),
+        inputText: clipIo(`${toolIds.length} parallel tool branches (Host tool pool)`),
+        outputText: clipIo('Continue to next step claim / turn-stopping'),
         status: toolIds.every(id => nodes.find(n => n.id === id)?.status === 'done'
           || nodes.find(n => n.id === id)?.status === 'error')
           ? 'done'
@@ -342,41 +406,60 @@ export function deriveAgentFlow(
         turn: latestTurn,
         step,
       })
-      for (const toolId of toolIds) link(toolId, joinId)
+      for (const toolId of toolIds) link(toolId, joinId, 'flow')
       previousAnchor = joinId
     }
   }
 
-  const endId = `turn-end:${latestTurn}`
   const endReason = turnError?.type === 'turn/end' ? turnError.data.reason.kind
     : turnEnded ? 'completed' : session.running ? 'in-progress' : 'open'
+  const renderId = `client-render:${latestTurn}`
+
   add({
-    id: endId,
-    kind: 'turn-end',
-    label: 'Turn end',
-    detail: String(endReason),
-    inputText: clipIo(`Turn ${latestTurn} settlement`),
-    outputText: clipIo(`reason=${endReason}`),
-    status: turnError ? 'error' : turnEnded ? 'done' : session.running ? 'active' : 'pending',
+    id: followId,
+    kind: 'remote-follow',
+    label: 'session.follow',
+    detail: 'Typert Remote stream',
+    inputText: clipIo([
+      'Host → Client stream: ctx.remote.session.follow → SessionFollowFrame[].',
+      'Carrier: Connection WebSocket /api/remote.mux (or in-process open).',
+      'Frames: snapshot | event (SessionWireEvent) | assistant-stream (opt-in).',
+      'Host Cordis session/event and agent/assistant-stream stay process-local;',
+      'history.follow repackages them onto this Remote stream.',
+    ].join('\n')),
+    outputText: clipIo('Client SessionEventStream applies journal → Conversation / Canvas UI'),
+    status: turnEnded ? 'done' : session.running ? 'active' : 'done',
     turn: latestTurn,
   })
-  link(previousAnchor, endId)
 
-  const renderId = `client-render:${latestTurn}`
   add({
     id: renderId,
     kind: 'client-render',
     label: 'Client render',
     detail: turnEnded ? 'Settled' : 'Live UI',
-    inputText: clipIo('Assistant / tool results from Session log'),
-    outputText: clipIo(turnEnded ? 'UI settled' : 'Live stream / cards'),
-    status: turnEnded ? 'done' : session.running ? 'active' : 'done',
+    inputText: clipIo([
+      'UI binds SessionBinding.eventSource (follow frames), not llm.stream.',
+      `turn=${latestTurn} reason=${endReason}`,
+    ].join('\n')),
+    outputText: clipIo(turnEnded ? 'Chat / Trajectory settled' : 'Live stream / cards'),
+    status: turnError ? 'error' : turnEnded ? 'done' : session.running ? 'active' : 'done',
     turn: latestTurn,
   })
-  link(endId, renderId)
+  // Durable log + Model transcript feed follow; follow feeds Client render.
+  link(sessionId, followId, 'data')
+  for (const modelId of modelIds) {
+    link(modelId, followId, 'data', 'assistant')
+  }
+  link(followId, renderId, 'data', 'session.follow')
+  // Host tool/join settle does not invent a Client wire — turn progress still exits via follow.
+  if (!modelIds.includes(previousAnchor)) {
+    link(previousAnchor, followId, 'flow')
+  }
 
   return {
     turn: latestTurn,
+    ...(agentPreset === undefined ? {} : { agentPreset }),
+    clientSurface,
     nodes,
     edges,
     running: session.running,
@@ -386,17 +469,18 @@ export function deriveAgentFlow(
 
 function addHarnessFrame(args: {
   add: (node: AgentFlowNode) => void
-  link: (from: string, to: string, kind?: AgentFlowEdge['kind']) => void
+  link: (from: string, to: string, kind?: AgentFlowEdge['kind'], label?: string) => void
   session: SessionSnapshot
   durable: readonly SessionEvent[]
   inTurn: readonly SessionEvent[]
   turn: number
   status: FlowNodeStatus
-}): { profileId: string; sessionId: string; envelopeId: string } {
+}): { profileId: string; sessionId: string; envelopeId: string; agentPreset?: string } {
   const { add, link, session, durable, inTurn, turn, status } = args
   const profileId = `profile:${session.sessionId}`
   const sessionNodeId = `session:${session.sessionId}`
   const envelopeId = `envelope:${turn}`
+  const agentPreset = readAgentPreset(durable)
 
   add({
     id: profileId,
@@ -414,18 +498,21 @@ function addHarnessFrame(args: {
     kind: 'session',
     label: 'Session',
     detail: truncate(String(session.sessionId), 36),
-    inputText: clipIo(`sessionId=${session.sessionId}`),
+    inputText: clipIo([
+      `sessionId=${session.sessionId}`,
+      'Append-only event log (single source of truth for model-visible history).',
+    ].join('\n')),
     outputText: clipIo([
       `blank=${session.blank}`,
       `running=${session.running}`,
       `awaitingFirstTurn=${session.awaitingFirstTurn}`,
+      'Clients follow session/event + assistant-stream; deriveMessages() reads surface.',
     ].join('\n')),
     status,
     turn,
   })
-  link(profileId, sessionNodeId)
+  link(profileId, sessionNodeId, 'flow')
 
-  const preset = readAgentPreset(durable)
   const header = latestRequestHeader(inTurn) ?? latestRequestHeader(durable)
   const toolNames = header?.type === 'request/header'
     ? (header.data.header.tools ?? []).map(tool => tool.name)
@@ -437,19 +524,19 @@ function addHarnessFrame(args: {
     ? `${header.data.header.config.provider}/${header.data.header.config.model}`
     : undefined
   const envelopeParts = [
-    preset === undefined ? undefined : `preset=${preset}`,
+    agentPreset === undefined ? undefined : `preset=${agentPreset}`,
     toolNames.length > 0 ? `tools=${toolNames.length}` : undefined,
     model === undefined ? undefined : `model=${model}`,
   ].filter((part): part is string => part !== undefined)
-  const hasEnvelopeEvidence = header !== undefined || preset !== undefined
+  const hasEnvelopeEvidence = header !== undefined || agentPreset !== undefined
   add({
     id: envelopeId,
     kind: 'envelope',
     label: 'Envelope',
     detail: envelopeParts.length > 0 ? envelopeParts.join(' · ') : 'awaiting request/header',
     inputText: clipIo([
-      'request/header EpochHeader (system + tools + call config) + agentPreset:',
-      preset === undefined ? 'agentPreset=(unknown)' : `agentPreset=${preset}`,
+      'Logged EpochHeader via request/header (system + tools + call config) + agentPreset.',
+      agentPreset === undefined ? 'agentPreset=(unknown)' : `agentPreset=${agentPreset}`,
       toolNames.length > 0 ? `tools: ${toolNames.join(', ')}` : 'tools: (none logged yet)',
       model === undefined ? 'model: (none logged yet)' : `model: ${model}`,
     ].join('\n')),
@@ -459,14 +546,20 @@ function addHarnessFrame(args: {
     status: hasEnvelopeEvidence ? 'done' : session.running ? 'active' : 'pending',
     turn,
   })
-  link(sessionNodeId, envelopeId)
+  // Header is Session-logged state (foldRequestHeader), not a separate Resource service.
+  link(sessionNodeId, envelopeId, 'data')
 
-  return { profileId, sessionId: sessionNodeId, envelopeId }
+  return {
+    profileId,
+    sessionId: sessionNodeId,
+    envelopeId,
+    ...(agentPreset === undefined ? {} : { agentPreset }),
+  }
 }
 
 function addStepAssembly(args: {
   add: (node: AgentFlowNode) => void
-  link: (from: string, to: string, kind?: AgentFlowEdge['kind']) => void
+  link: (from: string, to: string, kind?: AgentFlowEdge['kind'], label?: string) => void
   turn: number
   step: number
   stepKey: string
@@ -477,15 +570,15 @@ function addStepAssembly(args: {
   stepEvents: readonly SessionEvent[]
   stepEnded: boolean
   pendingStep: boolean
-}): { previousAnchor: string; stepId: string; contextId: string } {
+}): { previousAnchor: string; contextId: string } {
   const {
     add, link, turn, step, stepKey, envelopeId, previousAnchor, session,
     durable, stepEvents, stepEnded, pendingStep,
   } = args
-  const stepOpt = pendingStep ? undefined : step
+  // Pending (no step/start yet) still paints in the Host · Step band via step: 0.
+  const stepOpt = pendingStep ? 0 : step
   const memoryId = `memory:${turn}:${stepKey}`
   const contextId = `context:${turn}:${stepKey}`
-  const stepId = pendingStep ? `step:${turn}:pending` : `step:${turn}:${step}`
 
   const surfaceBefore = countSurfaceMessages(durable, turn, pendingStep ? undefined : step)
   const compaction = findCompaction(durable, turn, pendingStep ? undefined : step)
@@ -499,18 +592,19 @@ function addStepAssembly(args: {
     label: 'Memory',
     detail: memoryDetail,
     inputText: clipIo([
-      'No Memory service — Session log + surface + compaction.',
-      `Surface messages before this step: ${surfaceBefore}`,
+      'No Memory service — Session surface (user/message | assistant/message | tool/result) + compaction.',
+      `Surface nodes before this step: ${surfaceBefore}`,
       compaction === undefined
         ? 'No compaction bracket in scope.'
         : `compactionId=${compaction.id} open=${compaction.open}`,
     ].join('\n')),
-    outputText: clipIo(compaction?.summary ?? 'deriveMessages() projects surface nodes into model history'),
+    outputText: clipIo(compaction?.summary
+      ?? 'session.deriveMessages() → Message[] history for GenerateOptions'),
     status: memoryActive ? 'active'
       : stepEnded || surfaceBefore > 0 || compaction !== undefined ? 'done'
         : session.running ? 'active' : 'pending',
     turn,
-    ...(stepOpt === undefined ? {} : { step: stepOpt }),
+    step: stepOpt,
   })
 
   const injections = stepEvents.filter(isContextInjectionMessage)
@@ -539,49 +633,36 @@ function addStepAssembly(args: {
     kind: 'context',
     label: 'Context',
     detail: header !== undefined
-      ? `header + ${injections.length} inject`
+      ? `header + surface${injections.length > 0 ? ` · ${injections.length} inject` : ''}`
       : injections.length > 0
         ? `${injections.length} inject`
         : 'assembling…',
     inputText: clipIo([
-      'LLM request context = request/header (system+tools) + deriveMessages() + injections.',
+      'Assembled LLM request = EpochHeader (system+tools+config) + deriveMessages().',
+      'Plugin injections are already on Session surface before deriveMessages — not a third feed.',
       headerSummary,
-      injectionLines.length > 0 ? `injections:\n${injectionLines.join('\n')}` : 'injections: (none)',
+      injectionLines.length > 0
+        ? `surface injections this step:\n${injectionLines.join('\n')}`
+        : 'surface injections this step: (none)',
     ].join('\n\n')),
-    outputText: clipIo(header?.type === 'request/header' && header.data.header.system
-      ? header.data.header.system
-      : injections.length > 0
-        ? injections.map(e => e.type === 'user/message' ? fullContent(e.data.content) : '').join('\n---\n')
-        : '(awaiting assemble)'),
+    outputText: clipIo(header?.type === 'request/header'
+      ? [
+          'GenerateOptions ready for llm.stream:',
+          `systemChars=${header.data.header.system?.length ?? 0}`,
+          `tools=${(header.data.header.tools ?? []).length}`,
+          `provider/model=${header.data.header.config.provider}/${header.data.header.config.model}`,
+        ].join('\n')
+      : '(awaiting assemble / request/header)'),
     status: contextReady ? 'done' : session.running ? 'active' : 'pending',
     turn,
-    ...(stepOpt === undefined ? {} : { step: stepOpt }),
+    step: stepOpt,
   })
   // Control: admit / prior join → Context. Data: Memory + Envelope feed Context.
   link(previousAnchor, contextId, 'flow')
   link(memoryId, contextId, 'data')
   link(envelopeId, contextId, 'data')
 
-  add({
-    id: stepId,
-    kind: 'step',
-    label: pendingStep ? 'Step …' : `Step ${step}`,
-    detail: pendingStep ? 'Waiting for step' : 'Host step',
-    inputText: clipIo(pendingStep
-      ? '(awaiting step/start)'
-      : `Turn ${turn} · step ${step} begin`),
-    outputText: clipIo(pendingStep
-      ? 'No step started yet'
-      : stepEnded ? `step/end · turn ${turn} step ${step}` : 'Step in progress'),
-    status: pendingStep
-      ? (session.running ? 'active' : 'pending')
-      : stepEnded ? 'done' : session.running ? 'active' : 'done',
-    turn,
-    ...(stepOpt === undefined ? {} : { step: stepOpt }),
-  })
-  link(contextId, stepId, 'flow')
-
-  return { previousAnchor: stepId, stepId, contextId }
+  return { previousAnchor: contextId, contextId }
 }
 
 function deriveEngagingFlow(session: SessionSnapshot): AgentFlowSnapshot {
@@ -624,17 +705,38 @@ function deriveEngagingFlow(session: SessionSnapshot): AgentFlowSnapshot {
   }, {
     id: inputId,
     kind: 'client-input',
-    label: 'Client input',
+    label: 'Web input',
     detail: truncate(text, 48),
-    inputText: clipIo(text),
+    inputText: clipIo([
+      'Client surface: web (Canvas is a Web Client plugin).',
+      text,
+    ].join('\n')),
     outputText: clipIo('Waiting for Host'),
     status: 'active',
     turn: 0,
   }, {
+    id: 'remote-prompt:pending',
+    kind: 'remote-prompt',
+    label: 'session.prompt',
+    detail: 'Typert Remote',
+    inputText: clipIo('SessionPromptRequest pending'),
+    outputText: clipIo('Awaiting Host SessionController.prompt'),
+    status: 'active',
+    turn: 0,
+  }, {
+    id: 'remote-follow:pending',
+    kind: 'remote-follow',
+    label: 'session.follow',
+    detail: 'Typert Remote stream',
+    inputText: clipIo('Awaiting Host journal frames'),
+    outputText: clipIo('Client SessionEventStream idle'),
+    status: 'pending',
+    turn: 0,
+  }, {
     id: 'admit:pending',
     kind: 'host-admit',
-    label: 'Host',
-    detail: 'Awaiting admit',
+    label: 'Host admit',
+    detail: 'SessionController',
     inputText: clipIo(text),
     outputText: clipIo('Awaiting turn/start'),
     status: session.running ? 'active' : 'pending',
@@ -642,12 +744,14 @@ function deriveEngagingFlow(session: SessionSnapshot): AgentFlowSnapshot {
   }]
   return {
     turn: 0,
+    clientSurface: 'web',
     nodes,
     edges: [
       { from: profileId, to: sessionNodeId, kind: 'flow' },
-      { from: sessionNodeId, to: envelopeId, kind: 'flow' },
-      { from: sessionNodeId, to: inputId, kind: 'flow' },
-      { from: inputId, to: 'admit:pending', kind: 'flow' },
+      { from: sessionNodeId, to: envelopeId, kind: 'data' },
+      { from: inputId, to: 'remote-prompt:pending', kind: 'data' },
+      { from: 'remote-prompt:pending', to: 'admit:pending', kind: 'data', label: 'session.prompt' },
+      { from: sessionNodeId, to: 'remote-follow:pending', kind: 'data' },
     ],
     running: session.running,
     updatedAt: new Date().toISOString(),
@@ -719,6 +823,26 @@ function eventTypeName(event: SessionEvent): string {
 function isUserPromptMessage(event: SessionEvent): boolean {
   if (event.type !== 'user/message') return false
   return event.data.source.kind === 'user'
+}
+
+/**
+ * Infer Web vs CLI/remote from durable user source fields.
+ * Web Client prompts carry `clientTimeZone`; CLI/SDK/ACP usually omit it.
+ */
+function detectClientSurface(source: { readonly kind: string }): 'web' | 'cli' {
+  if (source.kind !== 'user') return 'cli'
+  const zone = (source as { clientTimeZone?: unknown }).clientTimeZone
+  return typeof zone === 'string' && zone.length > 0 ? 'web' : 'cli'
+}
+
+function surfaceEvidence(source: { readonly kind: string }): string {
+  if (source.kind !== 'user') return ''
+  const zone = (source as { clientTimeZone?: unknown }).clientTimeZone
+  const rpcId = (source as { rpcId?: unknown }).rpcId
+  const parts: string[] = []
+  if (typeof zone === 'string' && zone.length > 0) parts.push(`clientTimeZone=${zone}`)
+  if (typeof rpcId === 'string') parts.push(`rpcId=${rpcId}`)
+  return parts.length > 0 ? ` (${parts.join(', ')})` : ' (no clientTimeZone on source)'
 }
 
 function isContextInjectionMessage(event: SessionEvent): boolean {
