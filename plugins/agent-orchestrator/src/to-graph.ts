@@ -72,7 +72,7 @@ export function layoutComposition(
 }
 
 /**
- * Stack units into wiki-layer bands (①→⑨, then other); empty layers omitted.
+ * Stack units into wiki-layer bands (top → bottom: other/⑨ → ①); empty layers omitted.
  * Caller order is preserved within each layer (composition before catalog when concatenated).
  * @param units - canvas units.
  * @param columns - column count inside each band.

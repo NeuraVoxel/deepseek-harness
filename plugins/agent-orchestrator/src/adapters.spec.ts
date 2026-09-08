@@ -126,14 +126,14 @@ describe('toGraphDocument', () => {
     expect(graph.nodes).toHaveLength(3)
     expect(graph.groups).toHaveLength(2)
     expect(graph.groups?.map(group => group.id)).toEqual([
-      'layer:model-context',
       'layer:execution',
+      'layer:model-context',
     ])
-    expect(graph.groups?.[0]?.label).toBe('Layer:model-context')
-    expect(graph.groups?.[0]?.memberIds).toEqual(['standard:persona'])
-    expect(graph.groups?.[1]?.memberIds).toEqual(['standard:tool-fs', 'standard:row:2'])
-    expect(graph.nodes[0]?.groupId).toBe('layer:model-context')
-    expect(graph.nodes[0]?.data).toMatchObject({
+    expect(graph.groups?.[0]?.label).toBe('Layer:execution')
+    expect(graph.groups?.[0]?.memberIds).toEqual(['standard:tool-fs', 'standard:row:2'])
+    expect(graph.groups?.[1]?.memberIds).toEqual(['standard:persona'])
+    expect(graph.nodes[0]?.groupId).toBe('layer:execution')
+    expect(graph.nodes.find(node => node.id === 'standard:persona')?.data).toMatchObject({
       entryId: 'persona',
       moduleName: '@deepseek-ai/dsh-persona',
       fiberPhase: 'active',
@@ -159,12 +159,12 @@ describe('toGraphDocument', () => {
     expect(graph.nodes.find(node => node.id === 'standard:row:2')?.status).toBe('pending')
   })
 
-  it('stacks layer bands vertically', () => {
+  it('stacks layer bands with foundation (lower wiki layers) at the bottom', () => {
     const doc = fromPresetComposition(sample)
     const graph = toGraphDocument(doc, labels)
     const modelY = graph.nodes.find(node => node.id === 'standard:persona')?.y ?? 0
     const execY = graph.nodes.find(node => node.id === 'standard:tool-fs')?.y ?? 0
-    expect(execY).toBeGreaterThan(modelY)
+    expect(modelY).toBeGreaterThan(execY)
   })
 
   it('renders a broken note when meta.broken is set', () => {

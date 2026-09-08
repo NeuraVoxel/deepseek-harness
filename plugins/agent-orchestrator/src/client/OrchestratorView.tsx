@@ -177,7 +177,7 @@ export function OrchestratorView(props: Props): ReactElement {
 
   if (error !== null) {
     return (
-      <div className={css.root}>
+      <div className={css.root} data-conversation-composer-overlay="">
         <div className={css.message} role="alert">{error}</div>
       </div>
     )
@@ -185,7 +185,7 @@ export function OrchestratorView(props: Props): ReactElement {
 
   if (presets === null) {
     return (
-      <div className={css.root}>
+      <div className={css.root} data-conversation-composer-overlay="">
         <div className={css.message}>{t('loading')}</div>
       </div>
     )
@@ -193,7 +193,7 @@ export function OrchestratorView(props: Props): ReactElement {
 
   if (presets.length === 0 || graphDoc === null) {
     return (
-      <div className={css.root}>
+      <div className={css.root} data-conversation-composer-overlay="">
         <div className={css.message}>{t('error.noPresets')}</div>
       </div>
     )
@@ -206,7 +206,7 @@ export function OrchestratorView(props: Props): ReactElement {
       : `${t('hint.readonly')} · ${t('hint.membership')}`
 
   return (
-    <div className={css.root}>
+    <div className={css.root} data-conversation-composer-overlay="">
       <div className={css.toolbar}>
         <span className={css.presetLabel}>{t('toolbar.preset')}</span>
         <select

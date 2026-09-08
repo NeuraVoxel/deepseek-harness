@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write plugins/agent-orchestrator/README.md
-README.md: c705ac27b4fbcb739a52f96f3422c32ffc647b96
-README.zh.md: 171cb872991807fb0ea4d327fd734b9ffb7e26f1
+README.md: 5a2d5cc41719f15928b1923570bebd27f525d362
+README.zh.md: c4de602f0b0a3ad686f2e5987cfa63abb4ff5065

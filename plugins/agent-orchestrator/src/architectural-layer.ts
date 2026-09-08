@@ -20,18 +20,18 @@ export type ArchitecturalLayerId =
   | 'experimental'
   | 'other'
 
-/** Display order for layer bands (① → ⑨, then other). */
+/** Display order for layer bands (top → bottom: other / ⑨ → ① foundation). */
 export const ARCHITECTURAL_LAYER_ORDER: readonly ArchitecturalLayerId[] = [
-  'core',
-  'session-data',
-  'config-identity',
-  'model-context',
-  'execution',
-  'extensions',
-  'bundle-boot',
-  'application',
-  'experimental',
   'other',
+  'experimental',
+  'application',
+  'bundle-boot',
+  'extensions',
+  'execution',
+  'model-context',
+  'config-identity',
+  'session-data',
+  'core',
 ] as const
 
 /**
