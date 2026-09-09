@@ -2,6 +2,7 @@
  * Interaction plugin contract (avoids importing Network class).
  */
 
+import type { Rect } from '../geom.ts'
 import type { GraphEvent } from '../protocol/events.ts'
 import type { GraphPatch } from '../protocol/patch.ts'
 import type { GraphGroup, GraphNode } from '../protocol/types.ts'
@@ -18,6 +19,8 @@ export interface InteractionHost {
   readonly viewport: import('../network/viewport.ts').Viewport
   /** @param id - node id. @returns node or undefined. */
   getNode(id: string): GraphNode | undefined
+  /** @returns nodes in the active network. */
+  getNodes(): readonly GraphNode[]
   /** @returns groups in the active network. */
   getGroups(): readonly GraphGroup[]
   /** @returns selected element ids. */
@@ -58,6 +61,11 @@ export interface InteractionHost {
   wasGestureDragged(): boolean
   /** Reset the drag-consumed flag (call at pointerdown). */
   clearGestureDragged(): void
+  /**
+   * Live marquee rect on the overlay (world space), or clear.
+   * @param rect - world rect during Shift-marquee drag, or undefined to clear.
+   */
+  setMarqueeRect(rect: Rect | undefined): void
   /**
    * Fan out a GraphEvent to subscribers.
    * @param event - event payload.

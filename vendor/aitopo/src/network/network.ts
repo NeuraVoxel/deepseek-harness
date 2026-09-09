@@ -56,6 +56,8 @@ export class Network {
   private readonly options: NetworkOptions
   private interactionModules: Interaction[] = []
   private gestureDragged = false
+  /** Live Shift-marquee world rect painted on the overlay during validate. */
+  private marqueeRect: Rect | undefined
 
   constructor(options: NetworkOptions = {}) {
     this.options = options
@@ -306,9 +308,24 @@ export class Network {
     return this.scene.nodes.get(id)
   }
 
+  /** @returns nodes in the active network. */
+  getNodes(): readonly GraphNode[] {
+    return [...this.scene.nodes.values()]
+  }
+
   /** @returns groups in the active network. */
   getGroups(): readonly GraphGroup[] {
     return [...this.scene.groups.values()]
+  }
+
+  /**
+   * Live marquee rect on the overlay (world space), or clear.
+   * @param rect - world rect during Shift-marquee drag, or undefined to clear.
+   */
+  setMarqueeRect(rect: Rect | undefined): void {
+    this.marqueeRect = rect
+    this.dirty.markAll()
+    this.needsPaint = true
   }
 
   /** @returns selected element ids. */
@@ -547,6 +564,9 @@ export class Network {
         if (this.scene.selectedIds.has(node.id) && renderer instanceof Canvas2DRenderer) {
           renderer.drawSelectionOverlay(bounds)
         }
+      }
+      if (this.marqueeRect !== undefined && renderer instanceof Canvas2DRenderer) {
+        renderer.drawMarquee(this.marqueeRect)
       }
       renderer.endFrame()
     } catch {

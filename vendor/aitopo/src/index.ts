@@ -32,6 +32,7 @@ export {
   EXTERNAL_DROP_MIME_AITOPO,
   EXTERNAL_DROP_MIME_PLAIN,
   ExternalDropInteraction,
+  MarqueeSelectInteraction,
   MoveNodeInteraction,
   PanZoomInteraction,
   SelectActivateInteraction,

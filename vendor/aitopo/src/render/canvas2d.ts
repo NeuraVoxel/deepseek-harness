@@ -270,6 +270,22 @@ export class Canvas2DRenderer implements Renderer {
     ctx.lineWidth = 2 / this.viewport.zoom
     ctx.strokeRect(bounds.x - 2, bounds.y - 2, bounds.width + 4, bounds.height + 4)
   }
+
+  /**
+   * Draw a marquee selection rect on the overlay (call after beginFrame, before endFrame).
+   * @param rect - world-space marquee.
+   */
+  drawMarquee(rect: Rect): void {
+    const ctx = this.overlayCtx
+    ctx.save()
+    ctx.strokeStyle = '#3b82f6'
+    ctx.fillStyle = 'rgba(59, 130, 246, 0.12)'
+    ctx.lineWidth = 1 / this.viewport.zoom
+    ctx.setLineDash([4 / this.viewport.zoom, 3 / this.viewport.zoom])
+    ctx.fillRect(rect.x, rect.y, rect.width, rect.height)
+    ctx.strokeRect(rect.x, rect.y, rect.width, rect.height)
+    ctx.restore()
+  }
 }
 
 function resizeCanvas(canvas: HTMLCanvasElement, cssW: number, cssH: number, dpr: number): void {

@@ -105,6 +105,7 @@ function createHost(options: {
     updateCamera: vi.fn(),
     viewport: { state: { zoom, x: 0, y: 0 } } as InteractionHost['viewport'],
     getNode: id => nodes.get(id),
+    getNodes: () => [...nodes.values()],
     getGroups: () => [],
     getSelectedIds: () => selectedIds,
     hitTestGroupScreen: () => groupOnUp,
@@ -116,6 +117,7 @@ function createHost(options: {
     clearGestureDragged: () => {
       gestureDragged = false
     },
+    setMarqueeRect: vi.fn(),
     emit: vi.fn(),
     apply: vi.fn(),
   }

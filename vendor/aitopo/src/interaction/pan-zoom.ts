@@ -27,6 +27,8 @@ export class PanZoomInteraction implements Interaction {
 
     const onPointerDown = (event: PointerEvent): void => {
       if (event.button !== 0) return
+      // Shift+empty drag is MarqueeSelect; leave unmodified empty drag as pan.
+      if (event.shiftKey) return
       const rect = canvas.getBoundingClientRect()
       const hit = network.hitTestScreen(event.clientX - rect.left, event.clientY - rect.top)
       if (hit !== undefined) return

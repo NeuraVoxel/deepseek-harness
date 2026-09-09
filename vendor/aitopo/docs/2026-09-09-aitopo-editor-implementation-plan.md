@@ -392,18 +392,20 @@ it('emits externalDrop with world coords and opaque data', () => {
 - Create: `vendor/aitopo/tests/marquee.spec.ts`
 - Modify: Network overlay paint path to draw marquee rect when `scene.marquee` or host callback — **prefer**: Marquee keeps local rect and calls `network.setMarqueeRect(rect | undefined)` painted on overlay in `validate()`.
 
-- [ ] **Step 1: Tests** — empty-space drag selects nodes whose bounds intersect marquee; locked nodes may still be selected (lock blocks move, not select); Shift appends (optional — if skipped, document replace-only).
+- [x] **Step 1: Tests** — empty-space drag selects nodes whose bounds intersect marquee; locked nodes may still be selected (lock blocks move, not select); Shift appends (optional — if skipped, document replace-only).
 
-- [ ] **Step 2: Implement**
+- [x] **Step 2: Implement**
 
 - `pointerdown` only when `hitTestScreen` is undefined (do not fight MoveNode).
 - Coordinate with PanZoom: **attach order matters**. Network default order should be: `ExternalDrop`, `MoveNode`, `MarqueeSelect`, `SelectActivate`, `PanZoom` when editor interactions are enabled via options; **or** Marquee uses Alt/Shift modifier so PanZoom keeps unmodified empty drag.
 
-**Decision for this plan:** Marquee requires **Shift+drag** on empty space; unmodified empty drag remains pan. Document in README.
+**Decision for this plan:** Marquee requires **Shift+drag** on empty space; unmodified empty drag remains pan. Document in README. PanZoom skips `pointerdown` when `shiftKey` is set.
 
-- [ ] **Step 3: Overlay marquee stroke** during drag; on up `setSelection(ids)`.
+- [x] **Step 3: Overlay marquee stroke** during drag; on up `setSelection(ids)`.
 
 **Verify:** marquee specs green.
+
+**Selection mode:** replace-only on pointerup (no Shift-append).
 
 ---
 
@@ -526,7 +528,7 @@ Keep `vendor/README.md` staged if `vendor/aitopo/src/**` changes (pre-commit ven
 | 2 Group stroke paint | done |
 | 3 Move / membership / lock | done |
 | 4 External drop | done |
-| 5 Marquee | pending |
+| 5 Marquee | done |
 | 6 PatchHistory | pending |
 | 7 Demo + README + note | pending |
 

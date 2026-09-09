@@ -61,6 +61,7 @@ function createHost(canvas: FakeHitCanvas): InteractionHost & {
     updateCamera: vi.fn(),
     viewport: {} as InteractionHost['viewport'],
     getNode: () => undefined,
+    getNodes: () => [],
     getGroups: () => [],
     getSelectedIds: () => [],
     hitTestGroupScreen: () => undefined,
@@ -74,6 +75,7 @@ function createHost(canvas: FakeHitCanvas): InteractionHost & {
     clearGestureDragged: () => {
       gestureDragged = false
     },
+    setMarqueeRect: vi.fn(),
     emit: vi.fn(),
     apply: vi.fn(),
   }
