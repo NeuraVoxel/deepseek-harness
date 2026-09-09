@@ -25,6 +25,14 @@
 
 ### 首次搭建
 
+克隆时带上 submodule，以便解析 `vendor/aitopo`（`@neuravoxel/aitopo` 为私有 peer 钉扎）：
+
+```sh
+git clone --recurse-submodules <url>
+# 或在普通克隆之后：
+git submodule update --init --recursive
+```
+
 在仓库根目录安装依赖：
 
 ```sh

@@ -10,7 +10,7 @@ English | [中文](2026-09-09-ai-eng-kit-mvp.zh.md)
 
 **Tech Stack:** Node `^22.19 \|\| >=24`, TypeScript, vitest, `tsx` for CLI during development, `tsdown` or `tsc` for publish build.
 
-**Spec:** [../../.agents/notes/proposed/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md](../../.agents/notes/proposed/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md)
+**Spec:** [../../.agents/notes/implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md](../../.agents/notes/implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md)
 
 **Seed sources (read-only from deepseek-harness; copy then strip):**
 

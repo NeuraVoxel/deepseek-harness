@@ -4,7 +4,7 @@ English | [中文](2026-09-09-peer-ai-eng-and-aitopo-index.zh.md)
 
 > **For agentic workers:** Execute the three linked plans **in order**. Each plan is independently shippable. Do not start Part N+1 until Part N acceptance criteria pass. REQUIRED SUB-SKILL when implementing: `superpowers:subagent-driven-development` or `superpowers:executing-plans`.
 
-**Spec:** [.agents/notes/proposed/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md](../../.agents/notes/proposed/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md)
+**Spec:** [.agents/notes/implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md](../../.agents/notes/implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md)
 
 **Peers (no parent authority, K1 cherry-pick only):**
 

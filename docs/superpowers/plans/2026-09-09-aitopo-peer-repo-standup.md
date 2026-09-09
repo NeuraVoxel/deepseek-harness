@@ -10,7 +10,7 @@ English | [中文](2026-09-09-aitopo-peer-repo-standup.zh.md)
 
 **Tech Stack:** Existing aitopo stack (TypeScript, vitest, vite demo, zod) + `@neuravoxel/ai-eng` from `NeuraVoxel/ai-eng-kit`.
 
-**Spec:** [../../.agents/notes/proposed/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md](../../.agents/notes/proposed/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md)
+**Spec:** [../../.agents/notes/implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md](../../.agents/notes/implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md)
 
 **Index:** [2026-09-09-peer-ai-eng-and-aitopo-index.md](./2026-09-09-peer-ai-eng-and-aitopo-index.md)
 

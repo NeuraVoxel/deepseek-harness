@@ -4,7 +4,7 @@
 
 > **给 agentic worker：** 按顺序执行三份链接计划。每份可独立交付。Part N 验收通过前不要开始 N+1。实现时使用 `superpowers:subagent-driven-development` 或 `superpowers:executing-plans`。
 
-**规格：** [.agents/notes/proposed/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.zh.md](../../.agents/notes/proposed/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.zh.md)
+**规格：** [.agents/notes/implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.zh.md](../../.agents/notes/implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.zh.md)
 
 **Peers（无父子权威，仅 K1 cherry-pick）：**
 

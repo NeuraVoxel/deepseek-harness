@@ -10,7 +10,7 @@ English | [中文](2026-09-09-harness-aitopo-submodule.zh.md)
 
 **Tech Stack:** git submodule, existing pnpm workspace, harness doc/notice gates.
 
-**Spec:** [../../.agents/notes/proposed/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md](../../.agents/notes/proposed/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md)
+**Spec:** [../../.agents/notes/implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md](../../.agents/notes/implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md)
 
 **Index:** [2026-09-09-peer-ai-eng-and-aitopo-index.md](./2026-09-09-peer-ai-eng-and-aitopo-index.md)
 
@@ -43,8 +43,8 @@ Expected: no unrelated dirty files (or stash them). Commit the already-written p
 
 ```bash
 git add \
-  .agents/notes/proposed/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md \
-  .agents/notes/proposed/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.zh.md \
+  .agents/notes/implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md \
+  .agents/notes/implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.zh.md \
   .agents/notes/proposed/architecture/2026-09-07-aitopo-dual-face-canvas-engine.md \
   .agents/notes/proposed/architecture/2026-09-07-aitopo-dual-face-canvas-engine.zh.md \
   docs/superpowers/plans/2026-09-09-*.md
@@ -169,17 +169,17 @@ Wire it where harness already validates workspace layout (prefer an existing hyg
 ### Task 4: Agent Notes lifecycle update
 
 **Files:**
-- Modify: `.agents/notes/proposed/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md` (+ `.zh.md`) → move to `implemented/` with Decision rewrite
+- Modify: `.agents/notes/implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md` (+ `.zh.md`) → move to `implemented/` with Decision rewrite
 - Modify: `.agents/notes/proposed/architecture/2026-09-07-aitopo-dual-face-canvas-engine.md` (+ `.zh.md`) ownership lines already cross-linked; ensure they point at the implemented peer note after the move
 
 - [ ] **Step 1: Move peer-repos note to implemented**
 
 ```bash
 git mv \
-  .agents/notes/proposed/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md \
+  .agents/notes/implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md \
   .agents/notes/implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md
 git mv \
-  .agents/notes/proposed/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.zh.md \
+  .agents/notes/implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.zh.md \
   .agents/notes/implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.zh.md
 ```
 

@@ -23,6 +23,14 @@ Install dependencies separately in each environment because native binaries and 
 
 ### First-time setup
 
+Clone with submodules so `vendor/aitopo` resolves (`@neuravoxel/aitopo` is a private peer pin):
+
+```sh
+git clone --recurse-submodules <url>
+# or after a plain clone:
+git submodule update --init --recursive
+```
+
 Install dependencies from the repo root:
 
 ```sh
