@@ -1,0 +1,3 @@
+[submodule "vendor/aitopo"]
+	path = vendor/aitopo
+	url = https://github.com/NeuraVoxel/aitopo.git

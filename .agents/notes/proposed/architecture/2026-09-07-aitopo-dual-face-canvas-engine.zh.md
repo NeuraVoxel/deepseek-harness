@@ -25,7 +25,7 @@ Status: proposed
 
 - 仅 Document-first（无 Scene/View）：对 Agent 友好，弱于脏区绘制与交互。
 - 仅 Scene-first（类 twaver Element 作为公开 API）：不利于模型驱动的 patch。
-- 仓外独立仓库：改为 `vendor/aitopo` 以便 monorepo workspace 接线。
+- 仓外独立仓库：原先改为 `vendor/aitopo` 以便 monorepo workspace 接线；所有权由 peer 仓决策 [2026-09-09-ai-eng-kit-and-aitopo-peer-repos.zh.md](../../implemented/architecture/2026-09-09-ai-eng-kit-and-aitopo-peer-repos.zh.md) 取代（先 submodule，后 npm）。Dual-face 协议与引擎纯净性不变。
 - 直接移植或包装 twaver：因干净室与授权清晰性而拒绝。
 
 ## Acceptance criteria

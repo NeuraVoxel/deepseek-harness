@@ -23,6 +23,16 @@ Install dependencies separately in each environment because native binaries and 
 
 ### First-time setup
 
+Clone with submodules so `vendor/aitopo` resolves (`@neuravoxel/aitopo` is a private peer pin):
+
+```sh
+git clone --recurse-submodules <url>
+# or after a plain clone:
+git submodule update --init --recursive
+```
+
+`pnpm install` may also fetch aitopo's locked `@neuravoxel/ai-eng` git dependency from private `NeuraVoxel/ai-eng-kit` (needs GitHub read access). CI jobs use repository secret `NEURAVOXEL_PRIVATE_READ_TOKEN` (Contents: Read on `aitopo` and `ai-eng-kit`) for submodule checkout and that git fetch.
+
 Install dependencies from the repo root:
 
 ```sh

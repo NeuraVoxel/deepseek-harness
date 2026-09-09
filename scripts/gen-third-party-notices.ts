@@ -45,6 +45,8 @@ const FIRST_PARTY = new Set([
   '@deepseek-ai/node-addon-system-darwin-x64',
   '@deepseek-ai/node-addon-system-linux-arm64',
   '@deepseek-ai/node-addon-system-linux-x64',
+  // Peer toolkit locked by `vendor/aitopo` for its own Agent Notes gate; not a harness product dependency.
+  '@neuravoxel/ai-eng',
 ])
 
 /** Official SDK identity covered by the project's narrow owner authorization. */
