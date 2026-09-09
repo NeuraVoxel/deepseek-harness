@@ -355,6 +355,13 @@ export class Network {
 
   /**
    * Commit a node move with optional group membership change.
+   * Emits `nodeMoved`; emits `groupMembershipChanged` when membership changes.
+   *
+   * `toGroupId` sentinel (presence vs value):
+   * - property omitted → membership unchanged
+   * - `toGroupId: undefined` (key present) → clear membership
+   * - `toGroupId: 'g…'` → reparent into that group
+   *
    * @param args - from/to positions and optional target group id.
    */
   commitNodeMove(args: {

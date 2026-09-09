@@ -68,6 +68,8 @@ describe('Network editor helpers', () => {
 
   it('clears membership when toGroupId is undefined', () => {
     const network = createNetwork()
+    const events: GraphEvent[] = []
+    network.on(event => events.push(event))
     network.commitNodeMove({
       nodeId: 'a',
       from: { x: 10, y: 20 },
@@ -76,6 +78,32 @@ describe('Network editor helpers', () => {
     })
     expect(network.getNode('a')?.groupId).toBeUndefined()
     expect(network.getGroups().find(g => g.id === 'g1')?.memberIds).toEqual([])
+    expect(events.filter(e => e.type === 'groupMembershipChanged')).toEqual([{
+      type: 'groupMembershipChanged',
+      nodeId: 'a',
+      fromGroupId: 'g1',
+      toGroupId: undefined,
+    }])
+  })
+
+  it('preserves membership when toGroupId key is omitted', () => {
+    const network = createNetwork()
+    const events: GraphEvent[] = []
+    network.on(event => events.push(event))
+    network.commitNodeMove({
+      nodeId: 'a',
+      from: { x: 10, y: 20 },
+      to: { x: 55, y: 60 },
+    })
+    expect(network.getNode('a')).toMatchObject({ x: 55, y: 60, groupId: 'g1' })
+    expect(network.getGroups().find(g => g.id === 'g1')?.memberIds).toEqual(['a'])
+    expect(events.filter(e => e.type === 'nodeMoved')).toEqual([{
+      type: 'nodeMoved',
+      nodeId: 'a',
+      from: { x: 10, y: 20 },
+      to: { x: 55, y: 60 },
+    }])
+    expect(events.filter(e => e.type === 'groupMembershipChanged')).toEqual([])
   })
 
   it('hit-tests groups in screen space', () => {

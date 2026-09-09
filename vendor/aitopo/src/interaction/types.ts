@@ -40,6 +40,11 @@ export interface InteractionHost {
   /**
    * Commit move: apply updateNode, optional membership patch, emit nodeMoved
    * and groupMembershipChanged when membership changes.
+   *
+   * `toGroupId` sentinel (presence vs value):
+   * - property omitted → membership unchanged
+   * - `toGroupId: undefined` (key present) → clear membership
+   * - `toGroupId: 'g…'` → reparent into that group
    */
   commitNodeMove(args: {
     nodeId: string
