@@ -29,6 +29,9 @@ export { Network, Viewport, contentBounds, MIN_ZOOM, MAX_ZOOM } from './network/
 export { Canvas2DRenderer } from './render/index.ts'
 export type { Renderer, ViewportState } from './render/index.ts'
 export {
+  EXTERNAL_DROP_MIME_AITOPO,
+  EXTERNAL_DROP_MIME_PLAIN,
+  ExternalDropInteraction,
   MoveNodeInteraction,
   PanZoomInteraction,
   SelectActivateInteraction,

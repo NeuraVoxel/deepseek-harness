@@ -357,7 +357,7 @@ Confirm: no `twaver` / `SDK2D` strings in `vendor/aitopo/src` except README/docs
 - Create: `vendor/aitopo/src/interaction/external-drop.ts`
 - Create: `vendor/aitopo/tests/external-drop.spec.ts`
 
-- [ ] **Step 1: Tests**
+- [x] **Step 1: Tests**
 
 ```ts
 it('emits externalDrop with world coords and opaque data', () => {
@@ -372,7 +372,7 @@ it('emits externalDrop with world coords and opaque data', () => {
 })
 ```
 
-- [ ] **Step 2: Implement**
+- [x] **Step 2: Implement**
 
 - Listen on `getViewElement()` for `dragover` (preventDefault) and `drop`.
 - Read `text/plain` first; if empty, try `application/aitopo-drop` (document both).
@@ -525,7 +525,7 @@ Keep `vendor/README.md` staged if `vendor/aitopo/src/**` changes (pre-commit ven
 | 1 InteractionHost helpers | done |
 | 2 Group stroke paint | done |
 | 3 Move / membership / lock | done |
-| 4 External drop | pending |
+| 4 External drop | done |
 | 5 Marquee | pending |
 | 6 PatchHistory | pending |
 | 7 Demo + README + note | pending |
