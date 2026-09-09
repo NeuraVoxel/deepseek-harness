@@ -10,6 +10,7 @@ Humans and models share a versioned **Document / Patch / Events** protocol. Inte
 - Implementation checklist: [docs/2026-09-07-aitopo-implementation-plan.md](docs/2026-09-07-aitopo-implementation-plan.md)
 - Editor milestone (orchestrator): [docs/2026-09-08-aitopo-editor-requirements.md](docs/2026-09-08-aitopo-editor-requirements.md)
 - Editor implementation plan: [docs/2026-09-09-aitopo-editor-implementation-plan.md](docs/2026-09-09-aitopo-editor-implementation-plan.md)
+- twaver.vector gap backlog: [docs/2026-09-09-aitopo-twaver-vector-gap.md](docs/2026-09-09-aitopo-twaver-vector-gap.md)
 
 Design ideas come from `twaver.vector` in `vendor/SDK2D`. This package is a **clean-room** TypeScript rewrite: no SDK2D imports, no twaver public API names, and no Cordis sync procedure.
 
@@ -104,6 +105,8 @@ Editor requirements and decisions: [Editor requirements](docs/2026-09-08-aitopo-
 ## Known Limitations and Deferred Work
 
 - SubNetwork drill-down is single-level (root ↔ one child).
-- Alarm badges cover display only; no propagation tree.
+- Alarm badges cover display only; no propagation tree; `alarmChanged` is not emitted yet.
 - Pan/zoom triggers full-frame invalidate; element edits use dirty-rect.
 - Marquee is replace-only on pointer-up (no Shift-append).
+
+Full per-module status vs `twaver.vector`: [docs/2026-09-09-aitopo-twaver-vector-gap.md](docs/2026-09-09-aitopo-twaver-vector-gap.md).
