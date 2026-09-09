@@ -8,6 +8,7 @@ export type {
   GraphDocument,
   GraphEdge,
   GraphGroup,
+  GraphGroupStyle,
   GraphMeta,
   GraphNode,
   GraphViewport,

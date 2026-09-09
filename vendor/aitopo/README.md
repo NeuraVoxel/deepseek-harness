@@ -9,6 +9,7 @@ Humans and models share a versioned **Document / Patch / Events** protocol. Inte
 - Dual-face architecture and phase plan: [docs/2026-09-07-aitopo-design.md](docs/2026-09-07-aitopo-design.md)
 - Implementation checklist: [docs/2026-09-07-aitopo-implementation-plan.md](docs/2026-09-07-aitopo-implementation-plan.md)
 - Editor milestone (orchestrator): [docs/2026-09-08-aitopo-editor-requirements.md](docs/2026-09-08-aitopo-editor-requirements.md)
+- Editor implementation plan: [docs/2026-09-09-aitopo-editor-implementation-plan.md](docs/2026-09-09-aitopo-editor-implementation-plan.md)
 
 Design ideas come from `twaver.vector` in `vendor/SDK2D`. This package is a **clean-room** TypeScript rewrite: no SDK2D imports, no twaver public API names, and no Cordis sync procedure.
 
@@ -44,7 +45,7 @@ network.destroy()
 - Overview / HTML node UI
 - Copying or wrapping `vendor/SDK2D`
 
-Editor interactions (node move, external drop, dashed groups, lock, marquee, undo policy) are specified in the [Editor requirements](docs/2026-09-08-aitopo-editor-requirements.md); they are not implemented in observation-grade Phase 1.
+Editor interactions (node move, external drop, dashed groups, lock, marquee, undo policy) are specified in the [Editor requirements](docs/2026-09-08-aitopo-editor-requirements.md) and [Editor plan](docs/2026-09-09-aitopo-editor-implementation-plan.md); they are not implemented in observation-grade Phase 1. Implementation borrows **ideas** from `vendor/SDK2D/twaver/vector/` (especially `interaction/DefaultInteraction.js`) under the same clean-room rules as the observation engine.
 
 ## Known Limitations and Deferred Work
 

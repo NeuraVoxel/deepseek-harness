@@ -41,6 +41,8 @@ export interface GraphNode {
   readonly groupId?: string
   /** Child SubNetwork id keyed in `document.networks`. */
   readonly networkId?: string
+  /** When true, move and membership edits skip this node. */
+  readonly locked?: boolean
   readonly alarms?: readonly Alarm[]
   readonly data?: Readonly<Record<string, unknown>>
 }
@@ -55,6 +57,15 @@ export interface GraphEdge {
   readonly data?: Readonly<Record<string, unknown>>
 }
 
+/** Optional paint overrides for a group band outline/fill. */
+export interface GraphGroupStyle {
+  readonly stroke?: string
+  readonly strokeWidth?: number
+  /** Canvas setLineDash segments in world px. */
+  readonly strokeDash?: readonly number[]
+  readonly fill?: string
+}
+
 /** Visual grouping band for member nodes. */
 export interface GraphGroup {
   readonly id: string
@@ -64,6 +75,7 @@ export interface GraphGroup {
   readonly y?: number
   readonly w?: number
   readonly h?: number
+  readonly style?: GraphGroupStyle
 }
 
 /**

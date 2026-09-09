@@ -56,6 +56,31 @@ export interface DocumentChangedEvent {
   readonly reason: string
 }
 
+/** Node position committed after a move gesture. */
+export interface NodeMovedEvent {
+  readonly type: 'nodeMoved'
+  readonly nodeId: string
+  readonly from: { readonly x: number; readonly y: number }
+  readonly to: { readonly x: number; readonly y: number }
+}
+
+/** Node entered, left, or moved between groups. */
+export interface GroupMembershipChangedEvent {
+  readonly type: 'groupMembershipChanged'
+  readonly nodeId: string
+  readonly fromGroupId: string | undefined
+  readonly toGroupId: string | undefined
+}
+
+/** Opaque catalog drop — engine does not parse `data`. */
+export interface ExternalDropEvent {
+  readonly type: 'externalDrop'
+  readonly x: number
+  readonly y: number
+  readonly data: string
+  readonly groupId?: string
+}
+
 /** Discriminated event union for `Network.on`. */
 export type GraphEvent =
   | SelectionChangedEvent
@@ -66,3 +91,6 @@ export type GraphEvent =
   | AlarmChangedEvent
   | SubNetworkChangedEvent
   | DocumentChangedEvent
+  | NodeMovedEvent
+  | GroupMembershipChangedEvent
+  | ExternalDropEvent

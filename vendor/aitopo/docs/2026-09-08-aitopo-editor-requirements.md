@@ -1,9 +1,10 @@
 # AITopo Editor requirements (for dsh-agent-orchestrator)
 
-**Status:** requirements draft (2026-09-08); awaiting engine design acceptance
+**Status:** requirements accepted (2026-09-09); implementation plan in progress
 **Package:** `@neuravoxel/aitopo`
 **Consumer:** [`plugins/agent-orchestrator`](../../../plugins/agent-orchestrator/docs/2026-09-08-agent-orchestrator-design.md)
 **Base design:** [2026-09-07-aitopo-design.md](./2026-09-07-aitopo-design.md)
+**Implementation plan:** [2026-09-09-aitopo-editor-implementation-plan.md](./2026-09-09-aitopo-editor-implementation-plan.md)
 
 ## Summary
 
@@ -59,8 +60,15 @@ Editor milestone is done when:
 | F1 editable commit | AT-E1–E6, AT-E8, AT-E9 |
 | F2 richer kinds | AT-E7 as needed |
 
-## Open choices
+## Decisions (locked in implementation plan)
 
-- Exact `GraphEvent` discriminant names (`nodeMoved` vs `documentChanged` with op metadata).
-- Whether drop targets are groups-only or free canvas (host decides membership after drop).
-- AT-E8: in-engine `PatchHistory` vs host-owned stack (recommend resolving before Editor implementation starts).
+| Topic | Choice |
+|---|---|
+| Event names | Dedicated `nodeMoved`, `groupMembershipChanged`, `externalDrop` |
+| Drop target | Free canvas + opaque payload; host decides `addNode` / membership |
+| AT-E8 | Optional in-engine `PatchHistory` (inverse patch apply); host may own its own stack |
+| Marquee | Shift+empty-space drag (unmodified empty drag stays pan) |
+| `locked` | First-class `GraphNode.locked?: boolean` |
+| Design reference | `vendor/SDK2D/twaver/vector/` ideas only (DefaultInteraction live move / rect-select / movable gate / GroupUI outline styles / UndoManager → PatchHistory). Clean-room: no SDK2D import or twaver API names |
+
+See the [implementation plan](./2026-09-09-aitopo-editor-implementation-plan.md) for the full reference map, file map, and tasks.

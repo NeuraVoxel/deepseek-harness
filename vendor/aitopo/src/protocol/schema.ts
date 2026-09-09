@@ -23,6 +23,7 @@ const graphNodeSchema = z.object({
   parentId: z.string().optional(),
   groupId: z.string().optional(),
   networkId: z.string().optional(),
+  locked: z.boolean().optional(),
   alarms: z.array(alarmSchema).optional(),
   data: z.record(z.string(), z.unknown()).optional(),
 })
@@ -44,6 +45,12 @@ const graphGroupSchema = z.object({
   y: z.number().optional(),
   w: z.number().positive().optional(),
   h: z.number().positive().optional(),
+  style: z.object({
+    stroke: z.string().optional(),
+    strokeWidth: z.number().positive().optional(),
+    strokeDash: z.array(z.number()).optional(),
+    fill: z.string().optional(),
+  }).optional(),
 })
 
 const graphViewportSchema = z.object({
