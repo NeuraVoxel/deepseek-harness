@@ -261,7 +261,7 @@ On activation path: if `network.wasGestureDragged()` return without `activateNod
 - Modify: `vendor/aitopo/src/render/canvas2d.ts`
 - Modify: `vendor/aitopo/tests/editor-protocol.spec.ts` or add paint unit via style read helpers
 
-- [ ] **Step 1: Respect `group.style`**
+- [x] **Step 1: Respect `group.style`**
 
 ```ts
 drawGroup(group: GraphGroup, view: GroupPaintView): void {
@@ -523,7 +523,7 @@ Keep `vendor/README.md` staged if `vendor/aitopo/src/**` changes (pre-commit ven
 |---|---|
 | 0 Protocol locked/style/events | done |
 | 1 InteractionHost helpers | done |
-| 2 Group stroke paint | pending |
+| 2 Group stroke paint | done |
 | 3 Move / membership / lock | pending |
 | 4 External drop | pending |
 | 5 Marquee | pending |

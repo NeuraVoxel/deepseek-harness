@@ -114,19 +114,27 @@ export class Canvas2DRenderer implements Renderer {
   drawGroup(group: GraphGroup, view: GroupPaintView): void {
     const { bounds } = view
     const ctx = this.rootCtx
+    const style = group.style ?? {}
+    const stroke = style.stroke ?? '#5a6478'
+    const fill = style.fill ?? 'rgba(90, 100, 120, 0.08)'
+    const strokeWidth = (style.strokeWidth ?? 1) / this.viewport.zoom
     const radius = 12
     roundRect(ctx, bounds.x, bounds.y, bounds.width, bounds.height, radius)
-    ctx.fillStyle = 'rgba(90, 100, 120, 0.08)'
+    ctx.fillStyle = fill
     ctx.fill()
-    ctx.strokeStyle = '#5a6478'
-    ctx.lineWidth = 1 / this.viewport.zoom
+    ctx.strokeStyle = stroke
+    ctx.lineWidth = strokeWidth
+    const dash = style.strokeDash
+    if (dash !== undefined && dash.length > 0) {
+      ctx.setLineDash([...dash])
+    }
     ctx.stroke()
-    ctx.fillStyle = '#5a6478'
+    ctx.setLineDash([])
+    ctx.fillStyle = stroke
     // World-space font — scales with viewport zoom (do not divide by zoom).
     ctx.font = '12px sans-serif'
     ctx.textBaseline = 'top'
     ctx.fillText(group.label, bounds.x + 8, bounds.y + 6)
-    void group
   }
 
   drawEdge(edge: GraphEdge, view: EdgePaintView): void {
