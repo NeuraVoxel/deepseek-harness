@@ -16,12 +16,9 @@ function isBuildFaceClient(value: unknown): boolean {
 export default defineConfig(({ env }) => {
   const client = isBuildFaceClient(env?.DSH_BUILD_FACE)
   return {
-    // Object form so vendor/SDK2D (local design-reference tree, often without
-    // package.json) is not treated as a workspace package. Without this, tsdown
-    // walks up to the root package.json and fails as @deepseek-ai/dsh-root.
-    workspace: {
-      include: ['vendor/*', 'packages/*/*', 'apps/cli'],
-      exclude: [
+    workspace: client
+      ? ['vendor/*', 'packages/*/*', 'apps/cli']
+      : ['vendor/*', 'packages/*/*', 'apps/cli', 'apps/desktop', 'apps/desktop-host',
         '**/node_modules/**',
         '**/dist/**',
         '**/test?(s)/**',
@@ -29,7 +26,6 @@ export default defineConfig(({ env }) => {
         'vendor/SDK2D',
         'vendor/SDK2D/**',
       ],
-    },
     entry: client ? '' : ['lib/types/{index,invariant,startup}.js'],
     outDir: 'lib',
     format: ['esm'],
