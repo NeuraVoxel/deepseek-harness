@@ -291,7 +291,7 @@ drawGroup(group: GraphGroup, view: GroupPaintView): void {
 - Create: `vendor/aitopo/tests/move-node.spec.ts`
 - Modify: `vendor/aitopo/src/interaction/index.ts`
 
-- [ ] **Step 1: Write failing tests with mock host**
+- [x] **Step 1: Write failing tests with mock host**
 
 ```ts
 it('skips locked nodes', () => {
@@ -320,7 +320,7 @@ it('updates membership when dropped into another group', () => {
 })
 ```
 
-- [ ] **Step 2: Implement MoveNodeInteraction**
+- [x] **Step 2: Implement MoveNodeInteraction**
 
 Behavior (aligned with `DefaultInteraction` live-move + selection set):
 1. `pointerdown` on node hit (button 0): if hit node `locked === true` **and** no other selected unlocked nodes, ignore. If hit is unlocked (or selection has unlocked members), prepare move of **all selected unlocked** ids; if hit was not selected, replace selection with `[hit]` first (twaver-style).
@@ -336,9 +336,9 @@ Membership rules:
 - Removing membership (drop outside all groups): `toGroupId: undefined` clears `groupId` and removes id from previous group's `memberIds`.
 - Do **not** require a P-key chord (twaver-only); automatic group hit is the Editor contract.
 
-- [ ] **Step 3: Export from interaction/index + package barrel**
+- [x] **Step 3: Export from interaction/index + package barrel**
 
-- [ ] **Step 4: While coding, skim reference (do not copy)**
+- [x] **Step 4: While coding, skim reference (do not copy)**
 
 Read for behavior only:
 - `vendor/SDK2D/twaver/vector/interaction/DefaultInteraction.js` — `handle_mousedown` / `handle_mousemove` / `end` move + select paths; `paint` rect-select + lazy outline
@@ -524,7 +524,7 @@ Keep `vendor/README.md` staged if `vendor/aitopo/src/**` changes (pre-commit ven
 | 0 Protocol locked/style/events | done |
 | 1 InteractionHost helpers | done |
 | 2 Group stroke paint | done |
-| 3 Move / membership / lock | pending |
+| 3 Move / membership / lock | done |
 | 4 External drop | pending |
 | 5 Marquee | pending |
 | 6 PatchHistory | pending |

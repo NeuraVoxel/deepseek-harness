@@ -29,6 +29,7 @@ export { Network, Viewport, contentBounds, MIN_ZOOM, MAX_ZOOM } from './network/
 export { Canvas2DRenderer } from './render/index.ts'
 export type { Renderer, ViewportState } from './render/index.ts'
 export {
+  MoveNodeInteraction,
   PanZoomInteraction,
   SelectActivateInteraction,
   type Interaction,
