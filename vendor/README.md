@@ -40,8 +40,8 @@ These directories live under `vendor/` for workspace layout but are **not** upst
 
 1. `cd vendor/aitopo && git fetch origin && git checkout <sha> && cd ../..`
 2. `git add vendor/aitopo`
-3. Run `pnpm install && pnpm --filter @neuravoxel/aitopo test` (and any harness consumer tests that import the engine).
-4. Commit the submodule pointer bump in deepseek-harness. Edit engine sources only in the peer repo (`NeuraVoxel/aitopo`), not via Cordis-style local-mod essays here.
+3. Run `pnpm install && pnpm --filter @neuravoxel/aitopo test` (and any harness consumer tests that import the engine). `pnpm install` may fetch aitopo's locked `@neuravoxel/ai-eng` git dependency; the machine needs read access to private `NeuraVoxel/ai-eng-kit`.
+4. Commit the submodule pointer bump (and any lockfile change) in deepseek-harness. Edit engine sources only in the peer repo (`NeuraVoxel/aitopo`), not via Cordis-style local-mod essays here.
 
 Clone this repository with submodules: `git clone --recurse-submodules <url>` (or `git submodule update --init --recursive` after clone). `vendor/aitopo` is required for workspace resolution of `@neuravoxel/aitopo`.
 

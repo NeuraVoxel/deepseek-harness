@@ -11280,6 +11280,9 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
+      '@neuravoxel/ai-eng':
+        specifier: github:NeuraVoxel/ai-eng-kit#832a5f2302c6732f5f35045a95db7ac52cba0405
+        version: git+ssh://git@github.com/NeuraVoxel/ai-eng-kit.git#832a5f2302c6732f5f35045a95db7ac52cba0405
       '@types/node':
         specifier: ^22.13.10
         version: 22.20.0
@@ -12993,6 +12996,12 @@ packages:
     peerDependencies:
       '@emnapi/core': ^1.7.1
       '@emnapi/runtime': ^1.7.1
+
+  '@neuravoxel/ai-eng@git+ssh://git@github.com/NeuraVoxel/ai-eng-kit.git#832a5f2302c6732f5f35045a95db7ac52cba0405':
+    resolution: {commit: 832a5f2302c6732f5f35045a95db7ac52cba0405, repo: git@github.com:NeuraVoxel/ai-eng-kit.git, type: git}
+    version: 0.1.0
+    engines: {node: ^22.19.0 || >=24.0.0}
+    hasBin: true
 
   '@noble/hashes@1.4.0':
     resolution: {integrity: sha512-V1JJ1WTRUqHHrOSh597hURcMqVKVGL/ea3kv0gSnEdsEZ0/+VyPghM1lMNGc00z7CIQorSvbKpuJkxvuHbvdbg==}
@@ -19740,6 +19749,8 @@ snapshots:
       '@emnapi/runtime': 1.11.0
       '@tybys/wasm-util': 0.10.2
     optional: true
+
+  '@neuravoxel/ai-eng@git+ssh://git@github.com/NeuraVoxel/ai-eng-kit.git#832a5f2302c6732f5f35045a95db7ac52cba0405': {}
 
   '@noble/hashes@1.4.0': {}
 

@@ -35,6 +35,7 @@ This supersedes the in-tree first-party ownership choice in [2026-09-07-aitopo-d
 ## Consequences
 
 - Harness contributors need submodule init; missing `vendor/aitopo/package.json` breaks `@neuravoxel/aitopo` resolution.
+- While `vendor/aitopo` is a workspace member, `pnpm install` may resolve aitopo's locked `@neuravoxel/ai-eng` git pin; contributors and CI need read access to `NeuraVoxel/ai-eng-kit`. That install does not make harness use the kit for its own gates (K1).
 - Process ideas can diverge between harness and kit; improve via occasional cherry-picks.
 - `agent-observe` integration and npm publish of aitopo remain follow-ups.
 - Plans live under `docs/superpowers/plans/2026-09-09-peer-ai-eng-and-aitopo-index.md`.
