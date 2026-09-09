@@ -3,7 +3,7 @@ import { distanceToPolyline, distanceToSegment, hitRect, unionRect } from '../sr
 import { DirtyAccumulator } from '../src/network/dirty.ts'
 import { layoutGrid, layoutFlowColumns } from '../src/layout/index.ts'
 import { Viewport } from '../src/network/viewport.ts'
-import { edgeAnchors, hitTestEdges } from '../src/ui/bounds.ts'
+import { edgeAnchors, hitTestEdges, hitTestGroups } from '../src/ui/bounds.ts'
 
 describe('geom + dirty + viewport + layout', () => {
   it('unions rects and hits points', () => {
@@ -99,5 +99,16 @@ describe('geom + dirty + viewport + layout', () => {
     const hit = hitTestEdges(onWire, [edge], new Map([['a', from], ['b', to]]), 4)
     expect(hit?.id).toBe('e1')
     expect(hitTestEdges({ x: 50, y: 80 }, [edge], new Map([['a', from], ['b', to]]), 4)).toBeUndefined()
+  })
+
+  it('hit-tests groups by smallest area then topmost', () => {
+    const outer = { id: 'outer', label: 'Outer', memberIds: [], x: 0, y: 0, w: 200, h: 200 }
+    const inner = { id: 'inner', label: 'Inner', memberIds: [], x: 50, y: 50, w: 40, h: 40 }
+    const tieA = { id: 'tie-a', label: 'A', memberIds: [], x: 0, y: 0, w: 100, h: 100 }
+    const tieB = { id: 'tie-b', label: 'B', memberIds: [], x: 0, y: 0, w: 100, h: 100 }
+    expect(hitTestGroups({ x: 60, y: 60 }, [outer, inner])?.id).toBe('inner')
+    expect(hitTestGroups({ x: 10, y: 10 }, [outer, inner])?.id).toBe('outer')
+    expect(hitTestGroups({ x: 10, y: 10 }, [tieA, tieB])?.id).toBe('tie-b')
+    expect(hitTestGroups({ x: 300, y: 300 }, [outer])).toBeUndefined()
   })
 })

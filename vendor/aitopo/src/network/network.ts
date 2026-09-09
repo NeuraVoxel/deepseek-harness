@@ -5,14 +5,16 @@
 import { growRect, unionRect, type Rect } from '../geom.ts'
 import { GraphScene } from '../model/scene.ts'
 import type { GraphEvent } from '../protocol/events.ts'
+import type { GraphPatch } from '../protocol/patch.ts'
 import { graphPatchSchema } from '../protocol/schema.ts'
-import type { GraphDocument, GraphViewport } from '../protocol/types.ts'
+import type { GraphDocument, GraphGroup, GraphNode, GraphViewport } from '../protocol/types.ts'
 import { Canvas2DRenderer } from '../render/canvas2d.ts'
 import type { Renderer } from '../render/canvas2d.ts'
 import {
   edgeAnchors,
   groupBounds,
   hitTestEdges,
+  hitTestGroups,
   hitTestNodes,
   nodeBounds,
 } from '../ui/bounds.ts'
@@ -53,6 +55,7 @@ export class Network {
   private readonly disposers: Array<() => void> = []
   private readonly options: NetworkOptions
   private interactionModules: Interaction[] = []
+  private gestureDragged = false
 
   constructor(options: NetworkOptions = {}) {
     this.options = options
@@ -89,7 +92,7 @@ export class Network {
    * Apply a GraphPatch atomically.
    * @param patch - patch object with `ops`.
    */
-  apply(patch: unknown): void {
+  apply(patch: GraphPatch | unknown): void {
     const parsed = graphPatchSchema.safeParse(patch)
     if (!parsed.success) {
       const issue = parsed.error.issues[0]
@@ -295,6 +298,158 @@ export class Network {
     return edgeHit === undefined ? undefined : { id: edgeHit.id, kind: 'edge' }
   }
 
+  /**
+   * @param id - node id.
+   * @returns node from the active network, or undefined.
+   */
+  getNode(id: string): GraphNode | undefined {
+    return this.scene.nodes.get(id)
+  }
+
+  /** @returns groups in the active network. */
+  getGroups(): readonly GraphGroup[] {
+    return [...this.scene.groups.values()]
+  }
+
+  /** @returns selected element ids. */
+  getSelectedIds(): readonly string[] {
+    return [...this.scene.selectedIds]
+  }
+
+  /**
+   * Hit-test groups at a screen point (smallest area wins; equal area prefers topmost).
+   * @param screenX - CSS x relative to the hit canvas.
+   * @param screenY - CSS y relative to the hit canvas.
+   * @returns group id, or undefined.
+   */
+  hitTestGroupScreen(screenX: number, screenY: number): string | undefined {
+    const world = this.screenToWorld(screenX, screenY)
+    const hit = hitTestGroups(world, this.getGroups())
+    return hit?.id
+  }
+
+  /**
+   * @param screenX - CSS x relative to the hit canvas.
+   * @param screenY - CSS y relative to the hit canvas.
+   * @returns world point.
+   */
+  screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
+    return this.viewport.screenToWorld({ x: screenX, y: screenY })
+  }
+
+  /**
+   * Live preview position during drag (no nodeMoved / documentChanged).
+   * @param id - node id.
+   * @param x - world x.
+   * @param y - world y.
+   */
+  previewNodePosition(id: string, x: number, y: number): void {
+    const node = this.scene.nodes.get(id)
+    if (node === undefined) return
+    this.dirty.add(growRect(nodeBounds(node), 8))
+    this.scene.writePositions({ [id]: { x, y } })
+    const next = this.scene.nodes.get(id)
+    if (next !== undefined) this.dirty.add(growRect(nodeBounds(next), 8))
+    this.needsPaint = true
+  }
+
+  /**
+   * Commit a node move with optional group membership change.
+   * @param args - from/to positions and optional target group id.
+   */
+  commitNodeMove(args: {
+    nodeId: string
+    from: { x: number; y: number }
+    to: { x: number; y: number }
+    toGroupId?: string | undefined
+  }): void {
+    const node = this.scene.nodes.get(args.nodeId)
+    if (node === undefined) {
+      throw new Error(`commitNodeMove: missing node ${args.nodeId}`)
+    }
+    const fromGroupId = node.groupId
+    const membershipRequested = Object.hasOwn(args, 'toGroupId')
+    const toGroupId = args.toGroupId
+    const membershipChanged = membershipRequested && fromGroupId !== toGroupId
+
+    const ops: GraphPatch['ops'] = [
+      { op: 'updateNode', id: args.nodeId, patch: { x: args.to.x, y: args.to.y } },
+    ]
+
+    if (membershipChanged) {
+      if (fromGroupId !== undefined) {
+        const fromGroup = this.scene.groups.get(fromGroupId)
+        if (fromGroup !== undefined) {
+          ops.push({
+            op: 'updateGroup',
+            id: fromGroupId,
+            patch: { memberIds: fromGroup.memberIds.filter(id => id !== args.nodeId) },
+          })
+        }
+      }
+      if (toGroupId !== undefined) {
+        const toGroup = this.scene.groups.get(toGroupId)
+        if (toGroup === undefined) {
+          throw new Error(`commitNodeMove: missing group ${toGroupId}`)
+        }
+        const memberIds = toGroup.memberIds.includes(args.nodeId)
+          ? [...toGroup.memberIds]
+          : [...toGroup.memberIds, args.nodeId]
+        ops.push({ op: 'updateGroup', id: toGroupId, patch: { memberIds } })
+        ops[0] = {
+          op: 'updateNode',
+          id: args.nodeId,
+          patch: { x: args.to.x, y: args.to.y, groupId: toGroupId },
+        }
+      } else {
+        ops[0] = {
+          op: 'updateNode',
+          id: args.nodeId,
+          patch: { x: args.to.x, y: args.to.y, groupId: null },
+        }
+      }
+    }
+
+    this.apply({ ops })
+    this.emit({
+      type: 'nodeMoved',
+      nodeId: args.nodeId,
+      from: { x: args.from.x, y: args.from.y },
+      to: { x: args.to.x, y: args.to.y },
+    })
+    if (membershipChanged) {
+      this.emit({
+        type: 'groupMembershipChanged',
+        nodeId: args.nodeId,
+        fromGroupId,
+        toGroupId,
+      })
+    }
+  }
+
+  /** Mark that a drag consumed this pointer gesture. */
+  markGestureDragged(): void {
+    this.gestureDragged = true
+  }
+
+  /** @returns true when markGestureDragged ran since the last clear. */
+  wasGestureDragged(): boolean {
+    return this.gestureDragged
+  }
+
+  /** Reset the drag-consumed flag. */
+  clearGestureDragged(): void {
+    this.gestureDragged = false
+  }
+
+  /**
+   * Fan out a GraphEvent to subscribers.
+   * @param event - event payload.
+   */
+  emit(event: GraphEvent): void {
+    for (const listener of this.listeners) listener(event)
+  }
+
   private attachInteractions(): void {
     const defaults = this.options.defaultInteractions === false
       ? []
@@ -394,9 +549,6 @@ export class Network {
     }
   }
 
-  private emit(event: GraphEvent): void {
-    for (const listener of this.listeners) listener(event)
-  }
 }
 
 /** Content union bounds for fit. */

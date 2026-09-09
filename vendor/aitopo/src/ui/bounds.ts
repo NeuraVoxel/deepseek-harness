@@ -169,6 +169,34 @@ export function hitTestNodes(
 }
 
 /**
+ * Hit-test groups: among groups containing the point, prefer smallest area;
+ * equal area keeps the topmost (later in paint order).
+ * @param point - world point.
+ * @param groups - groups in paint order (later = top).
+ * @param pad - hit padding.
+ * @returns winning group, or undefined.
+ */
+export function hitTestGroups(
+  point: Point,
+  groups: readonly GraphGroup[],
+  pad = 0,
+): GraphGroup | undefined {
+  let best: GraphGroup | undefined
+  let bestArea = Infinity
+  for (let i = groups.length - 1; i >= 0; i -= 1) {
+    const group = groups[i]!
+    const bounds = groupBounds(group)
+    if (!hitRect(point, bounds, pad)) continue
+    const area = bounds.width * bounds.height
+    if (best === undefined || area < bestArea) {
+      best = group
+      bestArea = area
+    }
+  }
+  return best
+}
+
+/**
  * Hit-test edges by distance to the same orthogonal polyline used for paint.
  * Closest edge within tolerance wins; nodes must be resolved separately first.
  * @param point - world point.

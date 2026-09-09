@@ -79,7 +79,14 @@ export const graphDocumentSchema: z.ZodType<import('./types.ts').GraphDocument> 
 
 const patchOpSchema = z.discriminatedUnion('op', [
   z.object({ op: z.literal('addNode'), node: graphNodeSchema }),
-  z.object({ op: z.literal('updateNode'), id: z.string().min(1), patch: graphNodeSchema.partial().omit({ id: true }) }),
+  z.object({
+    op: z.literal('updateNode'),
+    id: z.string().min(1),
+    patch: graphNodeSchema.partial().omit({ id: true }).extend({
+      /** `null` clears membership (`groupId` omitted). */
+      groupId: z.union([z.string().min(1), z.null()]).optional(),
+    }),
+  }),
   z.object({ op: z.literal('removeNode'), id: z.string().min(1) }),
   z.object({ op: z.literal('addEdge'), edge: graphEdgeSchema }),
   z.object({ op: z.literal('updateEdge'), id: z.string().min(1), patch: graphEdgeSchema.partial().omit({ id: true }) }),

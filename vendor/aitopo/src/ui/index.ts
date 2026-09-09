@@ -8,6 +8,7 @@ export {
   edgeAnchors,
   groupBounds,
   hitTestEdges,
+  hitTestGroups,
   hitTestNodes,
   nodeBounds,
 } from './bounds.ts'

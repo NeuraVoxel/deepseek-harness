@@ -206,7 +206,7 @@ export interface ExternalDropEvent {
 - Modify: `vendor/aitopo/src/network/network.ts`
 - Modify: `vendor/aitopo/src/ui/bounds.ts` (add `hitTestGroups` if missing)
 
-- [ ] **Step 1: Widen host surface**
+- [x] **Step 1: Widen host surface**
 
 ```ts
 export interface InteractionHost {
@@ -236,7 +236,7 @@ export interface InteractionHost {
 }
 ```
 
-- [ ] **Step 2: Implement on Network**
+- [x] **Step 2: Implement on Network**
 
 - `getNode` / `getGroups` from `scene`
 - `hitTestGroupScreen` → screenToWorld → `hitTestGroups` (topmost group containing point; prefer smallest area on ties)
@@ -244,7 +244,7 @@ export interface InteractionHost {
 - `commitNodeMove`: build patch `updateNode` (+ `updateGroup` memberIds when `toGroupId` differs from current); `apply`; emit `nodeMoved`; emit `groupMembershipChanged` if membership changed
 - Gesture drag flags: private boolean reset on next pointerdown via SelectActivate / MoveNode calling `clearGestureDragged` at start
 
-- [ ] **Step 3: SelectActivate — skip activate after drag**
+- [x] **Step 3: SelectActivate — skip activate after drag**
 
 At start of `pointerdown`: `network.clearGestureDragged()`.
 On activation path: if `network.wasGestureDragged()` return without `activateNode`.
@@ -521,8 +521,8 @@ Keep `vendor/README.md` staged if `vendor/aitopo/src/**` changes (pre-commit ven
 
 | Chunk | Status |
 |---|---|
-| 0 Protocol locked/style/events | pending |
-| 1 InteractionHost helpers | pending |
+| 0 Protocol locked/style/events | done |
+| 1 InteractionHost helpers | done |
 | 2 Group stroke paint | pending |
 | 3 Move / membership / lock | pending |
 | 4 External drop | pending |

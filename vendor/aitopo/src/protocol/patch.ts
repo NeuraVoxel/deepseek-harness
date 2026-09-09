@@ -3,7 +3,7 @@
  */
 
 import { graphPatchSchema, type GraphPatch, type GraphPatchOp } from './schema.ts'
-import type { Alarm, GraphDocument, GraphEdge, GraphGroup, GraphNode } from './types.ts'
+import type { Alarm, GraphDocument, GraphEdge, GraphGroup, GraphGroupStyle, GraphNode } from './types.ts'
 
 export type { GraphPatch, GraphPatchOp }
 
@@ -78,7 +78,14 @@ function applyOp(doc: GraphDocument, op: GraphPatchOp): GraphDocument {
       if ((doc.groups ?? []).some(g => g.id === op.group.id)) {
         throw new Error(`addGroup: duplicate id ${op.group.id}`)
       }
-      return { ...doc, groups: [...(doc.groups ?? []), asGroup(op.group)] }
+      const { style: rawStyle, ...groupRest } = op.group
+      return {
+        ...doc,
+        groups: [...(doc.groups ?? []), asGroup({
+          ...groupRest,
+          ...(rawStyle !== undefined ? { style: normalizeGroupStyle(rawStyle) } : {}),
+        })],
+      }
     }
     case 'updateGroup': {
       const groups = doc.groups ?? []
@@ -86,7 +93,11 @@ function applyOp(doc: GraphDocument, op: GraphPatchOp): GraphDocument {
       if (index < 0) throw new Error(`updateGroup: missing id ${op.id}`)
       const current = groups[index]!
       const next = groups.slice()
-      next[index] = mergeGroup(current, op.patch)
+      const { style: rawStyle, ...patchRest } = op.patch
+      next[index] = mergeGroup(current, {
+        ...patchRest,
+        ...(rawStyle !== undefined ? { style: normalizeGroupStyle(rawStyle) } : {}),
+      })
       return { ...doc, groups: next }
     }
     case 'removeGroup': {
@@ -139,6 +150,7 @@ function asNode(raw: {
   parentId?: string | undefined
   groupId?: string | undefined
   networkId?: string | undefined
+  locked?: boolean | undefined
   alarms?: Array<{
     id: string
     level: Alarm['level']
@@ -162,8 +174,9 @@ function mergeNode(
     w?: number | undefined
     h?: number | undefined
     parentId?: string | undefined
-    groupId?: string | undefined
+    groupId?: string | null | undefined
     networkId?: string | undefined
+    locked?: boolean | undefined
     alarms?: Array<{
       id: string
       level: Alarm['level']
@@ -178,6 +191,9 @@ function mergeNode(
     type: patch.type ?? current.type,
     label: patch.label ?? current.label,
   }
+  const groupId = patch.groupId === null
+    ? undefined
+    : (patch.groupId ?? current.groupId)
   return applyOptionalNode(base, {
     status: patch.status ?? current.status,
     x: patch.x ?? current.x,
@@ -185,8 +201,9 @@ function mergeNode(
     w: patch.w ?? current.w,
     h: patch.h ?? current.h,
     parentId: patch.parentId ?? current.parentId,
-    groupId: patch.groupId ?? current.groupId,
+    groupId,
     networkId: patch.networkId ?? current.networkId,
+    locked: patch.locked ?? current.locked,
     alarms: patch.alarms ?? current.alarms?.map(a => ({ ...a })),
     data: patch.data ?? (current.data !== undefined ? { ...current.data } : undefined),
   })
@@ -203,6 +220,7 @@ function applyOptionalNode(
     parentId?: string | undefined
     groupId?: string | undefined
     networkId?: string | undefined
+    locked?: boolean | undefined
     alarms?: Array<{
       id: string
       level: Alarm['level']
@@ -222,6 +240,7 @@ function applyOptionalNode(
     ...(raw.parentId !== undefined ? { parentId: raw.parentId } : {}),
     ...(raw.groupId !== undefined ? { groupId: raw.groupId } : {}),
     ...(raw.networkId !== undefined ? { networkId: raw.networkId } : {}),
+    ...(raw.locked !== undefined ? { locked: raw.locked } : {}),
     ...(raw.alarms !== undefined ? { alarms: [...raw.alarms].map(asAlarm) } : {}),
     ...(raw.data !== undefined ? { data: raw.data } : {}),
   }
@@ -283,6 +302,7 @@ function asGroup(raw: {
   y?: number | undefined
   w?: number | undefined
   h?: number | undefined
+  style?: GraphGroupStyle | undefined
 }): GraphGroup {
   return {
     id: raw.id,
@@ -292,6 +312,7 @@ function asGroup(raw: {
     ...(raw.y !== undefined ? { y: raw.y } : {}),
     ...(raw.w !== undefined ? { w: raw.w } : {}),
     ...(raw.h !== undefined ? { h: raw.h } : {}),
+    ...(raw.style !== undefined ? { style: normalizeGroupStyle(raw.style) } : {}),
   }
 }
 
@@ -304,6 +325,7 @@ function mergeGroup(
     y?: number | undefined
     w?: number | undefined
     h?: number | undefined
+    style?: GraphGroupStyle | undefined
   },
 ): GraphGroup {
   return asGroup({
@@ -314,7 +336,23 @@ function mergeGroup(
     y: patch.y ?? current.y,
     w: patch.w ?? current.w,
     h: patch.h ?? current.h,
+    style: patch.style ?? current.style,
   })
+}
+
+/** Drop undefined optional style keys for exactOptionalPropertyTypes. */
+function normalizeGroupStyle(style: {
+  stroke?: string | undefined
+  strokeWidth?: number | undefined
+  strokeDash?: readonly number[] | undefined
+  fill?: string | undefined
+}): GraphGroupStyle {
+  return {
+    ...(style.stroke !== undefined ? { stroke: style.stroke } : {}),
+    ...(style.strokeWidth !== undefined ? { strokeWidth: style.strokeWidth } : {}),
+    ...(style.strokeDash !== undefined ? { strokeDash: [...style.strokeDash] } : {}),
+    ...(style.fill !== undefined ? { fill: style.fill } : {}),
+  }
 }
 
 function setNodeAlarms(doc: GraphDocument, id: string, alarms: readonly Alarm[]): GraphDocument {
