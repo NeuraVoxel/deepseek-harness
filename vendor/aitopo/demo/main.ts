@@ -55,30 +55,43 @@ function bindEvents(n: Network): void {
   unsub?.()
   unsub = n.on(event => {
     if (mode === 'edit' && event.type === 'externalDrop') {
-      setStatus(summarizeEvent(event))
       const label = event.data === '' ? 'dropped' : event.data
-      applyPatch({
-        ops: [{
-          op: 'addNode',
-          node: {
-            id: `drop-${Date.now()}`,
-            type: 'unit',
-            label,
-            x: event.x,
-            y: event.y,
-            ...(event.groupId !== undefined ? { groupId: event.groupId } : {}),
-          },
-        }],
-      })
+      const id = `drop-${Date.now()}`
+      const ops: GraphPatch['ops'] = [{
+        op: 'addNode',
+        node: {
+          id,
+          type: 'unit',
+          label,
+          x: event.x,
+          y: event.y,
+          ...(event.groupId !== undefined ? { groupId: event.groupId } : {}),
+        },
+      }]
+      if (event.groupId !== undefined) {
+        const group = n.getGroups().find(g => g.id === event.groupId)
+        if (group !== undefined && !group.memberIds.includes(id)) {
+          ops.push({
+            op: 'updateGroup',
+            id: event.groupId,
+            patch: { memberIds: [...group.memberIds, id] },
+          })
+        }
+      }
+      applyPatch({ ops })
+      // Status after apply so documentChanged does not overwrite externalDrop.
+      setStatus(summarizeEvent(event))
       return
     }
     if (
       mode === 'edit'
-      && (event.type === 'nodeMoved'
-        || event.type === 'groupMembershipChanged'
-        || event.type === 'externalDrop')
+      && (event.type === 'nodeMoved' || event.type === 'groupMembershipChanged')
     ) {
       setStatus(summarizeEvent(event))
+      return
+    }
+    if (mode === 'edit' && event.type === 'documentChanged') {
+      // Keep prior editor gesture status; apply side-effects are not the demo focus.
       return
     }
     setStatus(summarizeEvent(event))
