@@ -36,6 +36,7 @@ DeepSeek Harness 已沉淀的可复用 AI 工程化实践（Agent Notes、AGENTS
 
 - Harness 贡献者需要 submodule init；缺少 `vendor/aitopo/package.json` 会破坏 `@neuravoxel/aitopo` 解析。
 - 在 `vendor/aitopo` 仍是 workspace 成员时，`pnpm install` 可能解析 aitopo 锁定的 `@neuravoxel/ai-eng` git pin；贡献者与 CI 需要对 `NeuraVoxel/ai-eng-kit` 有读权限。该安装并不使 harness 用 kit 跑自身门禁（K1）。
+- CI checkout 设置 `submodules: true`，使用仓库 secret `NEURAVOXEL_PRIVATE_READ_TOKEN`（对私有 `aitopo` 与 `ai-eng-kit` 可读），并在 `pnpm install` 前运行 `scripts/ci-configure-private-git.sh`。submodule URL 为 HTTPS，以便 token checkout。
 - harness 与 kit 的流程理念可能分叉；用偶尔 cherry-pick 改进。
 - `agent-observe` 集成与 aitopo 的 npm 发布仍是后续工作。
 - 计划见 `docs/superpowers/plans/2026-09-09-peer-ai-eng-and-aitopo-index.md`。

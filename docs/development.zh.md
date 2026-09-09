@@ -29,9 +29,11 @@
 
 ```sh
 git clone --recurse-submodules <url>
-# 或在普通克隆之后：
+# or after a plain clone:
 git submodule update --init --recursive
 ```
+
+`pnpm install` 还可能拉取 aitopo 锁定的 `@neuravoxel/ai-eng` git 依赖（私有仓 `NeuraVoxel/ai-eng-kit`，需要 GitHub 读权限）。CI 使用仓库 secret `NEURAVOXEL_PRIVATE_READ_TOKEN`（对 `aitopo` 与 `ai-eng-kit` 的 Contents: Read）做 submodule checkout 与该 git 拉取。
 
 在仓库根目录安装依赖：
 

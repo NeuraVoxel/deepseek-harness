@@ -66,6 +66,15 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
+        with:
+          submodules: true
+          token: ${{ secrets.NEURAVOXEL_PRIVATE_READ_TOKEN }}
+          persist-credentials: false
+
+      - name: Auth private GitHub deps
+        env:
+          NEURAVOXEL_PRIVATE_READ_TOKEN: ${{ secrets.NEURAVOXEL_PRIVATE_READ_TOKEN }}
+        run: bash scripts/ci-configure-private-git.sh
 
       - uses: pnpm/action-setup@v4
 
