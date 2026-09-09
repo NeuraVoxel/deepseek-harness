@@ -3,6 +3,8 @@ import {
   contentBounds,
   parseDocument,
   PatchHistory,
+  CreateEdgeInteraction,
+  DeleteEdgeInteraction,
   ExternalDropInteraction,
   MoveNodeInteraction,
   MarqueeSelectInteraction,
@@ -25,6 +27,12 @@ let history: PatchHistory | null = null
 let unsub: (() => void) | null = null
 let mode: DemoMode = 'observe'
 let debug = false
+/** Editor: hide non-movers while dragging (default off — full scene paint). */
+let hideOthersWhileDragging = false
+/** Editor: exclusive link mode (drag node→node without Alt). */
+let linkMode = false
+/** Edge kind applied by CreateEdgeInteraction. */
+let edgeKind: 'data' | 'control' = 'data'
 
 function setStatus(text: string): void {
   status.textContent = text
@@ -38,6 +46,10 @@ function summarizeEvent(event: GraphEvent): string {
       return `groupMembershipChanged · ${event.nodeId} ${event.fromGroupId ?? '—'} → ${event.toGroupId ?? '—'}`
     case 'externalDrop':
       return `externalDrop · (${event.x},${event.y}) data=${JSON.stringify(event.data)} group=${event.groupId ?? '—'}`
+    case 'edgeCreated':
+      return `edgeCreated · ${event.edgeId} ${event.from}→${event.to}${event.kind !== undefined ? ` · ${event.kind}` : ''}`
+    case 'edgeRemoved':
+      return `edgeRemoved · ${event.edgeId}`
     default:
       return `${event.type} · network=${network?.scene.currentNetworkId ?? 'root'} · sel=${[...(network?.scene.selectedIds ?? [])].join(',') || '—'}`
   }
@@ -85,7 +97,12 @@ function bindEvents(n: Network): void {
     }
     if (
       mode === 'edit'
-      && (event.type === 'nodeMoved' || event.type === 'groupMembershipChanged')
+      && (
+        event.type === 'nodeMoved'
+        || event.type === 'groupMembershipChanged'
+        || event.type === 'edgeCreated'
+        || event.type === 'edgeRemoved'
+      )
     ) {
       setStatus(summarizeEvent(event))
       return
@@ -98,9 +115,26 @@ function bindEvents(n: Network): void {
   })
 }
 
+function editorInteractions(): ConstructorParameters<typeof Network>[0] {
+  return {
+    interactions: [
+      new ExternalDropInteraction(),
+      ...(linkMode
+        ? []
+        : [new MoveNodeInteraction({ hideOthersWhileDragging })]),
+      new DeleteEdgeInteraction(),
+      new CreateEdgeInteraction({
+        kind: edgeKind,
+        requireAlt: !linkMode,
+      }),
+      new MarqueeSelectInteraction(),
+    ],
+  }
+}
+
 /**
- * Recreate Network. Editor mode adds Move/Drop/Marquee **in addition** to
- * defaults (`PanZoom` + `SelectActivate`) via `options.interactions`.
+ * Recreate Network. Editor mode adds Move/Drop/Marquee/CreateEdge/DeleteEdge
+ * **in addition** to defaults (`PanZoom` + `SelectActivate`) via `options.interactions`.
  */
 function recreate(next: DemoMode): void {
   unsub?.()
@@ -112,15 +146,7 @@ function recreate(next: DemoMode): void {
 
   const nextNetwork = new Network({
     debugPaintRects: debug,
-    ...(next === 'edit'
-      ? {
-          interactions: [
-            new ExternalDropInteraction(),
-            new MoveNodeInteraction(),
-            new MarqueeSelectInteraction(),
-          ],
-        }
-      : {}),
+    ...(next === 'edit' ? editorInteractions() : {}),
   })
   nextNetwork.mount(stage)
 
@@ -153,20 +179,39 @@ function loadObservation(name: string, data: unknown): void {
   fitContent()
 }
 
+function editorStatusHint(): string {
+  const linkHint = linkMode
+    ? 'Link mode · drag node→node'
+    : 'Alt+drag node→node to link'
+  const hideHint = hideOthersWhileDragging ? 'hide-others ON' : 'hide-others OFF'
+  return `Editor · ${linkHint} · ${hideHint} · Delete edge · Shift+marquee · drop chip`
+}
+
 function loadEditor(): void {
   recreate('edit')
   if (network === null) return
   network.load(parseDocument(editor))
   fitContent()
-  setStatus('Editor · drag unlocked nodes · Shift+marquee · drop catalog chip')
+  setStatus(editorStatusHint())
 }
 
-function button(label: string, onClick: () => void): void {
+function reloadEditorIfActive(): void {
+  if (mode !== 'edit' || network === null) return
+  const doc = network.toJSON()
+  recreate('edit')
+  if (network === null) return
+  network.load(doc)
+  fitContent()
+  setStatus(editorStatusHint())
+}
+
+function button(label: string, onClick: () => void): HTMLButtonElement {
   const el = document.createElement('button')
   el.type = 'button'
   el.textContent = label
   el.addEventListener('click', onClick)
   toolbar.appendChild(el)
+  return el
 }
 
 button('Fleet', () => { loadObservation('fleet', fleet) })
@@ -233,6 +278,36 @@ button('Redo', () => {
     return
   }
   setStatus(history.redo() ? 'Redo' : 'Redo · empty')
+})
+button('Delete edge', () => {
+  if (network === null || mode !== 'edit') {
+    setStatus('Delete edge · enter Editor mode first')
+    return
+  }
+  const selected = network.getSelectedIds()
+  const edgeIds = new Set(network.getEdges().map(e => e.id))
+  const toRemove = selected.filter(id => edgeIds.has(id))
+  if (toRemove.length === 0) {
+    setStatus('Delete edge · select an edge first')
+    return
+  }
+  network.commitEdgeRemove(toRemove)
+  network.setSelection([])
+})
+const linkModeBtn = button('Link mode', () => {
+  linkMode = !linkMode
+  linkModeBtn.textContent = linkMode ? 'Link mode ✓' : 'Link mode'
+  reloadEditorIfActive()
+})
+const edgeKindBtn = button('Kind: data', () => {
+  edgeKind = edgeKind === 'data' ? 'control' : 'data'
+  edgeKindBtn.textContent = `Kind: ${edgeKind}`
+  reloadEditorIfActive()
+})
+const hideOthersBtn = button('Hide others', () => {
+  hideOthersWhileDragging = !hideOthersWhileDragging
+  hideOthersBtn.textContent = hideOthersWhileDragging ? 'Hide others ✓' : 'Hide others'
+  reloadEditorIfActive()
 })
 button('Debug dirty', () => {
   debug = !debug

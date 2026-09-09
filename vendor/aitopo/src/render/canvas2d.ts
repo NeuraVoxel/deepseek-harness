@@ -2,7 +2,7 @@
  * Renderer abstraction and Canvas 2D implementation.
  */
 
-import type { Rect } from '../geom.ts'
+import type { Point, Rect } from '../geom.ts'
 import type { GraphEdge, GraphGroup, GraphNode } from '../protocol/types.ts'
 
 /** Camera state passed into a frame. */
@@ -93,7 +93,19 @@ export class Canvas2DRenderer implements Renderer {
     resizeCanvas(this.overlay, viewport.width, viewport.height, dpr)
     const ctx = this.rootCtx
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-    ctx.clearRect(0, 0, viewport.width, viewport.height)
+    // Partial dirty must clear only those screen rects. Clearing the full canvas then
+    // clipping would erase every element outside the dirty union (looks like hide-others).
+    if (dirty === 'all' || dirty.length === 0) {
+      ctx.clearRect(0, 0, viewport.width, viewport.height)
+    } else {
+      for (const rect of dirty) {
+        const sx = (rect.x - viewport.x) * viewport.zoom
+        const sy = (rect.y - viewport.y) * viewport.zoom
+        const sw = rect.width * viewport.zoom
+        const sh = rect.height * viewport.zoom
+        ctx.clearRect(sx, sy, sw, sh)
+      }
+    }
     ctx.save()
     ctx.translate(-viewport.x * viewport.zoom, -viewport.y * viewport.zoom)
     ctx.scale(viewport.zoom, viewport.zoom)
@@ -284,6 +296,24 @@ export class Canvas2DRenderer implements Renderer {
     ctx.setLineDash([4 / this.viewport.zoom, 3 / this.viewport.zoom])
     ctx.fillRect(rect.x, rect.y, rect.width, rect.height)
     ctx.strokeRect(rect.x, rect.y, rect.width, rect.height)
+    ctx.restore()
+  }
+
+  /**
+   * Draw an edge-create rubber-band on the overlay.
+   * @param from - world start.
+   * @param to - world end (pointer).
+   */
+  drawEdgeRubberBand(from: Point, to: Point): void {
+    const ctx = this.overlayCtx
+    ctx.save()
+    ctx.strokeStyle = '#3b82f6'
+    ctx.lineWidth = 1.5 / this.viewport.zoom
+    ctx.setLineDash([6 / this.viewport.zoom, 4 / this.viewport.zoom])
+    ctx.beginPath()
+    ctx.moveTo(from.x, from.y)
+    ctx.lineTo(to.x, to.y)
+    ctx.stroke()
     ctx.restore()
   }
 }

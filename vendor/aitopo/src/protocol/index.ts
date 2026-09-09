@@ -17,6 +17,8 @@ export type {
 export type {
   AlarmChangedEvent,
   DocumentChangedEvent,
+  EdgeCreatedEvent,
+  EdgeRemovedEvent,
   ExternalDropEvent,
   GraphEvent,
   GroupMembershipChangedEvent,

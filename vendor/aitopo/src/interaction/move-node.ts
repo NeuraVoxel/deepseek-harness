@@ -6,8 +6,25 @@ import type { Interaction, InteractionHost } from './types.ts'
 
 const DRAG_THRESHOLD_PX = 4
 
+export interface MoveNodeInteractionOptions {
+  /**
+   * When true, during an active move only movers and incident edges are painted
+   * (groups and other nodes hidden). Default false: paint the full scene.
+   */
+  readonly hideOthersWhileDragging?: boolean
+}
+
 /** Live-move nodes; skip locked; reparent from group under pointer on commit. */
 export class MoveNodeInteraction implements Interaction {
+  private readonly hideOthersWhileDragging: boolean
+
+  /**
+   * @param options - optional paint filter while dragging.
+   */
+  constructor(options: MoveNodeInteractionOptions = {}) {
+    this.hideOthersWhileDragging = options.hideOthersWhileDragging === true
+  }
+
   /**
    * Attach pointer listeners for node move.
    * @param network - host network.
@@ -42,6 +59,12 @@ export class MoveNodeInteraction implements Interaction {
       capturedPointerId = null
     }
 
+    const clearPaintFilter = (): void => {
+      if (this.hideOthersWhileDragging) {
+        network.setDragPaintFilter(undefined)
+      }
+    }
+
     /** Revert live previews to drag-start positions, release capture, clear state. */
     const abortWithoutCommit = (): void => {
       if (active && dragged) {
@@ -49,12 +72,15 @@ export class MoveNodeInteraction implements Interaction {
           network.previewNodePosition(mover.id, mover.fromX, mover.fromY)
         }
       }
+      clearPaintFilter()
       releaseCapture()
       reset()
     }
 
     const onPointerDown = (event: PointerEvent): void => {
       if (event.button !== 0) return
+      // Alt+drag is CreateEdge; leave that gesture alone.
+      if (event.altKey) return
       const rect = canvas.getBoundingClientRect()
       const hit = network.hitTestScreen(event.clientX - rect.left, event.clientY - rect.top)
       if (hit === undefined || hit.kind !== 'node') return
@@ -101,6 +127,9 @@ export class MoveNodeInteraction implements Interaction {
         if (dist < DRAG_THRESHOLD_PX) return
         dragged = true
         network.markGestureDragged()
+        if (this.hideOthersWhileDragging) {
+          network.setDragPaintFilter(movers.map(m => m.id))
+        }
         try {
           canvas.setPointerCapture(event.pointerId)
           capturedPointerId = event.pointerId
@@ -130,6 +159,7 @@ export class MoveNodeInteraction implements Interaction {
             toGroupId: groupHit,
           })
         }
+        clearPaintFilter()
         releaseCapture()
       }
       reset()

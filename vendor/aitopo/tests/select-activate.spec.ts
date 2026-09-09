@@ -62,12 +62,15 @@ function createHost(canvas: FakeHitCanvas): InteractionHost & {
     viewport: {} as InteractionHost['viewport'],
     getNode: () => undefined,
     getNodes: () => [],
+    getEdges: () => [],
     getGroups: () => [],
     getSelectedIds: () => [],
     hitTestGroupScreen: () => undefined,
     screenToWorld: () => ({ x: 0, y: 0 }),
     previewNodePosition: vi.fn(),
     commitNodeMove: vi.fn(),
+    commitEdgeCreate: vi.fn(),
+    commitEdgeRemove: vi.fn(),
     markGestureDragged: () => {
       gestureDragged = true
     },
@@ -76,6 +79,8 @@ function createHost(canvas: FakeHitCanvas): InteractionHost & {
       gestureDragged = false
     },
     setMarqueeRect: vi.fn(),
+    setEdgeRubberBand: vi.fn(),
+    setDragPaintFilter: vi.fn(),
     emit: vi.fn(),
     apply: vi.fn(),
   }

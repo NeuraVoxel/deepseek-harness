@@ -108,18 +108,23 @@ function createHost(options: {
     viewport: { state: { zoom: 1, x: 0, y: 0 } } as InteractionHost['viewport'],
     getNode: id => nodes.find(n => n.id === id),
     getNodes: () => nodes,
+    getEdges: () => [],
     getGroups: () => [],
     getSelectedIds: () => [],
     hitTestGroupScreen: () => undefined,
     screenToWorld: (x, y) => ({ x, y }),
     previewNodePosition: vi.fn(),
     commitNodeMove: vi.fn(),
+    commitEdgeCreate: vi.fn(),
+    commitEdgeRemove: vi.fn(),
     markGestureDragged,
     wasGestureDragged: () => gestureDragged,
     clearGestureDragged: () => {
       gestureDragged = false
     },
     setMarqueeRect,
+    setEdgeRubberBand: vi.fn(),
+    setDragPaintFilter: vi.fn(),
     emit: vi.fn(),
     apply: vi.fn(),
   }

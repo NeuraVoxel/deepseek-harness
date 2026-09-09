@@ -123,4 +123,42 @@ describe('Network editor helpers', () => {
     network.clearGestureDragged()
     expect(network.wasGestureDragged()).toBe(false)
   })
+
+  it('commitEdgeCreate adds edge and emits edgeCreated', () => {
+    const network = createNetwork()
+    const events: GraphEvent[] = []
+    network.on(event => events.push(event))
+    const id = network.commitEdgeCreate({ from: 'a', to: 'b', kind: 'data', id: 'e-ab' })
+    expect(id).toBe('e-ab')
+    expect(network.getEdges()).toEqual([
+      expect.objectContaining({ id: 'e-ab', from: 'a', to: 'b', kind: 'data' }),
+    ])
+    expect(events.filter(e => e.type === 'edgeCreated')).toEqual([{
+      type: 'edgeCreated',
+      edgeId: 'e-ab',
+      from: 'a',
+      to: 'b',
+      kind: 'data',
+    }])
+  })
+
+  it('commitEdgeCreate skips duplicates and self-links', () => {
+    const network = createNetwork()
+    expect(network.commitEdgeCreate({ from: 'a', to: 'a' })).toBeUndefined()
+    network.commitEdgeCreate({ from: 'a', to: 'b', id: 'e1' })
+    expect(network.commitEdgeCreate({ from: 'a', to: 'b' })).toBeUndefined()
+    expect(network.getEdges()).toHaveLength(1)
+  })
+
+  it('commitEdgeRemove emits edgeRemoved', () => {
+    const network = createNetwork()
+    network.commitEdgeCreate({ from: 'a', to: 'b', id: 'e1' })
+    const events: GraphEvent[] = []
+    network.on(event => events.push(event))
+    network.commitEdgeRemove(['e1', 'missing'])
+    expect(network.getEdges()).toEqual([])
+    expect(events.filter(e => e.type === 'edgeRemoved')).toEqual([
+      { type: 'edgeRemoved', edgeId: 'e1' },
+    ])
+  })
 })

@@ -34,13 +34,18 @@ export type { Renderer, ViewportState } from './render/index.ts'
 export {
   EXTERNAL_DROP_MIME_AITOPO,
   EXTERNAL_DROP_MIME_PLAIN,
+  CreateEdgeInteraction,
+  DeleteEdgeInteraction,
   ExternalDropInteraction,
   MarqueeSelectInteraction,
   MoveNodeInteraction,
   PanZoomInteraction,
   SelectActivateInteraction,
+  type CreateEdgeInteractionOptions,
+  type EdgeRubberBand,
   type Interaction,
   type InteractionHost,
+  type MoveNodeInteractionOptions,
 } from './interaction/index.ts'
 export { layoutGrid, layoutFlowColumns } from './layout/index.ts'
 export type { Point, Rect } from './geom.ts'

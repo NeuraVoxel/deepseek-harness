@@ -41,9 +41,47 @@
       "y": 300,
       "w": 100,
       "h": 48
+    },
+    {
+      "id": "sink",
+      "type": "unit",
+      "label": "sink",
+      "x": 280,
+      "y": 300,
+      "w": 100,
+      "h": 48
     }
   ],
-  "edges": [],
+  "edges": [
+    {
+      "id": "e-core-worker",
+      "from": "core",
+      "to": "worker",
+      "kind": "data",
+      "data": { "label": "data", "stroke": "#22c55e", "strokeHover": "#4ade80" }
+    },
+    {
+      "id": "e-worker-catalog",
+      "from": "worker",
+      "to": "catalog-item",
+      "kind": "control",
+      "data": { "label": "depends", "stroke": "#94a3b8", "lineWidth": 1.5 }
+    },
+    {
+      "id": "e-catalog-loose",
+      "from": "catalog-item",
+      "to": "loose",
+      "kind": "data",
+      "data": { "label": "out", "stroke": "#3b82f6" }
+    },
+    {
+      "id": "e-worker-sink",
+      "from": "worker",
+      "to": "sink",
+      "kind": "control",
+      "data": { "label": "ctrl", "stroke": "#a855f7", "strokeHover": "#c084fc" }
+    }
+  ],
   "groups": [
     {
       "id": "composition",

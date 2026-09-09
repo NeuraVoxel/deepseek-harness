@@ -2,10 +2,16 @@
  * Interaction plugin contract (avoids importing Network class).
  */
 
-import type { Rect } from '../geom.ts'
+import type { Point, Rect } from '../geom.ts'
 import type { GraphEvent } from '../protocol/events.ts'
 import type { GraphPatch } from '../protocol/patch.ts'
-import type { GraphGroup, GraphNode } from '../protocol/types.ts'
+import type { GraphEdge, GraphGroup, GraphNode } from '../protocol/types.ts'
+
+/** Live rubber-band while creating an edge. */
+export interface EdgeRubberBand {
+  readonly from: Point
+  readonly to: Point
+}
 
 /** Minimal host surface interactions bind to. */
 export interface InteractionHost {
@@ -21,6 +27,8 @@ export interface InteractionHost {
   getNode(id: string): GraphNode | undefined
   /** @returns nodes in the active network. */
   getNodes(): readonly GraphNode[]
+  /** @returns edges in the active network. */
+  getEdges(): readonly GraphEdge[]
   /** @returns groups in the active network. */
   getGroups(): readonly GraphGroup[]
   /** @returns selected element ids. */
@@ -55,6 +63,22 @@ export interface InteractionHost {
     to: { x: number; y: number }
     toGroupId?: string | undefined
   }): void
+  /**
+   * Commit a new directed edge: apply `addEdge`, emit `edgeCreated`.
+   * @param args - endpoints and optional kind / id.
+   * @returns created edge id, or undefined when skipped (missing node / duplicate).
+   */
+  commitEdgeCreate(args: {
+    from: string
+    to: string
+    kind?: string
+    id?: string
+  }): string | undefined
+  /**
+   * Remove edges by id: apply `removeEdge` ops, emit `edgeRemoved` per id.
+   * @param edgeIds - edge ids to remove.
+   */
+  commitEdgeRemove(edgeIds: readonly string[]): void
   /** Mark that a drag consumed this pointer gesture (SelectActivate skips activate). */
   markGestureDragged(): void
   /** @returns true when markGestureDragged ran since the last clear. */
@@ -66,6 +90,17 @@ export interface InteractionHost {
    * @param rect - world rect during Shift-marquee drag, or undefined to clear.
    */
   setMarqueeRect(rect: Rect | undefined): void
+  /**
+   * Live edge-create rubber-band on the overlay, or clear.
+   * @param band - world-space segment, or undefined to clear.
+   */
+  setEdgeRubberBand(band: EdgeRubberBand | undefined): void
+  /**
+   * Restrict paint to the given node ids (plus incident edges) during drag.
+   * Pass `undefined` to paint the full scene (default).
+   * @param nodeIds - mover ids to keep visible, or undefined to clear.
+   */
+  setDragPaintFilter(nodeIds: readonly string[] | undefined): void
   /**
    * Fan out a GraphEvent to subscribers.
    * @param event - event payload.

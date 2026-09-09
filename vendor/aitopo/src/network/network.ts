@@ -7,7 +7,7 @@ import { GraphScene } from '../model/scene.ts'
 import type { GraphEvent } from '../protocol/events.ts'
 import type { GraphPatch } from '../protocol/patch.ts'
 import { graphPatchSchema } from '../protocol/schema.ts'
-import type { GraphDocument, GraphGroup, GraphNode, GraphViewport } from '../protocol/types.ts'
+import type { GraphDocument, GraphEdge, GraphGroup, GraphNode, GraphViewport } from '../protocol/types.ts'
 import { Canvas2DRenderer } from '../render/canvas2d.ts'
 import type { Renderer } from '../render/canvas2d.ts'
 import {
@@ -21,6 +21,7 @@ import {
 import {
   PanZoomInteraction,
   SelectActivateInteraction,
+  type EdgeRubberBand,
   type Interaction,
 } from '../interaction/index.ts'
 import { layoutFlowColumns, layoutGrid } from '../layout/index.ts'
@@ -58,6 +59,13 @@ export class Network {
   private gestureDragged = false
   /** Live Shift-marquee world rect painted on the overlay during validate. */
   private marqueeRect: Rect | undefined
+  /** Live edge-create rubber-band painted on the overlay during validate. */
+  private edgeRubberBand: EdgeRubberBand | undefined
+  /**
+   * When set, validate paints only these node ids, incident edges, and skips groups.
+   * `undefined` paints the full scene.
+   */
+  private dragPaintFilter: ReadonlySet<string> | undefined
 
   constructor(options: NetworkOptions = {}) {
     this.options = options
@@ -318,12 +326,37 @@ export class Network {
     return [...this.scene.groups.values()]
   }
 
+  /** @returns edges in the active network. */
+  getEdges(): readonly GraphEdge[] {
+    return [...this.scene.edges.values()]
+  }
+
   /**
    * Live marquee rect on the overlay (world space), or clear.
    * @param rect - world rect during Shift-marquee drag, or undefined to clear.
    */
   setMarqueeRect(rect: Rect | undefined): void {
     this.marqueeRect = rect
+    this.dirty.markAll()
+    this.needsPaint = true
+  }
+
+  /**
+   * Live edge-create rubber-band on the overlay, or clear.
+   * @param band - world-space segment, or undefined to clear.
+   */
+  setEdgeRubberBand(band: EdgeRubberBand | undefined): void {
+    this.edgeRubberBand = band
+    this.dirty.markAll()
+    this.needsPaint = true
+  }
+
+  /**
+   * Restrict paint to mover node ids (+ incident edges). Pass `undefined` for full scene.
+   * @param nodeIds - ids to keep visible during drag, or undefined to clear.
+   */
+  setDragPaintFilter(nodeIds: readonly string[] | undefined): void {
+    this.dragPaintFilter = nodeIds === undefined ? undefined : new Set(nodeIds)
     this.dirty.markAll()
     this.needsPaint = true
   }
@@ -356,6 +389,8 @@ export class Network {
 
   /**
    * Live preview position during drag (no nodeMoved / documentChanged).
+   * Full-frame invalidate so incident edges and siblings stay painted when
+   * `hideOthersWhileDragging` is false (default).
    * @param id - node id.
    * @param x - world x.
    * @param y - world y.
@@ -363,10 +398,8 @@ export class Network {
   previewNodePosition(id: string, x: number, y: number): void {
     const node = this.scene.nodes.get(id)
     if (node === undefined) return
-    this.dirty.add(growRect(nodeBounds(node), 8))
     this.scene.writePositions({ [id]: { x, y } })
-    const next = this.scene.nodes.get(id)
-    if (next !== undefined) this.dirty.add(growRect(nodeBounds(next), 8))
+    this.dirty.markAll()
     this.needsPaint = true
   }
 
@@ -451,6 +484,65 @@ export class Network {
     }
   }
 
+  /**
+   * Commit a new directed edge. Skips when endpoints missing, identical, or a same-direction edge exists.
+   * @param args - endpoints and optional kind / id.
+   * @returns created edge id, or undefined when skipped.
+   */
+  commitEdgeCreate(args: {
+    from: string
+    to: string
+    kind?: string
+    id?: string
+  }): string | undefined {
+    if (args.from === args.to) return undefined
+    if (this.scene.nodes.get(args.from) === undefined) return undefined
+    if (this.scene.nodes.get(args.to) === undefined) return undefined
+    for (const edge of this.scene.edges.values()) {
+      if (edge.from === args.from && edge.to === args.to) return undefined
+    }
+    const edgeId = args.id ?? `e-${args.from}-${args.to}-${Date.now()}`
+    if (this.scene.edges.has(edgeId)) return undefined
+    this.apply({
+      ops: [{
+        op: 'addEdge',
+        edge: {
+          id: edgeId,
+          from: args.from,
+          to: args.to,
+          ...(args.kind !== undefined ? { kind: args.kind } : {}),
+        },
+      }],
+    })
+    this.emit({
+      type: 'edgeCreated',
+      edgeId,
+      from: args.from,
+      to: args.to,
+      ...(args.kind !== undefined ? { kind: args.kind } : {}),
+    })
+    return edgeId
+  }
+
+  /**
+   * Remove edges by id; emits `edgeRemoved` for each existing id.
+   * @param edgeIds - edge ids to remove.
+   */
+  commitEdgeRemove(edgeIds: readonly string[]): void {
+    const ops: GraphPatch['ops'] = []
+    const removed: string[] = []
+    for (const id of edgeIds) {
+      if (!this.scene.edges.has(id)) continue
+      ops.push({ op: 'removeEdge', id })
+      removed.push(id)
+    }
+    if (ops.length === 0) return
+    this.apply({ ops })
+    for (const edgeId of removed) {
+      this.emit({ type: 'edgeRemoved', edgeId })
+    }
+  }
+
   /** Mark that a drag consumed this pointer gesture. */
   markGestureDragged(): void {
     this.gestureDragged = true
@@ -525,16 +617,22 @@ export class Network {
     this.needsPaint = false
     const cam = this.viewport.state
     const snapshot = this.dirty.take()
-    const dirtyRects: Rect[] | 'all' = snapshot.invalidateAll
+    // Filtered drag paint must wipe the whole root layer; partial dirty would leave
+    // stale pixels for skipped nodes/groups.
+    const dirtyRects: Rect[] | 'all' = this.dragPaintFilter !== undefined || snapshot.invalidateAll
       ? 'all'
       : snapshot.rect === undefined ? 'all' : [snapshot.rect]
 
     try {
       renderer.beginFrame(cam, dirtyRects)
-      for (const group of this.scene.groups.values()) {
-        renderer.drawGroup(group, { bounds: groupBounds(group) })
+      const filter = this.dragPaintFilter
+      if (filter === undefined) {
+        for (const group of this.scene.groups.values()) {
+          renderer.drawGroup(group, { bounds: groupBounds(group) })
+        }
       }
       for (const edge of this.scene.edges.values()) {
+        if (filter !== undefined && !filter.has(edge.from) && !filter.has(edge.to)) continue
         const from = this.scene.nodes.get(edge.from)
         const to = this.scene.nodes.get(edge.to)
         if (from === undefined || to === undefined) continue
@@ -555,6 +653,7 @@ export class Network {
         })
       }
       for (const node of this.scene.nodes.values()) {
+        if (filter !== undefined && !filter.has(node.id)) continue
         const bounds = nodeBounds(node)
         renderer.drawNode(node, {
           bounds,
@@ -567,6 +666,9 @@ export class Network {
       }
       if (this.marqueeRect !== undefined && renderer instanceof Canvas2DRenderer) {
         renderer.drawMarquee(this.marqueeRect)
+      }
+      if (this.edgeRubberBand !== undefined && renderer instanceof Canvas2DRenderer) {
+        renderer.drawEdgeRubberBand(this.edgeRubberBand.from, this.edgeRubberBand.to)
       }
       renderer.endFrame()
     } catch {

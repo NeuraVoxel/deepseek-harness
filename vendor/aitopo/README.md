@@ -59,7 +59,9 @@ Pass `defaultInteractions: false` to attach only the listed modules (tests / cus
 
 | Class | Role |
 |---|---|
-| `MoveNodeInteraction` | Drag unlocked selected nodes; commit `updateNode` (+ membership); emit `nodeMoved` / `groupMembershipChanged` |
+| `MoveNodeInteraction` | Drag unlocked selected nodes; commit `updateNode` (+ membership); emit `nodeMoved` / `groupMembershipChanged`. Option `hideOthersWhileDragging` (default **false**) paints only movers + incident edges while dragging |
+| `CreateEdgeInteraction` | **Alt+drag** node→node (or `requireAlt: false` exclusive link mode); rubber-band; `commitEdgeCreate` → `edgeCreated` |
+| `DeleteEdgeInteraction` | Delete/Backspace removes selected edges → `edgeRemoved` |
 | `ExternalDropInteraction` | HTML5 drop → opaque `externalDrop` (engine does **not** `addNode`) |
 | `MarqueeSelectInteraction` | **Shift+empty-space** drag; intersect select; unmodified empty drag stays pan |
 
@@ -68,6 +70,8 @@ Pass `defaultInteractions: false` to attach only the listed modules (tests / cus
 - `nodeMoved` — `{ nodeId, from, to }` after pointer-up commit
 - `groupMembershipChanged` — `{ nodeId, fromGroupId, toGroupId }` when membership changes
 - `externalDrop` — `{ x, y, data, groupId? }` scene coords + opaque string
+- `edgeCreated` — `{ edgeId, from, to, kind? }` after Alt-link (or link mode) commit
+- `edgeRemoved` — `{ edgeId }` after Delete/Backspace or `commitEdgeRemove`
 
 ### Protocol fields
 
@@ -85,7 +89,7 @@ Optional `PatchHistory` records forward/inverse `GraphPatch` pairs around `apply
 ### Demo
 
 - **Fleet / Flow / Teams** — observation mode (defaults only); unchanged behavior.
-- **Editor** — remounts with editor interactions, loads `fixtures/editor.json`, shows editor events in the status line, applies `addNode` on `externalDrop`, and enables Undo/Redo via `PatchHistory`. Drag the **Drag: shell** chip onto the canvas to exercise drop.
+- **Editor** — remounts with editor interactions, loads `fixtures/editor.json` (sample **data/control** edges), Alt+drag to link, Delete edge / Delete key, **Link mode**, **Kind** toggle, **Hide others** (default off — full scene paint), drop catalog chip, Undo/Redo via `PatchHistory`.
 
 ## Non-goals (current)
 
@@ -93,7 +97,7 @@ Optional `PatchHistory` records forward/inverse `GraphPatch` pairs around `apply
 - WebGL renderer (interface reserved)
 - Overview / HTML node UI
 - Copying or wrapping `vendor/SDK2D`
-- CreateEdge / resize handles (AT-E7 and beyond)
+- Resize / rotate handles
 
 Editor requirements and decisions: [Editor requirements](docs/2026-09-08-aitopo-editor-requirements.md), [Editor plan](docs/2026-09-09-aitopo-editor-implementation-plan.md). Implementation borrows **ideas** from `vendor/SDK2D/twaver/vector/` under the same clean-room rules as the observation engine.
 

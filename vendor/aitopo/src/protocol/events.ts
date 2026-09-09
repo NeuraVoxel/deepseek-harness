@@ -81,6 +81,21 @@ export interface ExternalDropEvent {
   readonly groupId?: string
 }
 
+/** Directed edge created by an editor gesture. */
+export interface EdgeCreatedEvent {
+  readonly type: 'edgeCreated'
+  readonly edgeId: string
+  readonly from: string
+  readonly to: string
+  readonly kind?: string
+}
+
+/** Edge removed by an editor gesture (or host applying removeEdge). */
+export interface EdgeRemovedEvent {
+  readonly type: 'edgeRemoved'
+  readonly edgeId: string
+}
+
 /** Discriminated event union for `Network.on`. */
 export type GraphEvent =
   | SelectionChangedEvent
@@ -94,3 +109,5 @@ export type GraphEvent =
   | NodeMovedEvent
   | GroupMembershipChangedEvent
   | ExternalDropEvent
+  | EdgeCreatedEvent
+  | EdgeRemovedEvent

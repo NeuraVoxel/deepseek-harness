@@ -45,10 +45,14 @@ class FakeHitCanvas {
 
   dispatch(
     type: string,
-    partial: Pick<PointerEvent, 'button' | 'clientX' | 'clientY'> & { pointerId?: number },
+    partial: Pick<PointerEvent, 'button' | 'clientX' | 'clientY'> & {
+      pointerId?: number
+      altKey?: boolean
+    },
   ): void {
     const event = {
       pointerId: 1,
+      altKey: false,
       ...partial,
     } as PointerEvent
     for (const listener of this.listeners.get(type) ?? []) listener(event)
@@ -77,6 +81,7 @@ function createHost(options: {
   previewNodePosition: ReturnType<typeof vi.fn>
   markGestureDragged: ReturnType<typeof vi.fn>
   setSelection: ReturnType<typeof vi.fn>
+  setDragPaintFilter: ReturnType<typeof vi.fn>
 } {
   const nodes = new Map(options.nodes.map(n => [n.id, n]))
   let selectedIds = [...(options.selectedIds ?? [])]
@@ -93,6 +98,7 @@ function createHost(options: {
   const setSelection = vi.fn((ids: readonly string[]) => {
     selectedIds = [...ids]
   })
+  const setDragPaintFilter = vi.fn()
 
   return {
     getHitElement: () => options.canvas as unknown as HTMLCanvasElement,
@@ -106,18 +112,23 @@ function createHost(options: {
     viewport: { state: { zoom, x: 0, y: 0 } } as InteractionHost['viewport'],
     getNode: id => nodes.get(id),
     getNodes: () => [...nodes.values()],
+    getEdges: () => [],
     getGroups: () => [],
     getSelectedIds: () => selectedIds,
     hitTestGroupScreen: () => groupOnUp,
     screenToWorld: (x, y) => ({ x, y }),
     previewNodePosition,
     commitNodeMove,
+    commitEdgeCreate: vi.fn(),
+    commitEdgeRemove: vi.fn(),
     markGestureDragged,
     wasGestureDragged: () => gestureDragged,
     clearGestureDragged: () => {
       gestureDragged = false
     },
     setMarqueeRect: vi.fn(),
+    setEdgeRubberBand: vi.fn(),
+    setDragPaintFilter,
     emit: vi.fn(),
     apply: vi.fn(),
   }
@@ -354,6 +365,54 @@ describe('MoveNodeInteraction', () => {
     expect(canvas.pointerCaptureIds.has(1)).toBe(false)
     expect(host.previewNodePosition).toHaveBeenLastCalledWith('a', 10, 20)
     expect(host.commitNodeMove).not.toHaveBeenCalled()
+    dispose()
+  })
+
+  it('ignores Alt+pointerdown (CreateEdge owns that gesture)', () => {
+    const canvas = new FakeHitCanvas()
+    const host = createHost({
+      canvas,
+      nodes: [node({ id: 'a', x: 10, y: 20 })],
+      selectedIds: ['a'],
+      hitId: 'a',
+    })
+    const dispose = new MoveNodeInteraction().attach(host)
+    canvas.dispatch('pointerdown', { button: 0, clientX: 10, clientY: 10, altKey: true })
+    canvas.dispatch('pointermove', { button: 0, clientX: 40, clientY: 10, altKey: true })
+    canvas.dispatch('pointerup', { button: 0, clientX: 40, clientY: 10, altKey: true })
+    expect(host.commitNodeMove).not.toHaveBeenCalled()
+    expect(host.setDragPaintFilter).not.toHaveBeenCalled()
+    dispose()
+  })
+
+  it('default does not set drag paint filter while dragging', () => {
+    const canvas = new FakeHitCanvas()
+    const host = createHost({
+      canvas,
+      nodes: [node({ id: 'a', x: 10, y: 20 })],
+      selectedIds: ['a'],
+      hitId: 'a',
+    })
+    const dispose = new MoveNodeInteraction().attach(host)
+    dragPastThreshold(canvas, { x: 10, y: 10 }, { x: 30, y: 10 })
+    expect(host.setDragPaintFilter).not.toHaveBeenCalled()
+    dispose()
+  })
+
+  it('hideOthersWhileDragging sets and clears paint filter', () => {
+    const canvas = new FakeHitCanvas()
+    const host = createHost({
+      canvas,
+      nodes: [node({ id: 'a', x: 10, y: 20 })],
+      selectedIds: ['a'],
+      hitId: 'a',
+    })
+    const dispose = new MoveNodeInteraction({ hideOthersWhileDragging: true }).attach(host)
+    canvas.dispatch('pointerdown', { button: 0, clientX: 10, clientY: 10 })
+    canvas.dispatch('pointermove', { button: 0, clientX: 30, clientY: 10 })
+    expect(host.setDragPaintFilter).toHaveBeenCalledWith(['a'])
+    canvas.dispatch('pointerup', { button: 0, clientX: 30, clientY: 10 })
+    expect(host.setDragPaintFilter).toHaveBeenLastCalledWith(undefined)
     dispose()
   })
 })
