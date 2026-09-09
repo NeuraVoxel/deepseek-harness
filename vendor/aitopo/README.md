@@ -15,7 +15,7 @@ Design ideas come from `twaver.vector` in `vendor/SDK2D`. This package is a **cl
 
 ## Status
 
-First-party library under `vendor/` (not an upstream pin). Engine + vanilla demo ship before `plugins/agent-observe` integration.
+First-party library under `vendor/` (not an upstream pin). Engine + vanilla demo ship Editor interactions (move, drop, marquee, optional undo) beside observation demos. `plugins/agent-observe` remains observation-only until a later integration.
 
 ## Commands
 
@@ -28,9 +28,24 @@ pnpm --filter @neuravoxel/aitopo demo
 ## Public API (summary)
 
 ```ts
-import { Network, parseDocument, applyPatch } from '@neuravoxel/aitopo'
+import {
+  Network,
+  parseDocument,
+  applyPatch,
+  PatchHistory,
+  MoveNodeInteraction,
+  ExternalDropInteraction,
+  MarqueeSelectInteraction,
+} from '@neuravoxel/aitopo'
 
-const network = new Network()
+const network = new Network({
+  // Extra interactions are appended to defaults (PanZoom + SelectActivate).
+  interactions: [
+    new ExternalDropInteraction(),
+    new MoveNodeInteraction(),
+    new MarqueeSelectInteraction(),
+  ],
+})
 network.mount(el)
 network.load(parseDocument(json))
 network.apply(patch)
@@ -38,17 +53,53 @@ network.on(event => { /* GraphEvent */ })
 network.destroy()
 ```
 
+Pass `defaultInteractions: false` to attach only the listed modules (tests / custom packing).
+
+## Editor interactions
+
+| Class | Role |
+|---|---|
+| `MoveNodeInteraction` | Drag unlocked selected nodes; commit `updateNode` (+ membership); emit `nodeMoved` / `groupMembershipChanged` |
+| `ExternalDropInteraction` | HTML5 drop → opaque `externalDrop` (engine does **not** `addNode`) |
+| `MarqueeSelectInteraction` | **Shift+empty-space** drag; intersect select; unmodified empty drag stays pan |
+
+### Events
+
+- `nodeMoved` — `{ nodeId, from, to }` after pointer-up commit
+- `groupMembershipChanged` — `{ nodeId, fromGroupId, toGroupId }` when membership changes
+- `externalDrop` — `{ x, y, data, groupId? }` scene coords + opaque string
+
+### Protocol fields
+
+- `GraphNode.locked?: boolean` — move and membership edits skip locked nodes (selection still allowed)
+- `GraphGroup.style?: { stroke?, strokeWidth?, strokeDash?, fill? }` — Canvas2D band outline (e.g. dashed green composition vs solid gray catalog)
+
+### Drop MIME types
+
+`ExternalDropInteraction` reads `text/plain` first, then `application/aitopo-drop` when plain is empty. Hosts should set both when possible.
+
+### Undo / redo
+
+Optional `PatchHistory` records forward/inverse `GraphPatch` pairs around `apply` / `toJSON`. Hosts may ignore it and own their own stack. The vanilla demo wires Undo/Redo only in **Editor** mode.
+
+### Demo
+
+- **Fleet / Flow / Teams** — observation mode (defaults only); unchanged behavior.
+- **Editor** — remounts with editor interactions, loads `fixtures/editor.json`, shows editor events in the status line, applies `addNode` on `externalDrop`, and enables Undo/Redo via `PatchHistory`. Drag the **Drag: shell** chip onto the canvas to exercise drop.
+
 ## Non-goals (current)
 
 - React bindings (plugin adapter later)
 - WebGL renderer (interface reserved)
 - Overview / HTML node UI
 - Copying or wrapping `vendor/SDK2D`
+- CreateEdge / resize handles (AT-E7 and beyond)
 
-Editor interactions (node move, external drop, dashed groups, lock, marquee, undo policy) are specified in the [Editor requirements](docs/2026-09-08-aitopo-editor-requirements.md) and [Editor plan](docs/2026-09-09-aitopo-editor-implementation-plan.md); they are not implemented in observation-grade Phase 1. Implementation borrows **ideas** from `vendor/SDK2D/twaver/vector/` (especially `interaction/DefaultInteraction.js`) under the same clean-room rules as the observation engine.
+Editor requirements and decisions: [Editor requirements](docs/2026-09-08-aitopo-editor-requirements.md), [Editor plan](docs/2026-09-09-aitopo-editor-implementation-plan.md). Implementation borrows **ideas** from `vendor/SDK2D/twaver/vector/` under the same clean-room rules as the observation engine.
 
 ## Known Limitations and Deferred Work
 
 - SubNetwork drill-down is single-level (root ↔ one child).
 - Alarm badges cover display only; no propagation tree.
 - Pan/zoom triggers full-frame invalidate; element edits use dirty-rect.
+- Marquee is replace-only on pointer-up (no Shift-append).

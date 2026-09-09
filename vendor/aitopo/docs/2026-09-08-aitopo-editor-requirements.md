@@ -1,6 +1,6 @@
 # AITopo Editor requirements (for dsh-agent-orchestrator)
 
-**Status:** requirements accepted (2026-09-09); implementation plan in progress
+**Status:** accepted (2026-09-09); Editor milestone implemented (engine + demo)
 **Package:** `@neuravoxel/aitopo`
 **Consumer:** [`plugins/agent-orchestrator`](../../../plugins/agent-orchestrator/docs/2026-09-08-agent-orchestrator-design.md)
 **Base design:** [2026-09-07-aitopo-design.md](./2026-09-07-aitopo-design.md)
@@ -30,7 +30,7 @@ This document revises Phase 1 non-goals that blocked editing (undo ownership, ed
 | **AT-E5** | P0 | Locked / non-interactive nodes | Core rows cannot move or leave composition | `locked?: boolean` (or `interactive: false`) on nodes; move/membership interactions skip locked targets |
 | **AT-E6** | P1 | Marquee selection | Bulk enable/disable in the shell | `MarqueeSelectInteraction`; updates selection via existing `setSelection` |
 | **AT-E7** | P2 | Create / delete edges | Optional dependency edges for future kinds | `CreateEdgeInteraction`; `edgeCreated` / edge remove via patch; skip if product kind unused |
-| **AT-E8** | P1 | Undo / redo policy | Orchestrator edit reversibility | **Decision (proposed):** engine ships an optional `PatchHistory` helper (push applied patches, `undo`/`redo` → inverse apply) **or** documents stable inverse rules so the host owns the stack; pick one in the Editor design pass and keep protocol patches the unit of history |
+| **AT-E8** | P1 | Undo / redo policy | Orchestrator edit reversibility | Optional in-engine `PatchHistory` (push applied patches, `undo`/`redo` → inverse apply); host may own its own stack; protocol patches remain the unit of history |
 | **AT-E9** | P0 | Demo + README | Prove editor loop without the plugin | Vanilla demo: move, drop stub, dashed group, lock; README lists Editor interactions and events |
 
 ### Event / patch expectations

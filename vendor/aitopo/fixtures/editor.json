@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "meta": { "title": "Editor demo", "kind": "custom" },
+  "nodes": [
+    {
+      "id": "core",
+      "type": "unit",
+      "label": "core (locked)",
+      "locked": true,
+      "groupId": "composition",
+      "x": 80,
+      "y": 100,
+      "w": 140,
+      "h": 48
+    },
+    {
+      "id": "worker",
+      "type": "unit",
+      "label": "worker",
+      "groupId": "composition",
+      "x": 280,
+      "y": 110,
+      "w": 120,
+      "h": 48
+    },
+    {
+      "id": "catalog-item",
+      "type": "unit",
+      "label": "catalog node",
+      "groupId": "catalog",
+      "x": 580,
+      "y": 90,
+      "w": 120,
+      "h": 48
+    },
+    {
+      "id": "loose",
+      "type": "unit",
+      "label": "loose",
+      "x": 580,
+      "y": 300,
+      "w": 100,
+      "h": 48
+    }
+  ],
+  "edges": [],
+  "groups": [
+    {
+      "id": "composition",
+      "label": "Composition",
+      "memberIds": ["core", "worker"],
+      "x": 40,
+      "y": 40,
+      "w": 420,
+      "h": 220,
+      "style": {
+        "stroke": "#22c55e",
+        "strokeWidth": 2,
+        "strokeDash": [8, 4],
+        "fill": "rgba(34, 197, 94, 0.08)"
+      }
+    },
+    {
+      "id": "catalog",
+      "label": "Catalog",
+      "memberIds": ["catalog-item"],
+      "x": 540,
+      "y": 40,
+      "w": 260,
+      "h": 180,
+      "style": {
+        "stroke": "#94a3b8",
+        "strokeWidth": 1.5,
+        "fill": "rgba(148, 163, 184, 0.08)"
+      }
+    }
+  ]
+}

@@ -466,35 +466,35 @@ Recommended API: `pushAndApply(forward)` that snapshots doc, applies, stores `{ 
 - Modify: `vendor/aitopo/docs/2026-09-08-aitopo-editor-requirements.md` (status + decisions)
 - Create: `.agents/notes/proposed/architecture/2026-09-09-aitopo-editor-interactions.md` (or `implemented/` when merged)
 
-- [ ] **Step 1: `fixtures/editor.json`**
+- [x] **Step 1: `fixtures/editor.json`**
 
 - Composition group with dashed green stroke; catalog group solid gray.
 - One `locked: true` core node inside composition; one unlocked movable node.
 - Enough spacing for drag / marquee.
 
-- [ ] **Step 2: Demo toolbar**
+- [x] **Step 2: Demo toolbar**
 
 - Button **Editor**: load fixture; attach `MoveNodeInteraction`, `ExternalDropInteraction`, `MarqueeSelectInteraction` (via `new Network({ interactions: […] })` or remount).
 - Status line shows `nodeMoved` / `externalDrop` / `groupMembershipChanged`.
 - Drop stub: listen `externalDrop` → `apply(addNode)` at coords (demo-only host behavior).
 - Optional Undo/Redo buttons wired to `PatchHistory`.
 
-- [ ] **Step 3: README**
+- [x] **Step 3: README**
 
 List Editor interactions, events, `locked`, group `style`, `PatchHistory`, Shift+marquee, drop MIME types. State observation demos unchanged.
 
-- [ ] **Step 4: Requirements doc**
+- [x] **Step 4: Requirements doc**
 
 Set status to accepted; replace Open choices with Decisions table pointing at this plan.
 
 **P1 Editor acceptance checklist:**
-- [ ] Drag unlocked node updates position; locked skipped.
-- [ ] Drop stub adds node via `externalDrop` + host apply.
-- [ ] Dashed composition group visible.
-- [ ] Shift-marquee selects multiple.
-- [ ] Undo/Redo via PatchHistory restores last move.
-- [ ] No React / DSH deps in package.json.
-- [ ] Unit tests cover AT-E1–E6, E8.
+- [x] Drag unlocked node updates position; locked skipped.
+- [x] Drop stub adds node via `externalDrop` + host apply.
+- [x] Dashed composition group visible.
+- [x] Shift-marquee selects multiple.
+- [x] Undo/Redo via PatchHistory restores last move.
+- [x] No React / DSH deps in package.json.
+- [x] Unit tests cover AT-E1–E6, E8.
 
 **Verify:**
 ```sh
@@ -530,7 +530,7 @@ Keep `vendor/README.md` staged if `vendor/aitopo/src/**` changes (pre-commit ven
 | 4 External drop | done |
 | 5 Marquee | done |
 | 6 PatchHistory | done |
-| 7 Demo + README + note | pending |
+| 7 Demo + README + note | done |
 
 ---
 
