@@ -20,6 +20,9 @@ export type {
 export {
   parseDocument,
   applyPatch,
+  invertOp,
+  invertPatch,
+  PatchHistory,
   graphDocumentSchema,
   graphPatchSchema,
 } from './protocol/index.ts'

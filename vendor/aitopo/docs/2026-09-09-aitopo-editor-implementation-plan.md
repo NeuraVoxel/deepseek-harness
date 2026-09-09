@@ -419,7 +419,7 @@ it('emits externalDrop with world coords and opaque data', () => {
 - Create: `vendor/aitopo/tests/patch-history.spec.ts`
 - Modify: `vendor/aitopo/src/protocol/index.ts`, `src/index.ts`
 
-- [ ] **Step 1: `invertOp(beforeDoc, op) → GraphPatchOp | GraphPatchOp[]`**
+- [x] **Step 1: `invertOp(beforeDoc, op) → GraphPatchOp | GraphPatchOp[]`**
 
 Supported inverses (minimum for Editor):
 | Forward | Inverse |
@@ -427,14 +427,14 @@ Supported inverses (minimum for Editor):
 | `updateNode` | `updateNode` with previous field snapshot for changed keys |
 | `updateGroup` | `updateGroup` with previous memberIds/style/geom |
 | `addNode` | `removeNode` |
-| `removeNode` | `addNode` (full prior node) |
+| `removeNode` | `addNode` (full prior node) + cascaded `addEdge` |
 | `addGroup` / `removeGroup` | symmetric |
-| `setSelection` / `setViewport` / `setAlarms` | restore prior |
-| SubNetwork nav | skip or mirror enter/exit (history typically host-filtered) |
+| `setViewport` / `setAlarms` | restore prior |
+| `setSelection` / SubNetwork nav | **skip** (`[]`) — Network runtime; `applyPatch` no-ops them |
 
 Throw or no-op with documented skip for unsupported ops.
 
-- [ ] **Step 2: PatchHistory**
+- [x] **Step 2: PatchHistory**
 
 ```ts
 export class PatchHistory {
@@ -449,7 +449,7 @@ export class PatchHistory {
 
 Recommended API: `pushAndApply(forward)` that snapshots doc, applies, stores `{ forward, inverse }`.
 
-- [ ] **Step 3: Tests** — move updateNode undo restores x/y; redo reapplies; failed apply does not push.
+- [x] **Step 3: Tests** — move updateNode undo restores x/y; redo reapplies; failed apply does not push.
 
 **Verify:** patch-history specs green.
 
@@ -529,7 +529,7 @@ Keep `vendor/README.md` staged if `vendor/aitopo/src/**` changes (pre-commit ven
 | 3 Move / membership / lock | done |
 | 4 External drop | done |
 | 5 Marquee | done |
-| 6 PatchHistory | pending |
+| 6 PatchHistory | done |
 | 7 Demo + README + note | pending |
 
 ---

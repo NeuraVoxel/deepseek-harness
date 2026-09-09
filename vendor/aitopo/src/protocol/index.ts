@@ -31,4 +31,6 @@ export type {
 
 export { parseDocument } from './parse.ts'
 export { applyPatch, type GraphPatch, type GraphPatchOp } from './patch.ts'
+export { invertOp, invertPatch } from './invert.ts'
+export { PatchHistory } from './patch-history.ts'
 export { graphDocumentSchema, graphPatchSchema } from './schema.ts'
