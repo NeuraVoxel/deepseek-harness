@@ -246,4 +246,112 @@ describe('MoveNodeInteraction', () => {
     canvas.dispatch('pointerup', { button: 0, clientX: 14, clientY: 10 })
     dispose()
   })
+
+  it('hit locked node already in selection with unlocked sibling commits only unlocked', () => {
+    const canvas = new FakeHitCanvas()
+    const host = createHost({
+      canvas,
+      nodes: [
+        node({ id: 'locked', locked: true, x: 10, y: 20 }),
+        node({ id: 'free', x: 50, y: 60 }),
+      ],
+      selectedIds: ['locked', 'free'],
+      hitId: 'locked',
+    })
+    const dispose = new MoveNodeInteraction().attach(host)
+
+    dragPastThreshold(canvas, { x: 10, y: 10 }, { x: 30, y: 20 })
+
+    expect(host.commitNodeMove).toHaveBeenCalledTimes(1)
+    expect(host.commitNodeMove).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nodeId: 'free',
+        from: { x: 50, y: 60 },
+        to: { x: 70, y: 70 },
+      }),
+    )
+    expect(host.commitNodeMove).not.toHaveBeenCalledWith(
+      expect.objectContaining({ nodeId: 'locked' }),
+    )
+    dispose()
+  })
+
+  it('multi-select with one locked commits only unlocked nodes', () => {
+    const canvas = new FakeHitCanvas()
+    const host = createHost({
+      canvas,
+      nodes: [
+        node({ id: 'a', x: 10, y: 20 }),
+        node({ id: 'b', locked: true, x: 40, y: 50 }),
+        node({ id: 'c', x: 70, y: 80 }),
+      ],
+      selectedIds: ['a', 'b', 'c'],
+      hitId: 'a',
+    })
+    const dispose = new MoveNodeInteraction().attach(host)
+
+    dragPastThreshold(canvas, { x: 10, y: 10 }, { x: 30, y: 10 })
+
+    expect(host.commitNodeMove).toHaveBeenCalledTimes(2)
+    expect(host.commitNodeMove).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nodeId: 'a',
+        from: { x: 10, y: 20 },
+        to: { x: 30, y: 20 },
+      }),
+    )
+    expect(host.commitNodeMove).toHaveBeenCalledWith(
+      expect.objectContaining({
+        nodeId: 'c',
+        from: { x: 70, y: 80 },
+        to: { x: 90, y: 80 },
+      }),
+    )
+    expect(host.commitNodeMove).not.toHaveBeenCalledWith(
+      expect.objectContaining({ nodeId: 'b' }),
+    )
+    dispose()
+  })
+
+  it('dispose mid-drag reverts preview and releases pointer capture', () => {
+    const canvas = new FakeHitCanvas()
+    const host = createHost({
+      canvas,
+      nodes: [node({ id: 'a', x: 10, y: 20 })],
+      selectedIds: ['a'],
+      hitId: 'a',
+    })
+    const dispose = new MoveNodeInteraction().attach(host)
+
+    canvas.dispatch('pointerdown', { button: 0, clientX: 10, clientY: 10 })
+    canvas.dispatch('pointermove', { button: 0, clientX: 30, clientY: 10 })
+    expect(canvas.pointerCaptureIds.has(1)).toBe(true)
+    expect(host.previewNodePosition).toHaveBeenCalledWith('a', 30, 20)
+
+    dispose()
+
+    expect(canvas.pointerCaptureIds.has(1)).toBe(false)
+    expect(host.previewNodePosition).toHaveBeenLastCalledWith('a', 10, 20)
+    expect(host.commitNodeMove).not.toHaveBeenCalled()
+  })
+
+  it('pointercancel mid-drag reverts preview without commit', () => {
+    const canvas = new FakeHitCanvas()
+    const host = createHost({
+      canvas,
+      nodes: [node({ id: 'a', x: 10, y: 20 })],
+      selectedIds: ['a'],
+      hitId: 'a',
+    })
+    const dispose = new MoveNodeInteraction().attach(host)
+
+    canvas.dispatch('pointerdown', { button: 0, clientX: 10, clientY: 10 })
+    canvas.dispatch('pointermove', { button: 0, clientX: 30, clientY: 10 })
+    canvas.dispatch('pointercancel', { button: 0, clientX: 30, clientY: 10 })
+
+    expect(canvas.pointerCaptureIds.has(1)).toBe(false)
+    expect(host.previewNodePosition).toHaveBeenLastCalledWith('a', 10, 20)
+    expect(host.commitNodeMove).not.toHaveBeenCalled()
+    dispose()
+  })
 })

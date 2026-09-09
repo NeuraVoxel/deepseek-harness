@@ -22,11 +22,35 @@ export class MoveNodeInteraction implements Interaction {
     let startClientX = 0
     let startClientY = 0
     let movers: { id: string; fromX: number; fromY: number }[] = []
+    /** Pointer id held via setPointerCapture; null when none. */
+    let capturedPointerId: number | null = null
 
     const reset = (): void => {
       active = false
       dragged = false
       movers = []
+      capturedPointerId = null
+    }
+
+    const releaseCapture = (): void => {
+      if (capturedPointerId === null) return
+      try {
+        canvas.releasePointerCapture(capturedPointerId)
+      } catch {
+        // Pointer already released.
+      }
+      capturedPointerId = null
+    }
+
+    /** Revert live previews to drag-start positions, release capture, clear state. */
+    const abortWithoutCommit = (): void => {
+      if (active && dragged) {
+        for (const mover of movers) {
+          network.previewNodePosition(mover.id, mover.fromX, mover.fromY)
+        }
+      }
+      releaseCapture()
+      reset()
     }
 
     const onPointerDown = (event: PointerEvent): void => {
@@ -79,6 +103,7 @@ export class MoveNodeInteraction implements Interaction {
         network.markGestureDragged()
         try {
           canvas.setPointerCapture(event.pointerId)
+          capturedPointerId = event.pointerId
         } catch {
           // Capture unsupported or already held.
         }
@@ -105,25 +130,26 @@ export class MoveNodeInteraction implements Interaction {
             toGroupId: groupHit,
           })
         }
-        try {
-          canvas.releasePointerCapture(event.pointerId)
-        } catch {
-          // Pointer already released.
-        }
+        releaseCapture()
       }
       reset()
+    }
+
+    const onPointerCancel = (): void => {
+      abortWithoutCommit()
     }
 
     canvas.addEventListener('pointerdown', onPointerDown)
     canvas.addEventListener('pointermove', onPointerMove)
     canvas.addEventListener('pointerup', onPointerUp)
-    canvas.addEventListener('pointercancel', onPointerUp)
+    canvas.addEventListener('pointercancel', onPointerCancel)
 
     return () => {
+      abortWithoutCommit()
       canvas.removeEventListener('pointerdown', onPointerDown)
       canvas.removeEventListener('pointermove', onPointerMove)
       canvas.removeEventListener('pointerup', onPointerUp)
-      canvas.removeEventListener('pointercancel', onPointerUp)
+      canvas.removeEventListener('pointercancel', onPointerCancel)
     }
   }
 }
