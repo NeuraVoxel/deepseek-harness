@@ -25,7 +25,7 @@ Design: [vendor/aitopo/docs/2026-09-07-aitopo-design.md](../../../../vendor/aito
 
 - Document-first only (no Scene/View): friendlier for agents, weaker for dirty paint and interaction.
 - Scene-first only (twaver-like Element model as the public API): harder for model-driven patches.
-- External separate repository: rejected in favor of `vendor/aitopo` for monorepo workspace wiring.
+- External separate repository: originally rejected in favor of `vendor/aitopo` for monorepo workspace wiring; ownership is superseded by the peer-repo proposal [2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md](2026-09-09-ai-eng-kit-and-aitopo-peer-repos.md) (submodule, then npm). Dual-face protocol and engine purity are unchanged.
 - Direct twaver port or wrapper: rejected for clean-room and license clarity.
 
 ## Acceptance criteria
