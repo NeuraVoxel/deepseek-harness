@@ -1,4 +1,4 @@
-/** Conversation Orchestrator tab: read-only preset composition on AITopo. */
+/** Conversation Orchestrator tab: editable preset composition on AITopo (F1 chrome). */
 
 import {
   useEffect, useMemo, useRef, useState,
@@ -15,10 +15,12 @@ import { documentForCanvas } from '../document-for-canvas.ts'
 import { pluginCountsFromDocument } from '../plugin-counts.ts'
 import { liveUnitIds, withLiveActivity } from '../map-tool-activity.ts'
 import { unitIdsForModules } from '../participation-map.ts'
+import { applyNodeMovedToLayout, withSessionLayout } from '../session-layout.ts'
 import { toGraphDocument, type GraphUnitMembership } from '../to-graph.ts'
 import type {
   OrchestrationEnablement,
   OrchestrationFiberPhase,
+  OrchestrationLayout,
   OrchestrationUnit,
 } from '../types.ts'
 import type { CompositionActivity } from './derive-activity.ts'
@@ -45,7 +47,7 @@ type Props = ConvViewProps
   & InjectFace<OrchestratorViewInjected>
 
 /**
- * Orchestrator conversation view (read-only + live tool highlight).
+ * Orchestrator conversation view (F1 canvas edit chrome + live tool highlight).
  * @param props - conversation props + locale + inject.
  */
 export function OrchestratorView(props: Props): ReactElement {
@@ -61,6 +63,8 @@ export function OrchestratorView(props: Props): ReactElement {
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
   const [showHostCatalog, setShowHostCatalog] = useState(false)
   const hostRef = useRef<AITopoHostHandle>(null)
+  /** Session-local positions per preset; not written to CommitSink yet. */
+  const layoutByPresetRef = useRef<Record<string, OrchestrationLayout>>({})
 
   useEffect(() => {
     let cancelled = false
@@ -108,12 +112,12 @@ export function OrchestratorView(props: Props): ReactElement {
     [selected, hostEntries],
   )
 
-  const canvasDoc = useMemo(
-    () => orchestrationDoc === null
-      ? null
-      : documentForCanvas(orchestrationDoc, showHostCatalog),
-    [orchestrationDoc, showHostCatalog],
-  )
+  const canvasDoc = useMemo(() => {
+    if (orchestrationDoc === null) return null
+    const base = documentForCanvas(orchestrationDoc, showHostCatalog)
+    const session = presetId === null ? undefined : layoutByPresetRef.current[presetId]
+    return withSessionLayout(base, session)
+  }, [orchestrationDoc, showHostCatalog, presetId])
 
   const baseGraphDoc = useMemo(() => {
     if (canvasDoc === null) return null
@@ -180,6 +184,13 @@ export function OrchestratorView(props: Props): ReactElement {
     setSelectedUnitId(null)
   }
 
+  const syncLayoutFromNetwork = (): void => {
+    if (presetId === null) return
+    const positions = hostRef.current?.captureNodePositions() ?? {}
+    if (Object.keys(positions).length === 0) return
+    layoutByPresetRef.current[presetId] = { positions: { ...positions } }
+  }
+
   const onEvent = (event: GraphEvent): void => {
     switch (event.type) {
       case 'viewportChanged':
@@ -192,6 +203,12 @@ export function OrchestratorView(props: Props): ReactElement {
           return
         }
         setSelectedUnitId(id)
+        break
+      }
+      case 'nodeMoved': {
+        if (presetId === null) break
+        const prev = layoutByPresetRef.current[presetId]
+        layoutByPresetRef.current[presetId] = applyNodeMovedToLayout(prev, event.nodeId, event.to)
         break
       }
       default:
@@ -227,7 +244,7 @@ export function OrchestratorView(props: Props): ReactElement {
     ? t('hint.live', { count: livePaint.hitCount })
     : liveActive
       ? t('hint.liveIdle')
-      : `${t('hint.readonly')} · ${t(showHostCatalog ? 'hint.membership' : 'hint.membershipPreset')}`
+      : `${t('hint.editable')} · ${t(showHostCatalog ? 'hint.membership' : 'hint.membershipPreset')}`
 
   const counts = orchestrationDoc === null
     ? null
@@ -282,12 +299,33 @@ export function OrchestratorView(props: Props): ReactElement {
             {t('zoom.fit')}
           </button>
         </div>
+        <div className={css.zoomGroup} role="group" aria-label={t('edit.group')}>
+          <button
+            type="button"
+            className={css.zoomButton}
+            onClick={() => {
+              if (hostRef.current?.undo()) syncLayoutFromNetwork()
+            }}
+          >
+            {t('edit.undo')}
+          </button>
+          <button
+            type="button"
+            className={css.zoomButton}
+            onClick={() => {
+              if (hostRef.current?.redo()) syncLayoutFromNetwork()
+            }}
+          >
+            {t('edit.redo')}
+          </button>
+        </div>
         <span className={css.hint}>{hint}</span>
       </div>
       <div className={css.stage}>
         <AITopoHost
           ref={hostRef}
           document={graphDoc}
+          editable
           fitToken={`${presetId ?? ''}:${showHostCatalog ? 'host' : 'preset'}`}
           ariaLabel={t('view.orchestrator')}
           onEvent={onEvent}

@@ -311,6 +311,7 @@ export function toGraphDocument(
         w: NODE_W,
         h: NODE_H,
         groupId: layerGroupId(layer),
+        ...(unit.locked ? { locked: true } : {}),
         data: {
           entryId: unit.entryId,
           moduleName: unit.moduleName,

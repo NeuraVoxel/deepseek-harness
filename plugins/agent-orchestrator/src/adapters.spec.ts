@@ -133,6 +133,7 @@ describe('toGraphDocument', () => {
     expect(graph.groups?.[0]?.memberIds).toEqual(['standard:tool-fs', 'standard:row:2'])
     expect(graph.groups?.[1]?.memberIds).toEqual(['standard:persona'])
     expect(graph.nodes[0]?.groupId).toBe('layer:execution')
+    expect(graph.nodes.find(node => node.id === 'standard:persona')?.locked).toBe(true)
     expect(graph.nodes.find(node => node.id === 'standard:persona')?.data).toMatchObject({
       entryId: 'persona',
       moduleName: '@deepseek-ai/dsh-persona',
@@ -140,6 +141,7 @@ describe('toGraphDocument', () => {
       layer: 'model-context',
       packageGroup: 'preset',
       membership: 'composition',
+      locked: true,
       fill: '#1F1F23',
       stroke: '#3F3F46',
       meta: 'on',
@@ -203,6 +205,12 @@ describe('toGraphDocument', () => {
     const graph = toGraphDocument(doc, labels)
     expect(graph.nodes.some(node => node.id === 'empty')).toBe(false)
     expect(graph.nodes.some(node => node.id === 'host:host-ui')).toBe(true)
+  })
+
+  it('leaves user-preset nodes unlocked on GraphNode', () => {
+    const doc = fromPresetComposition({ ...sample, trust: 'user', id: 'mine' })
+    const graph = toGraphDocument(doc, labels)
+    expect(graph.nodes.every(node => node.locked !== true)).toBe(true)
   })
 
   it('layoutComposition assigns distinct grid positions', () => {

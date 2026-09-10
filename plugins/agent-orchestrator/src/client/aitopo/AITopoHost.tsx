@@ -11,14 +11,19 @@ import {
 } from 'react'
 import {
   Network,
+  PatchHistory,
   contentBounds,
+  MarqueeSelectInteraction,
+  MoveNodeInteraction,
+  ResizeNodeInteraction,
   type GraphDocument,
   type GraphEvent,
+  type GraphPatch,
 } from '@neuravoxel/aitopo'
 
 const ZOOM_STEP = 1.15
 
-/** Imperative zoom / SubNetwork controls for the toolbar. */
+/** Imperative zoom / selection / undo controls for the toolbar. */
 export interface AITopoHostHandle {
   zoomIn: () => void
   zoomOut: () => void
@@ -29,6 +34,12 @@ export interface AITopoHostHandle {
   getZoom: () => number
   /** Update selection without reloading the document. */
   setSelection: (ids: readonly string[]) => void
+  /** Undo last editor apply when `editable` (no-op otherwise). */
+  undo: () => boolean
+  /** Redo last undone apply when `editable` (no-op otherwise). */
+  redo: () => boolean
+  /** Snapshot node top-lefts from the live Network document. */
+  captureNodePositions: () => Readonly<Record<string, { readonly x: number; readonly y: number }>>
 }
 
 export interface AITopoHostProps {
@@ -40,6 +51,11 @@ export interface AITopoHostProps {
   readonly onEvent?: ((event: GraphEvent) => void) | undefined
   /** When this token changes, fit content after load. */
   readonly fitToken?: string | number | undefined
+  /**
+   * When true, pack Resize → Move → Marquee and route `apply` through `PatchHistory`.
+   * Remounts the Network when the flag changes.
+   */
+  readonly editable?: boolean | undefined
 }
 
 /**
@@ -49,9 +65,19 @@ export const AITopoHost = forwardRef(function AITopoHost(
   props: AITopoHostProps,
   ref: React.Ref<AITopoHostHandle>,
 ): ReactElement {
-  const { document: graphDoc, className, ariaLabel, onEvent, fitToken } = props
+  const {
+    document: graphDoc,
+    className,
+    ariaLabel,
+    onEvent,
+    fitToken,
+    editable = false,
+  } = props
   const containerRef = useRef<HTMLDivElement>(null)
   const networkRef = useRef<Network | null>(null)
+  const historyRef = useRef<PatchHistory | null>(null)
+  const graphDocRef = useRef(graphDoc)
+  graphDocRef.current = graphDoc
   const onEventRef = useRef(onEvent)
   onEventRef.current = onEvent
 
@@ -84,21 +110,52 @@ export const AITopoHost = forwardRef(function AITopoHost(
     setSelection: (ids: readonly string[]) => {
       networkRef.current?.setSelection(ids)
     },
+    undo: () => historyRef.current?.undo() ?? false,
+    redo: () => historyRef.current?.redo() ?? false,
+    captureNodePositions: () => {
+      const network = networkRef.current
+      if (network === null) return {}
+      const positions: Record<string, { x: number; y: number }> = {}
+      for (const node of network.toJSON().nodes) {
+        if (node.x === undefined || node.y === undefined) continue
+        positions[node.id] = { x: node.x, y: node.y }
+      }
+      return positions
+    },
   }), [])
 
   useEffect(() => {
     const parent = containerRef.current
     if (parent === null) return
-    const network = new Network()
+    const network = new Network(editable
+      ? {
+        interactions: [
+          new ResizeNodeInteraction(),
+          new MoveNodeInteraction(),
+          new MarqueeSelectInteraction(),
+        ],
+      }
+      : {})
     networkRef.current = network
+    historyRef.current = null
+    if (editable) {
+      const rawApply = network.apply.bind(network)
+      const history = new PatchHistory(rawApply, () => network.toJSON())
+      historyRef.current = history
+      ;(network as { apply: (patch: GraphPatch | unknown) => void }).apply = (patch) => {
+        history.pushAndApply(patch as GraphPatch)
+      }
+    }
     const unsubscribe = network.on(event => { onEventRef.current?.(event) })
     network.mount(parent)
+    network.load(graphDocRef.current)
     return () => {
       unsubscribe()
       network.destroy()
       networkRef.current = null
+      historyRef.current = null
     }
-  }, [])
+  }, [editable])
 
   useEffect(() => {
     const network = networkRef.current

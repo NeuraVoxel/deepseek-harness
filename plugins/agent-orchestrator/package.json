@@ -1,6 +1,6 @@
 {
   "name": "dsh-agent-orchestrator",
-  "description": "Opt-in plugin: read-only orchestration canvas for agent-preset composition (F0)",
+  "description": "Opt-in plugin: orchestration canvas for agent-preset composition (F1 chrome; CommitSink later)",
   "version": "0.1.0",
   "private": true,
   "type": "module",
