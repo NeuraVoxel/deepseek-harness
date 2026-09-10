@@ -32,9 +32,7 @@ These directories live under `vendor/` for workspace layout but are **not** upst
 
 | Directory | npm name | Role |
 |---|---|---|
-| `aitopo/` | `@neuravoxel/aitopo` | Git submodule → `NeuraVoxel/aitopo` (private peer). Clean-room Canvas topology engine (Document/Patch/Events). Design reference: `SDK2D` / twaver.vector ideas only — no source copy or runtime dependency. Not a Cordis pin. Upgrade by bumping the submodule commit (see below). |
-
-`SDK2D/` (when present locally) is a design-reference tree only and is gitignored; it is not a workspace package.
+| `aitopo/` | `@neuravoxel/aitopo` | Git submodule → `NeuraVoxel/aitopo` (private peer). Clean-room Canvas topology engine (Document/Patch/Events). Design reference: `twaver.vector` at `/home/jeff/Documents/AI/coding-agent/SDK2D` (ideas only — no source copy or runtime dependency). Not a Cordis pin. Upgrade by bumping the submodule commit (see below). |
 
 ### Upgrading aitopo (submodule)
 
