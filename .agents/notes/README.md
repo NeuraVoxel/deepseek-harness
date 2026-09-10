@@ -2,7 +2,7 @@
 
 English | [中文](README.zh.md)
 
-One kind of design doc lives here. An **Agent Note** records a decision or proposal that affects this codebase — the *why* and *what we gave up*, the parts code and docs can't carry. This file defines where Agent Notes live, when to write one, and [the in-file format](#the-file-format).
+One kind of design doc lives here. An **Agent Note** records a decision or proposal that affects this codebase — the *why* and *what we gave up*, the parts code and docs can't carry. This file defines where Agent Notes live, when to write one, and [the in-file format](#the-file-format). Session recaps and study notes live in [`.agents/learning/`](../learning/README.md); they are not Agent Notes and do not use this format.
 
 ## Layout and naming
 

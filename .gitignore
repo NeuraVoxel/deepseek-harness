@@ -42,6 +42,9 @@ apps/web/dist/
 .worktrees/
 worktrees/
 .agents/worktrees/
+
+# Machine-local study notes (never commit)
+.agents/learning/private/
 .typert-*/
 vendor/SDK2D
 native/system/test/bin/

@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-这里存放一类设计文档。**Agent Note** 记录影响本代码库的决策或提案：代码和文档无法承载的*为什么*以及*放弃了什么*。本文件规定 Agent Note 存放在哪里、何时需要写一份，以及[文件内格式](#the-file-format)。
+这里存放一类设计文档。**Agent Note** 记录影响本代码库的决策或提案：代码和文档无法承载的*为什么*以及*放弃了什么*。本文件规定 Agent Note 存放在哪里、何时需要写一份，以及[文件内格式](#the-file-format)。会话复盘与学习笔记放在 [`.agents/learning/`](../learning/README.zh.md)；它们不是 Agent Note，也不使用本格式。
 
 ## 布局与命名
 
