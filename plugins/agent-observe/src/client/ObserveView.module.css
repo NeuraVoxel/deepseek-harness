@@ -97,6 +97,13 @@
   background: #ef4444;
   border-radius: 50%;
 }
+.swatchEventSeq {
+  width: 16px;
+  height: 0;
+  border-top: 2px dashed #fb7185;
+  background: transparent;
+  border-radius: 0;
+}
 .swatchGateway {
   background: #1f2a3a;
   border: 1px solid #5b8def;

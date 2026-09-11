@@ -6,6 +6,7 @@ import type { GraphDocument, GraphEdge, GraphGroup, GraphNode } from '@neuravoxe
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { AgentObserveGroupMode, AgentObserveNode, AgentObserveSnapshot } from '../../types.ts'
 import { layoutTopology, NODE_SIZE, type CanvasLayout } from '../layout.ts'
+import { DARK_FLOW_NODE_STYLE } from './dark-node-style.ts'
 
 /** Inputs for {@link snapshotToDocument}. */
 export interface SnapshotToDocumentOptions {
@@ -59,6 +60,7 @@ export function snapshotToDocument(options: SnapshotToDocumentOptions): FleetDoc
       w: NODE_SIZE.width,
       h: NODE_SIZE.height,
       groupId: node.groupKey,
+      style: DARK_FLOW_NODE_STYLE,
       ...(networkId === undefined ? {} : { networkId }),
       data: {
         meta: [

@@ -202,7 +202,14 @@ describe('integrated atlas', () => {
     const beads = view.document.nodes.filter(node => node.type === 'event')
     expect(beads.length).toBeGreaterThan(0)
     expect(beads.every(node => node.w === 16 && node.data?.fill === '#ef4444')).toBe(true)
-    expect(beads.every(node => node.label.length > 0 && node.data?.fontSize === 7)).toBe(true)
+    expect(beads.every(node =>
+      node.label.length > 0
+      && node.style?.labelPosition === 'center'
+      && node.style?.label?.fontSize === 7
+      && node.style?.label?.color === '#ffffff')).toBe(true)
+    const seqEdges = view.document.edges.filter(edge => edge.id.startsWith('event-seq:'))
+    expect(seqEdges.length).toBe(Math.max(0, beads.length - 1))
+    expect(seqEdges.every(edge => Array.isArray(edge.data?.strokeDash))).toBe(true)
     expect(view.document.groups?.map(group => group.id)).toEqual([
       'g-panorama', 'g-loop', 'g-seam',
     ])
@@ -257,6 +264,14 @@ describe('integrated atlas', () => {
     expect(beads.some(node => node.data?.meta === 'system/message')).toBe(true)
     expect(new Set(beads.map(node => node.label))).toEqual(
       new Set(listed.entries.map(entry => String(entry.seq))),
+    )
+    const ordered = [...listed.entries].sort((a, b) => a.seq - b.seq)
+    const seqEdges = atlas.document.edges.filter(edge => edge.id.startsWith('event-seq:'))
+    expect(seqEdges.map(edge => `${edge.from}->${edge.to}`)).toEqual(
+      ordered.slice(0, -1).map((entry, index) => {
+        const next = ordered[index + 1]!
+        return `event:${entry.seq}->event:${next.seq}`
+      }),
     )
   })
 })

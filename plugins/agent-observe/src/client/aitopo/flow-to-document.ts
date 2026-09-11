@@ -6,6 +6,7 @@ import type { GraphDocument, GraphEdge, GraphGroup, GraphNode } from '@neuravoxe
 import type { AgentFlowSnapshot } from '../derive-flow.ts'
 import { layoutAgentFlow, type FlowLayout } from '../layout-flow.ts'
 import { alarmsFromStatus } from './alarms-from-status.ts'
+import { DARK_FLOW_NODE_STYLE } from './dark-node-style.ts'
 
 /** Result of flow → document adaptation. */
 export interface FlowDocumentResult {
@@ -50,6 +51,7 @@ export function flowToDocument(
       y,
       w,
       h,
+      style: DARK_FLOW_NODE_STYLE,
       ...(alarms === undefined ? {} : { alarms }),
       data: {
         meta: node.detail ?? node.kind,

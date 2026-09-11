@@ -5,6 +5,7 @@
 import type { GraphDocument, GraphEdge, GraphGroup, GraphNode } from '@neuravoxel/aitopo'
 import type { FlowNodeStatus } from '../derive-flow.ts'
 import { alarmsFromStatus } from '../aitopo/alarms-from-status.ts'
+import { DARK_FLOW_NODE_STYLE } from '../aitopo/dark-node-style.ts'
 
 /** One skeleton node before live status is applied. */
 export interface SkeletonNode {
@@ -72,6 +73,7 @@ export function skeletonToDocument(
       y: circle ? node.y - radius : node.y,
       w: circle ? radius * 2 : w,
       h: circle ? radius * 2 : h,
+      style: DARK_FLOW_NODE_STYLE,
       ...(alarms === undefined ? {} : { alarms }),
       data: {
         meta: node.detail ?? node.type ?? 'stage',

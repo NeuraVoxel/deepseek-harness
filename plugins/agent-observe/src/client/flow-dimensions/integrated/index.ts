@@ -9,6 +9,7 @@
 
 import type { GraphDocument, GraphEdge, GraphGroup, GraphNode } from '@neuravoxel/aitopo'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import { DARK_EVENT_BEAD_STYLE, DARK_FLOW_NODE_STYLE } from '../../aitopo/dark-node-style.ts'
 import { linkedNodeIdForEvent } from '../events/index.ts'
 import { LOOP_SKELETON, deriveLoopDimension } from '../loop/index.ts'
 import { derivePanoramaDimension } from '../panorama/index.ts'
@@ -72,6 +73,7 @@ export function deriveIntegratedDimension(ctx: FlowDimensionContext): GraphDimen
     h: 56,
     groupId: 'g-loop',
     networkId: NET_LOOP,
+    style: DARK_FLOW_NODE_STYLE,
     data: {
       meta: 'SubNetwork',
       fill: '#1f2a3a',
@@ -89,6 +91,7 @@ export function deriveIntegratedDimension(ctx: FlowDimensionContext): GraphDimen
     h: 56,
     groupId: 'g-seam',
     networkId: NET_SEAM,
+    style: DARK_FLOW_NODE_STYLE,
     data: {
       meta: 'SubNetwork',
       fill: '#243018',
@@ -110,6 +113,7 @@ export function deriveIntegratedDimension(ctx: FlowDimensionContext): GraphDimen
     durableEventsFromWindow(ctx.window),
     evidence.turn,
   )
+  const beadIds: string[] = []
 
   for (const event of turnEvents) {
     const linked = linkedNodeIdForEvent(event)
@@ -137,13 +141,12 @@ export function deriveIntegratedDimension(ctx: FlowDimensionContext): GraphDimen
       w: EVENT_DIAMETER,
       h: EVENT_DIAMETER,
       groupId: 'g-panorama',
+      style: DARK_EVENT_BEAD_STYLE,
       data: {
         meta: event.type,
         shape: 'circle',
         fill: '#ef4444',
         stroke: '#fca5a5',
-        labelColor: '#ffffff',
-        fontSize: 7,
       },
     })
     rootEdges.push({
@@ -160,6 +163,25 @@ export function deriveIntegratedDimension(ctx: FlowDimensionContext): GraphDimen
     inspectByNodeId.set(beadId, {
       detail: `${event.type} · seq ${seqLabel}`,
       inputText: safeJson(event),
+    })
+    beadIds.push(beadId)
+  }
+
+  // Chronological chain: consecutive Session seq beads linked with dashed edges.
+  for (let index = 0; index < beadIds.length - 1; index += 1) {
+    const from = beadIds[index]!
+    const to = beadIds[index + 1]!
+    rootEdges.push({
+      id: `event-seq:${from}->${to}`,
+      from,
+      to,
+      kind: 'data',
+      data: {
+        stroke: '#fb7185',
+        strokeHover: '#fde047',
+        lineWidth: 1.5,
+        strokeDash: [5, 4],
+      },
     })
   }
 
