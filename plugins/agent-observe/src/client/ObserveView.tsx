@@ -246,14 +246,21 @@ function FlowPane(props: Props): ReactElement {
     window,
     session: sessionLife,
     agentFlow: flow,
-    selection,
+    // Selection is UI-only; keep it out of derive inputs so node picks do not
+    // rebuild the GraphDocument and fight wheel zoom / pan.
+    selection: { nodeId: null, eventId: null } satisfies FlowDimensionSelection,
     t: t as (key: string, params?: Record<string, string>) => string,
-  }), [sessionId, focusTurn, window, sessionLife, flow, selection, t])
+  }), [sessionId, focusTurn, window, sessionLife, flow, t])
 
   const view = useMemo(() => {
-    if (dimension === 'events') return deriveEventsDimension(ctx, eventFilter)
+    if (dimension === 'events') {
+      return deriveEventsDimension({
+        ...ctx,
+        selection,
+      }, eventFilter)
+    }
     return resolveFlowDimension(dimension).derive(ctx)
-  }, [dimension, ctx, eventFilter])
+  }, [dimension, ctx, eventFilter, selection])
 
   const selectedIds = useMemo(() => {
     if (selection.nodeId === null) return []
