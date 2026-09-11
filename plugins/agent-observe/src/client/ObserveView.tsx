@@ -411,7 +411,7 @@ function FlowPane(props: Props): ReactElement {
             fitToken={`${dimension}:${flow.turn ?? 0}:${view.document.nodes.length}`}
             onEvent={onEvent}
           />
-          {dimension === 'process' ? (
+          {view.kind === 'graph' ? (
             <FlowInspectorPanel
               t={t}
               inspection={inspection}
