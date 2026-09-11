@@ -129,7 +129,8 @@
   min-height: 0;
   position: relative;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: stretch;
 }
 
 .stage {
@@ -140,6 +141,79 @@
   touch-action: none;
   overscroll-behavior: contain;
   background: transparent;
+}
+
+.inspector {
+  width: min(360px, 38%);
+  min-width: 260px;
+  max-width: 420px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-left: 1px solid var(--dsw-border-subtle, #2a2f3a);
+  background: var(--dsw-surface-raised, #12151c);
+}
+
+.inspectorHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--dsw-border-subtle, #2a2f3a);
+  flex-shrink: 0;
+}
+
+.inspectorTitle {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inspectorBody {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px 12px 14px;
+  font-size: 11px;
+  user-select: text;
+}
+
+.inspectorEmpty {
+  padding: 16px 12px;
+  font-size: 12px;
+  opacity: 0.55;
+  line-height: 1.45;
+}
+
+.inspectorSection {
+  opacity: 0.65;
+  margin: 10px 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+}
+
+.inspectorSection:first-child {
+  margin-top: 0;
+}
+
+.inspectorPre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #d7dce6;
+  padding: 8px;
+  border-radius: 6px;
+  background: var(--dsw-surface-base, #0f1115);
+  border: 1px solid var(--dsw-border-subtle, #2a2f3a);
 }
 
 .zoomControls {
@@ -154,50 +228,6 @@
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   opacity: 0.8;
-}
-
-.ioTooltip {
-  position: fixed;
-  z-index: 40;
-  width: 340px;
-  max-height: 260px;
-  overflow: auto;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid #3a4150;
-  background: #161b26;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-  pointer-events: auto;
-  font-size: 11px;
-  user-select: text;
-  cursor: text;
-  touch-action: pan-y;
-}
-
-.ioTooltipTitle {
-  font-weight: 600;
-  margin-bottom: 8px;
-  font-size: 12px;
-}
-
-.ioTooltipSection {
-  opacity: 0.65;
-  margin: 6px 0 2px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  font-size: 10px;
-}
-
-.ioTooltipBody {
-  margin: 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  line-height: 1.35;
-  color: #d7dce6;
-  user-select: text;
-  cursor: text;
 }
 
 .empty {

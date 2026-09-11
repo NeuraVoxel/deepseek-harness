@@ -4,7 +4,6 @@ import {
   useMemo, useRef, useState,
   type ReactElement,
   type RefObject,
-  type SyntheticEvent,
 } from 'react'
 import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {
@@ -229,10 +228,7 @@ function FlowPane(props: Props): ReactElement {
   const [inspection, setInspection] = useState<{
     inspect: FlowNodeInspect
     label: string
-    clientX: number
-    clientY: number
   } | null>(null)
-  const pointerRef = useRef({ x: 0, y: 0 })
   const hostRef = useRef<AITopoHostHandle>(null)
   const [zoom, setZoom] = useState(1)
 
@@ -289,8 +285,6 @@ function FlowPane(props: Props): ReactElement {
         setInspection({
           inspect: inspect ?? { detail: label },
           label,
-          clientX: pointerRef.current.x,
-          clientY: pointerRef.current.y,
         })
         break
       }
@@ -404,9 +398,6 @@ function FlowPane(props: Props): ReactElement {
       ) : (
         <div
           className={css.flowStageWrap}
-          onPointerDownCapture={event => {
-            pointerRef.current = { x: event.clientX, y: event.clientY }
-          }}
           onDoubleClick={event => {
             onBlankDoubleClick(event.clientX, event.clientY)
           }}
@@ -420,13 +411,14 @@ function FlowPane(props: Props): ReactElement {
             fitToken={`${dimension}:${flow.turn ?? 0}:${view.document.nodes.length}`}
             onEvent={onEvent}
           />
-          {inspection !== null ? (
-            <FlowIoTooltip
+          {dimension === 'process' ? (
+            <FlowInspectorPanel
               t={t}
-              label={inspection.label}
-              inspect={inspection.inspect}
-              clientX={inspection.clientX}
-              clientY={inspection.clientY}
+              inspection={inspection}
+              onClose={() => {
+                setInspection(null)
+                setSelection(prev => ({ ...prev, nodeId: null }))
+              }}
             />
           ) : null}
         </div>
@@ -435,47 +427,57 @@ function FlowPane(props: Props): ReactElement {
   )
 }
 
-function FlowIoTooltip(props: {
+function FlowInspectorPanel(props: {
   t: Props['t']
-  label: string
-  inspect: FlowNodeInspect
-  clientX: number
-  clientY: number
+  inspection: {
+    inspect: FlowNodeInspect
+    label: string
+  } | null
+  onClose: () => void
 }): ReactElement {
-  const { t, label, inspect, clientX, clientY } = props
-  const left = Math.min(clientX + 14, typeof window !== 'undefined' ? window.innerWidth - 360 : clientX + 14)
-  const top = Math.min(clientY + 14, typeof window !== 'undefined' ? window.innerHeight - 280 : clientY + 14)
-  const stopCanvasPointer = (event: SyntheticEvent): void => {
-    event.stopPropagation()
-  }
-  const hasIo = (inspect.inputText !== undefined && inspect.inputText !== '')
+  const { t, inspection, onClose } = props
+  const inspect = inspection?.inspect
+  const hasIo = inspect !== undefined && (
+    (inspect.inputText !== undefined && inspect.inputText !== '')
     || (inspect.outputText !== undefined && inspect.outputText !== '')
+  )
+  const hasDetail = inspect?.detail !== undefined && inspect.detail !== ''
   return (
-    <div
-      className={css.ioTooltip}
-      style={{ left, top }}
-      role="dialog"
-      aria-label={label}
-      onPointerDown={stopCanvasPointer}
-      onPointerMove={stopCanvasPointer}
-      onPointerUp={stopCanvasPointer}
-      onWheel={stopCanvasPointer}
-      onClick={stopCanvasPointer}
-      onDoubleClick={stopCanvasPointer}
-    >
-      <div className={css.ioTooltipTitle}>{label}</div>
-      {inspect.detail !== undefined && inspect.detail !== '' ? (
-        <div className={css.ioTooltipSection}>{inspect.detail}</div>
-      ) : null}
-      {hasIo ? (
-        <>
-          <div className={css.ioTooltipSection}>{t('flow.hover.input')}</div>
-          <pre className={css.ioTooltipBody}>{inspect.inputText || '—'}</pre>
-          <div className={css.ioTooltipSection}>{t('flow.hover.output')}</div>
-          <pre className={css.ioTooltipBody}>{inspect.outputText || '—'}</pre>
-        </>
-      ) : null}
-    </div>
+    <aside className={css.inspector} aria-label={t('flow.panel.title')}>
+      <div className={css.inspectorHeader}>
+        <div className={css.inspectorTitle}>
+          {inspection?.label ?? t('flow.panel.title')}
+        </div>
+        {inspection !== null ? (
+          <button type="button" className={css.groupButton} onClick={onClose}>
+            {t('flow.panel.close')}
+          </button>
+        ) : null}
+      </div>
+      {inspection === null ? (
+        <div className={css.inspectorEmpty}>{t('flow.panel.empty')}</div>
+      ) : (
+        <div className={css.inspectorBody}>
+          {hasDetail ? (
+            <>
+              <div className={css.inspectorSection}>{t('flow.panel.detail')}</div>
+              <pre className={css.inspectorPre}>{inspect!.detail}</pre>
+            </>
+          ) : null}
+          {hasIo ? (
+            <>
+              <div className={css.inspectorSection}>{t('flow.hover.input')}</div>
+              <pre className={css.inspectorPre}>{inspect!.inputText || '—'}</pre>
+              <div className={css.inspectorSection}>{t('flow.hover.output')}</div>
+              <pre className={css.inspectorPre}>{inspect!.outputText || '—'}</pre>
+            </>
+          ) : null}
+          {!hasDetail && !hasIo ? (
+            <div className={css.inspectorEmpty}>{t('flow.panel.empty')}</div>
+          ) : null}
+        </div>
+      )}
+    </aside>
   )
 }
 
