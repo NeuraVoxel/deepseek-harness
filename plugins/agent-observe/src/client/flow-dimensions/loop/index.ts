@@ -20,7 +20,7 @@ export const LOOP_SKELETON: SkeletonGraph = {
     { id: 'step-start', label: 'step/start', x: 280, y: 60, w: 120, h: 44, fill: '#1f2a3a' },
     { id: 'request', label: 'request + context', x: 480, y: 60, w: 140, h: 44, fill: '#243018' },
     { id: 'model', label: 'model', x: 700, y: 60, w: 110, h: 44, fill: '#3a2a10' },
-    { id: 'tools', label: 'tools ×N', x: 700, y: 180, w: 110, h: 44, fill: '#3a1530' },
+    { id: 'tools', label: 'tools ×N', x: 755, y: 200, w: 56, h: 56, fill: '#3a1530', shape: 'circle', type: 'tool' },
     { id: 'step-end', label: 'step/end', x: 480, y: 260, w: 120, h: 44, fill: '#1f2a3a' },
     { id: 'turn-end', label: 'turn/end', x: 280, y: 260, w: 120, h: 44, fill: '#152a48' },
   ],
