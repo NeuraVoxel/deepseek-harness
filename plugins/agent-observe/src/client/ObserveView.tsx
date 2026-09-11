@@ -420,6 +420,8 @@ function FlowPane(props: Props): ReactElement {
             <span><i className={`${css.swatch} ${css.swatchFlowActive}`} />{t('flow.legend.active')}</span>
             <span><i className={`${css.swatch} ${css.swatchFlowDone}`} />{t('flow.legend.done')}</span>
             <span><i className={`${css.swatch} ${css.swatchEventBead}`} />{t('flow.integrated.legend.event')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEventStart}`} />{t('flow.integrated.legend.eventStart')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEventEnd}`} />{t('flow.integrated.legend.eventEnd')}</span>
             <span><i className={`${css.swatch} ${css.swatchEventSeq}`} />{t('flow.integrated.legend.eventSeq')}</span>
             <span><i className={`${css.swatch} ${css.swatchGateway}`} />{t('flow.integrated.legend.gateway')}</span>
           </div>

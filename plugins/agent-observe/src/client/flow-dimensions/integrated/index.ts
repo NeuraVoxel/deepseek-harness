@@ -4,7 +4,9 @@
  * Root groups hold the end-to-end chain and SubNetwork gateways.
  * Double-click a gateway to enter the loop or seam child document.
  * Red beads are 1:1 with the Events tab Turn list (filter `all`); unmapped
- * types hang on the Session-write stage.
+ * types hang on the Session-write stage. The first seq bead is the start
+ * marker (deeper red) and the last is the end marker (green); mid beads and
+ * seq edges use orange.
  */
 
 import type { GraphDocument, GraphEdge, GraphGroup, GraphNode } from '@neuravoxel/aitopo'
@@ -30,6 +32,19 @@ import type {
 const NET_LOOP = 'net:loop'
 const NET_SEAM = 'net:seam'
 const EVENT_DIAMETER = 16
+/** Mid-chain beads and seq / stem edges — orange family. */
+const BEAD_FILL = '#f97316'
+const BEAD_STROKE = '#fdba74'
+const BEAD_EDGE_STROKE = '#ea580c'
+const BEAD_EDGE_HOVER = '#fbbf24'
+const BEAD_SEQ_STROKE = '#fb923c'
+const BEAD_SEQ_HOVER = '#fde68a'
+/** First seq bead — red family. */
+const BEAD_START_FILL = '#dc2626'
+const BEAD_START_STROKE = '#fecaca'
+/** Last seq bead — green family. */
+const BEAD_END_FILL = '#16a34a'
+const BEAD_END_STROKE = '#86efac'
 /** Fallback panorama node for SessionEvents without a dedicated stage mapping. */
 const FALLBACK_ANCHOR = 'durable'
 
@@ -146,8 +161,8 @@ export function deriveIntegratedDimension(ctx: FlowDimensionContext): GraphDimen
       data: {
         meta: event.type,
         shape: 'circle',
-        fill: '#ef4444',
-        stroke: '#fca5a5',
+        fill: BEAD_FILL,
+        stroke: BEAD_STROKE,
       },
     })
     rootEdges.push({
@@ -156,8 +171,8 @@ export function deriveIntegratedDimension(ctx: FlowDimensionContext): GraphDimen
       to: beadId,
       kind: 'data',
       data: {
-        stroke: '#7f1d1d',
-        strokeHover: '#ef4444',
+        stroke: BEAD_EDGE_STROKE,
+        strokeHover: BEAD_EDGE_HOVER,
         lineWidth: 1,
       },
     })
@@ -167,6 +182,8 @@ export function deriveIntegratedDimension(ctx: FlowDimensionContext): GraphDimen
     })
     beadIds.push(beadId)
   }
+
+  markEventBeadEndpoints(rootNodes, beadIds, inspectByNodeId, ctx.t)
 
   // Chronological chain: consecutive Session seq beads linked with dashed edges.
   for (let index = 0; index < beadIds.length - 1; index += 1) {
@@ -178,8 +195,8 @@ export function deriveIntegratedDimension(ctx: FlowDimensionContext): GraphDimen
       to,
       kind: 'data',
       data: {
-        stroke: '#fb7185',
-        strokeHover: '#fde047',
+        stroke: BEAD_SEQ_STROKE,
+        strokeHover: BEAD_SEQ_HOVER,
         lineWidth: 1.5,
         strokeDash: [5, 4],
       },
@@ -319,6 +336,63 @@ function fadeGroup(group: GraphGroup, alpha: number): GraphGroup {
 
 function isEventBead(node: GraphNode): boolean {
   return node.type === 'event' || node.id.startsWith('event:')
+}
+
+/**
+ * Recolor the first / last seq beads as start and end markers (same size).
+ * A single bead is both start and end (start fill, end stroke).
+ */
+function markEventBeadEndpoints(
+  nodes: GraphNode[],
+  beadIds: readonly string[],
+  inspectByNodeId: Map<string, FlowNodeInspect>,
+  t: FlowDimensionContext['t'],
+): void {
+  if (beadIds.length === 0) return
+  const firstId = beadIds[0]!
+  const lastId = beadIds[beadIds.length - 1]!
+  const byId = new Map(nodes.map((node, index) => [node.id, index]))
+
+  const paintEndpoint = (
+    id: string,
+    role: 'start' | 'end' | 'both',
+  ): void => {
+    const index = byId.get(id)
+    if (index === undefined) return
+    const node = nodes[index]!
+    const fill = role === 'end' ? BEAD_END_FILL : BEAD_START_FILL
+    const stroke = role === 'start' ? BEAD_START_STROKE : BEAD_END_STROKE
+    const roleLabel = role === 'start'
+      ? t('flow.integrated.bead.start')
+      : role === 'end'
+        ? t('flow.integrated.bead.end')
+        : t('flow.integrated.bead.both')
+    nodes[index] = {
+      ...node,
+      style: DARK_EVENT_BEAD_STYLE,
+      data: {
+        ...node.data,
+        shape: 'circle',
+        fill,
+        stroke,
+        endpoint: role,
+      },
+    }
+    const prior = inspectByNodeId.get(id)
+    inspectByNodeId.set(id, {
+      ...prior,
+      detail: prior?.detail !== undefined && prior.detail !== ''
+        ? `${roleLabel} · ${prior.detail}`
+        : roleLabel,
+    })
+  }
+
+  if (beadIds.length === 1) {
+    paintEndpoint(firstId, 'both')
+    return
+  }
+  paintEndpoint(firstId, 'start')
+  paintEndpoint(lastId, 'end')
 }
 
 function safeJson(event: SessionEvent): string {

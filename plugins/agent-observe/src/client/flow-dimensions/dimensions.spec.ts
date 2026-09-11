@@ -200,8 +200,20 @@ describe('integrated atlas', () => {
     const loopGate = view.document.nodes.find(node => node.id === 'gate:loop')
     expect(loopGate?.networkId).toBe('net:loop')
     const beads = view.document.nodes.filter(node => node.type === 'event')
-    expect(beads.length).toBeGreaterThan(0)
-    expect(beads.every(node => node.w === 16 && node.data?.fill === '#ef4444')).toBe(true)
+    expect(beads.length).toBeGreaterThan(1)
+    const ordered = [...beads].sort((a, b) => Number(a.label) - Number(b.label))
+    const start = ordered[0]!
+    const end = ordered[ordered.length - 1]!
+    const mid = ordered.slice(1, -1)
+    expect(start.data?.endpoint).toBe('start')
+    expect(start.data?.fill).toBe('#dc2626')
+    expect(start.w).toBe(16)
+    expect(start.label2).toBeUndefined()
+    expect(end.data?.endpoint).toBe('end')
+    expect(end.data?.fill).toBe('#16a34a')
+    expect(end.w).toBe(16)
+    expect(end.label2).toBeUndefined()
+    expect(mid.every(node => node.w === 16 && node.data?.fill === '#f97316')).toBe(true)
     expect(beads.every(node =>
       node.label.length > 0
       && node.style?.labelPosition === 'center'

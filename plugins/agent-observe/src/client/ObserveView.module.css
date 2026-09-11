@@ -94,13 +94,23 @@
 }
 .swatchKindRender { background: #34d399; }
 .swatchEventBead {
-  background: #ef4444;
+  background: #f97316;
   border-radius: 50%;
+}
+.swatchEventStart {
+  background: #dc2626;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #fecaca;
+}
+.swatchEventEnd {
+  background: #16a34a;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px #86efac;
 }
 .swatchEventSeq {
   width: 16px;
   height: 0;
-  border-top: 2px dashed #fb7185;
+  border-top: 2px dashed #fb923c;
   background: transparent;
   border-radius: 0;
 }
