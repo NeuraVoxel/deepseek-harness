@@ -202,9 +202,62 @@ describe('integrated atlas', () => {
     const beads = view.document.nodes.filter(node => node.type === 'event')
     expect(beads.length).toBeGreaterThan(0)
     expect(beads.every(node => node.w === 16 && node.data?.fill === '#ef4444')).toBe(true)
+    expect(beads.every(node => node.label.length > 0 && node.data?.fontSize === 7)).toBe(true)
     expect(view.document.groups?.map(group => group.id)).toEqual([
       'g-panorama', 'g-loop', 'g-seam',
     ])
+  })
+
+  it('places one bead per Events-tab Turn event (filter all)', () => {
+    const base = completedTurn()
+    const beforeEnd = base.slice(0, -1)
+    const turnEnd = {
+      ...base[base.length - 1]!,
+      seq: seq(100),
+      time: 100,
+    }
+    const extras = [
+      {
+        type: 'system/message',
+        seq: seq(50),
+        time: 50,
+        data: {
+          turn: 1,
+          step: 1,
+          message: {
+            id: 'sys1',
+            role: 'system',
+            content: [{ type: 'text', text: 'note' }],
+            source: { kind: 'plugin', plugin: '@deepseek-ai/dsh-system-prompt' },
+          },
+        },
+        surfaceOp: 'append',
+      },
+      ...Array.from({ length: 10 }, (_, index) => ({
+        type: 'tool/call' as const,
+        seq: seq(60 + index),
+        time: 60 + index,
+        data: {
+          turn: 1,
+          step: 1,
+          callId: `c-extra-${index}`,
+          name: 'bash',
+          arguments: '{}',
+        },
+      })),
+    ] as SessionEvent[]
+    const ctx = ctxOf([...beforeEnd, ...extras, turnEnd], 1)
+    const atlas = deriveIntegratedDimension(ctx)
+    const listed = deriveEventsDimension(ctx, 'all')
+    expect(atlas.kind).toBe('graph')
+    expect(listed.kind).toBe('events')
+    if (atlas.kind !== 'graph' || listed.kind !== 'events') return
+    const beads = atlas.document.nodes.filter(node => node.type === 'event')
+    expect(beads.length).toBe(listed.entries.length)
+    expect(beads.some(node => node.data?.meta === 'system/message')).toBe(true)
+    expect(new Set(beads.map(node => node.label))).toEqual(
+      new Set(listed.entries.map(entry => String(entry.seq))),
+    )
   })
 })
 

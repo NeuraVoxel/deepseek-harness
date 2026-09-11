@@ -3,7 +3,11 @@
  */
 
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
-import { collectTurnEvidence } from '../turn-evidence.ts'
+import {
+  collectTurnEvidence,
+  durableEventsFromWindow,
+  listEventsForTurn,
+} from '../turn-evidence.ts'
 import type {
   EventListEntry,
   EventListFilter,
@@ -70,15 +74,7 @@ export function deriveEventsDimension(
   filter: EventListFilter = 'all',
 ): EventsDimensionView {
   const evidence = collectTurnEvidence(ctx.window, ctx.session, ctx.focusTurn)
-  const durable: SessionEvent[] = []
-  for (const entry of ctx.window.entries) {
-    if (entry.type === 'event') durable.push(entry.event)
-  }
-
-  const turn = evidence.turn
-  const inScope = turn === null
-    ? durable
-    : filterEventsForTurn(durable, turn)
+  const inScope = listEventsForTurn(durableEventsFromWindow(ctx.window), evidence.turn)
 
   const entries: EventListEntry[] = []
   for (const event of inScope) {
@@ -168,19 +164,4 @@ function safeJson(event: SessionEvent): string {
   } catch {
     return String(event.type)
   }
-}
-
-function filterEventsForTurn(events: readonly SessionEvent[], turn: number): SessionEvent[] {
-  let startSeq: number | undefined
-  let endSeq: number | undefined
-  for (const event of events) {
-    if (event.type === 'turn/start' && event.data.turn === turn) startSeq = event.seq
-    if (event.type === 'turn/end' && event.data.turn === turn) endSeq = event.seq
-  }
-  if (startSeq === undefined) return []
-  return events.filter(event => {
-    if (event.seq < startSeq!) return false
-    if (endSeq !== undefined && event.seq > endSeq) return false
-    return true
-  })
 }

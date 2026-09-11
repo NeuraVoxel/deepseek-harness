@@ -65,7 +65,7 @@ export function collectTurnEvidence(
   }
   if (turn === null) return empty
 
-  const inTurn = eventsInTurn(durable, turn)
+  const inTurn = listEventsForTurn(durable, turn)
   const turnEnded = inTurn.some(e => e.type === 'turn/end')
   const endEvent = inTurn.find(e => e.type === 'turn/end')
   const turnError = endEvent?.type === 'turn/end'
@@ -133,7 +133,17 @@ function findLatestTurn(events: readonly SessionEvent[]): number | null {
   return latest
 }
 
-function eventsInTurn(events: readonly SessionEvent[], turn: number): SessionEvent[] {
+/**
+ * Durable events whose seq falls inside `[turn/start, turn/end]` for `turn`.
+ * Same Turn window the Events dimension lists (filter `all`).
+ * @param events - durable Session events in window order.
+ * @param turn - Turn number, or `null` for the full window.
+ */
+export function listEventsForTurn(
+  events: readonly SessionEvent[],
+  turn: number | null,
+): SessionEvent[] {
+  if (turn === null) return [...events]
   let startSeq: number | undefined
   let endSeq: number | undefined
   for (const event of events) {
@@ -146,4 +156,16 @@ function eventsInTurn(events: readonly SessionEvent[], turn: number): SessionEve
     if (endSeq !== undefined && event.seq > endSeq) return false
     return true
   })
+}
+
+/**
+ * Collect durable Session events from a Client event window.
+ * @param window - Client Session event window.
+ */
+export function durableEventsFromWindow(window: SessionEventWindow): SessionEvent[] {
+  const durable: SessionEvent[] = []
+  for (const entry of window.entries) {
+    if (entry.type === 'event') durable.push(entry.event)
+  }
+  return durable
 }

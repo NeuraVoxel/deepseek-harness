@@ -3,7 +3,8 @@
  *
  * Root groups hold the end-to-end chain and SubNetwork gateways.
  * Double-click a gateway to enter the loop or seam child document.
- * Session events appear as small red spheres near the related stage.
+ * Red beads are 1:1 with the Events tab Turn list (filter `all`); unmapped
+ * types hang on the Session-write stage.
  */
 
 import type { GraphDocument, GraphEdge, GraphGroup, GraphNode } from '@neuravoxel/aitopo'
@@ -12,7 +13,11 @@ import { linkedNodeIdForEvent } from '../events/index.ts'
 import { LOOP_SKELETON, deriveLoopDimension } from '../loop/index.ts'
 import { derivePanoramaDimension } from '../panorama/index.ts'
 import { SEAM_SKELETON, deriveSeamDimension } from '../seam/index.ts'
-import { collectTurnEvidence } from '../turn-evidence.ts'
+import {
+  collectTurnEvidence,
+  durableEventsFromWindow,
+  listEventsForTurn,
+} from '../turn-evidence.ts'
 import type {
   FlowDimensionContext,
   FlowDimensionModule,
@@ -23,7 +28,8 @@ import type {
 const NET_LOOP = 'net:loop'
 const NET_SEAM = 'net:seam'
 const EVENT_DIAMETER = 16
-const MAX_BEADS_PER_ANCHOR = 8
+/** Fallback panorama node for SessionEvents without a dedicated stage mapping. */
+const FALLBACK_ANCHOR = 'durable'
 
 /** Map loop/seam-oriented event links onto panorama stage ids for bead anchors. */
 const EVENT_ANCHOR: Readonly<Record<string, string>> = {
@@ -99,31 +105,32 @@ export function deriveIntegratedDimension(ctx: FlowDimensionContext): GraphDimen
 
   const anchorById = new Map(rootNodes.map(node => [node.id, node]))
   const beadStacks = new Map<string, number>()
-  const durable: SessionEvent[] = []
-  for (const entry of ctx.window.entries) {
-    if (entry.type === 'event') durable.push(entry.event)
-  }
-  const turnEvents = evidence.turn === null
-    ? durable
-    : filterEventsForTurn(durable, evidence.turn)
+  // Same Turn window as the Events dimension (filter `all`).
+  const turnEvents = listEventsForTurn(
+    durableEventsFromWindow(ctx.window),
+    evidence.turn,
+  )
 
   for (const event of turnEvents) {
     const linked = linkedNodeIdForEvent(event)
-    const anchorId = linked === undefined ? undefined : EVENT_ANCHOR[linked] ?? linked
+    const preferred = linked === undefined ? FALLBACK_ANCHOR : EVENT_ANCHOR[linked] ?? linked
+    const anchorId = anchorById.has(preferred)
+      ? preferred
+      : (anchorById.has(FALLBACK_ANCHOR) ? FALLBACK_ANCHOR : undefined)
     if (anchorId === undefined) continue
     const anchor = anchorById.get(anchorId)
     if (anchor === undefined) continue
     const stack = beadStacks.get(anchorId) ?? 0
-    if (stack >= MAX_BEADS_PER_ANCHOR) continue
     beadStacks.set(anchorId, stack + 1)
 
     const beadId = `event:${event.seq}`
     const ax = (anchor.x ?? 0) + (anchor.w ?? 110)
     const ay = (anchor.y ?? 0) + stack * (EVENT_DIAMETER + 4)
+    const seqLabel = String(event.seq)
     rootNodes.push({
       id: beadId,
       type: 'event',
-      label: '',
+      label: seqLabel,
       status: 'error',
       x: ax + 10,
       y: ay,
@@ -135,6 +142,8 @@ export function deriveIntegratedDimension(ctx: FlowDimensionContext): GraphDimen
         shape: 'circle',
         fill: '#ef4444',
         stroke: '#fca5a5',
+        labelColor: '#ffffff',
+        fontSize: 7,
       },
     })
     rootEdges.push({
@@ -149,7 +158,7 @@ export function deriveIntegratedDimension(ctx: FlowDimensionContext): GraphDimen
       },
     })
     inspectByNodeId.set(beadId, {
-      detail: event.type,
+      detail: `${event.type} · seq ${seqLabel}`,
       inputText: safeJson(event),
     })
   }
@@ -224,21 +233,6 @@ export const integratedDimension: FlowDimensionModule = {
   id: 'integrated',
   labelKey: 'flow.dim.integrated',
   derive: deriveIntegratedDimension,
-}
-
-function filterEventsForTurn(events: readonly SessionEvent[], turn: number): SessionEvent[] {
-  let startSeq: number | undefined
-  let endSeq: number | undefined
-  for (const event of events) {
-    if (event.type === 'turn/start' && event.data.turn === turn) startSeq = event.seq
-    if (event.type === 'turn/end' && event.data.turn === turn) endSeq = event.seq
-  }
-  if (startSeq === undefined) return []
-  return events.filter(event => {
-    if (event.seq < startSeq!) return false
-    if (endSeq !== undefined && event.seq > endSeq) return false
-    return true
-  })
 }
 
 function safeJson(event: SessionEvent): string {
