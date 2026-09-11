@@ -165,6 +165,10 @@ describe('skeleton overlays', () => {
     expect(byId.get('model')).toBe('done')
     expect(byId.get('tools')).toBe('done')
     expect(byId.get('preset')).toBe('pending')
+    const tools = view.document.nodes.find(node => node.id === 'tools')
+    expect(tools?.w).toBe(110)
+    expect(tools?.h).toBe(48)
+    expect(tools?.data?.shape).toBeUndefined()
   })
 
   it('loop turn-end carries settle reason detail', () => {

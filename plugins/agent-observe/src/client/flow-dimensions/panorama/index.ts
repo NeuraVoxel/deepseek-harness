@@ -22,11 +22,11 @@ export const PANORAMA_SKELETON: SkeletonGraph = {
     { id: 'session', label: 'Session', x: 360, y: 100, w: 100, h: 40, fill: '#1c2f3a', detail: 'Durable log identity' },
     { id: 'envelope', label: 'Envelope', x: 500, y: 80, w: 110, h: 48, fill: '#243018', detail: 'request/header' },
     { id: 'context', label: 'Context', x: 650, y: 80, w: 110, h: 48, fill: '#1f2a3a', detail: 'Per-step LLM request' },
-    { id: 'model', label: 'Model', x: 800, y: 40, w: 110, h: 48, fill: '#3a2a10', detail: 'LLM completion' },
-    { id: 'tools', label: 'Tools', x: 800, y: 120, w: 110, h: 48, fill: '#3a1530', detail: 'Tool executions', shape: 'circle', type: 'tool' },
-    { id: 'durable', label: 'Session write', x: 950, y: 80, w: 120, h: 48, fill: '#1c2f3a', detail: 'Append + surface' },
-    { id: 'render', label: 'Client render', x: 1110, y: 80, w: 120, h: 48, fill: '#143528', detail: 'UI projection' },
-    { id: 'preset', label: 'Preset / subagent', x: 500, y: 180, w: 140, h: 40, fill: '#1a2740', detail: 'Optional spur' },
+    { id: 'model', label: 'Model', x: 820, y: 40, w: 110, h: 48, fill: '#3a2a10', detail: 'LLM completion' },
+    { id: 'tools', label: 'Tools', x: 820, y: 120, w: 110, h: 48, fill: '#3a1530', detail: 'Tool executions' },
+    { id: 'durable', label: 'Session write', x: 980, y: 80, w: 120, h: 48, fill: '#1c2f3a', detail: 'Append + surface' },
+    { id: 'render', label: 'Client render', x: 1140, y: 80, w: 120, h: 48, fill: '#143528', detail: 'UI projection' },
+    { id: 'preset', label: 'Preset / subagent', x: 500, y: 200, w: 140, h: 40, fill: '#1a2740', detail: 'Optional spur' },
   ],
   edges: [
     { from: 'client', to: 'admit', kind: 'data', label: 'session.prompt' },
@@ -43,7 +43,7 @@ export const PANORAMA_SKELETON: SkeletonGraph = {
     { from: 'profile', to: 'preset', kind: 'flow' },
   ],
   groups: [
-    { id: 'g-client', label: 'Client', memberIds: ['client', 'render'], x: 20, y: 20, w: 1240, h: 220 },
+    { id: 'g-client', label: 'Client', memberIds: ['client', 'render'], x: 20, y: 20, w: 1280, h: 240 },
   ],
 }
 

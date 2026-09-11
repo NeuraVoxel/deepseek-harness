@@ -58,19 +58,20 @@ export function skeletonToDocument(
 ): GraphDocument {
   const nodes: GraphNode[] = skeleton.nodes.map(node => {
     const status = statusById.get(node.id) ?? 'pending'
-    const radius = node.shape === 'circle' ? (node.w ?? 56) / 2 : undefined
+    const radius = node.shape === 'circle' ? Math.min(node.w ?? 56, node.h ?? 56) / 2 : undefined
     const w = node.w ?? 120
     const h = node.h ?? 44
     const alarms = alarmsFromStatus(status, node.id, node.detail)
+    const circle = node.shape === 'circle' && radius !== undefined
     return {
       id: node.id,
       type: node.type ?? 'stage',
       label: node.label,
       status,
-      x: node.shape === 'circle' && radius !== undefined ? node.x - radius : node.x,
-      y: node.shape === 'circle' && radius !== undefined ? node.y - radius : node.y,
-      w: node.shape === 'circle' && radius !== undefined ? radius * 2 : w,
-      h: node.shape === 'circle' && radius !== undefined ? radius * 2 : h,
+      x: circle ? node.x - radius : node.x,
+      y: circle ? node.y - radius : node.y,
+      w: circle ? radius * 2 : w,
+      h: circle ? radius * 2 : h,
       ...(alarms === undefined ? {} : { alarms }),
       data: {
         meta: node.detail ?? node.type ?? 'stage',
