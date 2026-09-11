@@ -545,9 +545,7 @@ function addHarnessFrame(args: {
   const toolNames = header?.type === 'request/header'
     ? (header.data.header.tools ?? []).map(tool => tool.name)
     : []
-  const systemPreview = header?.type === 'request/header' && typeof header.data.header.system === 'string'
-    ? header.data.header.system
-    : ''
+  const systemPreview = latestSystemPromptText(inTurn) || latestSystemPromptText(durable)
   const model = header?.type === 'request/header'
     ? `${header.data.header.config.provider}/${header.data.header.config.model}`
     : undefined
@@ -563,14 +561,15 @@ function addHarnessFrame(args: {
     label: 'Envelope',
     detail: envelopeParts.length > 0 ? envelopeParts.join(' · ') : 'awaiting request/header',
     inputText: clipIo([
-      'Logged EpochHeader via request/header (system + tools + call config) + agentPreset.',
+      'Logged EpochHeader via request/header (tools + call config) + agentPreset.',
+      'System prompt is surface node system/message (not part of EpochHeader).',
       agentPreset === undefined ? 'agentPreset=(unknown)' : `agentPreset=${agentPreset}`,
       toolNames.length > 0 ? `tools: ${toolNames.join(', ')}` : 'tools: (none logged yet)',
       model === undefined ? 'model: (none logged yet)' : `model: ${model}`,
     ].join('\n')),
     outputText: clipIo(systemPreview
       ? `system prompt (${systemPreview.length} chars)\n${systemPreview}`
-      : '(no request/header system yet — logged at first step assembly)'),
+      : '(no system/message yet — logged at first step assembly)'),
     status: hasEnvelopeEvidence ? 'done' : live ? 'active' : 'pending',
     turn,
   })
@@ -620,7 +619,7 @@ function addStepAssembly(args: {
     label: 'Memory',
     detail: memoryDetail,
     inputText: clipIo([
-      'No Memory service — Session surface (user/message | assistant/message | tool/result) + compaction.',
+      'No Memory service — Session surface (system/message | user/message | assistant/message | tool/result) + compaction.',
       `Surface nodes before this step: ${surfaceBefore}`,
       compaction === undefined
         ? 'No compaction bracket in scope.'
@@ -637,13 +636,15 @@ function addStepAssembly(args: {
 
   const injections = stepEvents.filter(isContextInjectionMessage)
   const header = stepEvents.find(e => e.type === 'request/header')
+  const systemChars = latestSystemPromptText(stepEvents).length
+    || latestSystemPromptText(durable).length
   const headerSummary = header?.type === 'request/header'
     ? [
         `reason=${header.data.reason}`,
         `provider=${header.data.header.config.provider}`,
         `model=${header.data.header.config.model}`,
         `tools=${(header.data.header.tools ?? []).length}`,
-        `systemChars=${header.data.header.system?.length ?? 0}`,
+        `systemChars=${systemChars}`,
       ].join('\n')
     : '(no request/header in this step yet)'
   const injectionLines = injections.map(event => {
@@ -666,7 +667,7 @@ function addStepAssembly(args: {
         ? `${injections.length} inject`
         : 'assembling…',
     inputText: clipIo([
-      'Assembled LLM request = EpochHeader (system+tools+config) + deriveMessages().',
+      'Assembled LLM request = EpochHeader (tools+config) + deriveMessages() (system/message first).',
       'Plugin injections are already on Session surface before deriveMessages — not a third feed.',
       headerSummary,
       injectionLines.length > 0
@@ -676,7 +677,7 @@ function addStepAssembly(args: {
     outputText: clipIo(header?.type === 'request/header'
       ? [
           'GenerateOptions ready for llm.stream:',
-          `systemChars=${header.data.header.system?.length ?? 0}`,
+          `systemChars=${systemChars}`,
           `tools=${(header.data.header.tools ?? []).length}`,
           `provider/model=${header.data.header.config.provider}/${header.data.header.config.model}`,
         ].join('\n')
@@ -726,7 +727,7 @@ function deriveEngagingFlow(session: SessionSnapshot): AgentFlowSnapshot {
     kind: 'envelope',
     label: 'Envelope',
     detail: 'awaiting first step',
-    inputText: clipIo('request/header (system + tools + config) logs at first step assembly'),
+    inputText: clipIo('request/header (tools + config) and system/message log at first step assembly'),
     outputText: clipIo('(not yet logged)'),
     status: 'pending',
     turn: 0,
@@ -898,6 +899,19 @@ function latestRequestHeader(events: readonly SessionEvent[]): SessionEvent | un
     if (event.type === 'request/header') latest = event
   }
   return latest
+}
+
+/** Latest nonempty rendered system prompt text from `system/message` surface events. */
+function latestSystemPromptText(events: readonly SessionEvent[]): string {
+  for (let i = events.length - 1; i >= 0; i -= 1) {
+    const event = events[i]
+    if (event?.type !== 'system/message') continue
+    const text = event.data.message.content
+      .flatMap(block => block.type === 'text' ? [block.text] : [])
+      .join('')
+    if (text !== '') return text
+  }
+  return ''
 }
 
 function countSurfaceMessages(

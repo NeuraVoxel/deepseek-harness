@@ -46,7 +46,7 @@ function completedTurn(turn: number, startSeq: number, userText: string, assista
       type: 'turn/start',
       seq: seq(s),
       time: s,
-      data: { turn, trigger: { kind: 'message', source: { kind: 'user' } } },
+      data: { turn },
     },
     {
       type: 'user/message',

@@ -51,7 +51,7 @@ describe('deriveAgentFlow harness nodes', () => {
         type: 'turn/start',
         seq: seq(1),
         time: 2,
-        data: { turn: 1, trigger: { kind: 'message', source: { kind: 'user' } } },
+        data: { turn: 1 },
       },
       {
         type: 'user/message',
@@ -72,9 +72,25 @@ describe('deriveAgentFlow harness nodes', () => {
         data: { turn: 1, step: 1 },
       },
       {
-        type: 'user/message',
+        type: 'system/message',
         seq: seq(4),
         time: 5,
+        data: {
+          turn: 1,
+          step: 1,
+          message: {
+            id: 'sys1',
+            role: 'system',
+            content: [{ type: 'text', text: 'You are helpful.' }],
+            source: { kind: 'plugin', plugin: '@deepseek-ai/dsh-system-prompt' },
+          },
+        },
+        surfaceOp: 'append',
+      },
+      {
+        type: 'user/message',
+        seq: seq(5),
+        time: 6,
         data: {
           id: 'ctx1',
           role: 'user',
@@ -85,21 +101,20 @@ describe('deriveAgentFlow harness nodes', () => {
       },
       {
         type: 'request/header',
-        seq: seq(5),
-        time: 6,
+        seq: seq(6),
+        time: 7,
         data: {
           reason: 'initial',
           header: {
             config: { provider: 'mock', model: 'm1' },
-            system: 'You are helpful.',
             tools: [{ name: 'bash', description: 'shell', parameters: {} }],
           },
         },
       },
       {
         type: 'assistant/message',
-        seq: seq(6),
-        time: 7,
+        seq: seq(7),
+        time: 8,
         data: {
           turn: 1,
           step: 1,
@@ -114,14 +129,14 @@ describe('deriveAgentFlow harness nodes', () => {
       },
       {
         type: 'step/end',
-        seq: seq(7),
-        time: 8,
+        seq: seq(8),
+        time: 9,
         data: { turn: 1, step: 1 },
       },
       {
         type: 'turn/end',
-        seq: seq(8),
-        time: 9,
+        seq: seq(9),
+        time: 10,
         data: { turn: 1, reason: { kind: 'completed' } },
       },
     ] as SessionEvent[]
@@ -181,7 +196,7 @@ describe('deriveAgentFlow harness nodes', () => {
         type: 'turn/start',
         seq: seq(0),
         time: 1,
-        data: { turn: 1, trigger: { kind: 'message', source: { kind: 'user' } } },
+        data: { turn: 1 },
       },
       {
         type: 'user/message',
@@ -266,7 +281,7 @@ describe('deriveAgentFlow harness nodes', () => {
         type: 'turn/start',
         seq: seq(0),
         time: 1,
-        data: { turn: 1, trigger: { kind: 'message', source: { kind: 'user' } } },
+        data: { turn: 1 },
       },
       {
         type: 'user/message',
@@ -319,7 +334,7 @@ function completedTurn(args: {
       type: 'turn/start',
       seq: seq(s),
       time: s,
-      data: { turn, trigger: { kind: 'message', source: { kind: 'user' } } },
+      data: { turn },
     },
     {
       type: 'user/message',
@@ -430,7 +445,7 @@ describe('deriveAgentFlow focusTurn', () => {
         type: 'turn/start',
         seq: seq(10),
         time: 10,
-        data: { turn: 2, trigger: { kind: 'message', source: { kind: 'user' } } },
+        data: { turn: 2 },
       },
       {
         type: 'user/message',
@@ -470,7 +485,7 @@ describe('deriveAgentFlow focusTurn', () => {
         type: 'turn/start',
         seq: seq(0),
         time: 1,
-        data: { turn: 1, trigger: { kind: 'message', source: { kind: 'user' } } },
+        data: { turn: 1 },
       },
     ] as SessionEvent[]
 
@@ -510,7 +525,7 @@ describe('deriveAgentFlow focusTurn', () => {
         type: 'turn/start',
         seq: seq(10),
         time: 10,
-        data: { turn: 2, trigger: { kind: 'message', source: { kind: 'user' } } },
+        data: { turn: 2 },
       },
     ] as SessionEvent[]
 

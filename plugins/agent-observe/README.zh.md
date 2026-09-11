@@ -14,7 +14,7 @@
 - 钉住的 Turn 不是 Session 最新时，流程工具栏出现 **跳到最新**；点击清除钉住并留在流程模式
 - **限制：** Turn 由快捷入口 `messageId` 对应的持久化 `assistant/message.id` 反查得出（插件内解析）；本轮不扩展 `packages/` 中的 `AssistantActionOwnerProps`
 - **Client↔Host 通信节点：** `session.prompt`（一元 Remote）与 `session.follow`（流式 Remote）；Host 本地总线留在 Host admit / Session 内
-- **Harness 节点（对齐 Host 实现）：** Profile = boot 组合（Client 读不到 profile 名）；Session = 当前日志身份；Envelope = `request/header` 的 EpochHeader（system + tools + call config）加上 `agentPreset`；Memory = Session surface + compaction（**没有**独立 Memory 服务）；Context = 每步 LLM 请求上下文（`request/header` + 非 user 源的 `user/message` 注入）
+- **Harness 节点（对齐 Host 实现）：** Profile = boot 组合（Client 读不到 profile 名）；Session = 当前日志身份；Envelope = `request/header` 的 EpochHeader（tools + call config）加上 `agentPreset`（system prompt 是 surface 上的 `system/message`）；Memory = Session surface + compaction（**没有**独立 Memory 服务）；Context = 每步 LLM 请求上下文（`request/header` + 非 user 源的 `user/message` 注入）
 - **Turn / Step 只作分区标签**（标题 + `Host · Step N`），不是图节点——Host admit 是 Client→Host 交接；Context 以数据边喂给 Model
 - **边：** 灰色 **flow** = 控制 / 收束；青色 **data** = 载荷（`Client input → Host admit`、`Session → Envelope`、`Memory/Envelope → Context`、`Context → Model`、`Model → Tool`、`Model/Tool → Session`、`Session → Client render`）
 - 同一条 assistant 里的多个 tool 竖排为**并行列**，再汇入 Join
