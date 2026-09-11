@@ -129,8 +129,7 @@
   min-height: 0;
   position: relative;
   display: flex;
-  flex-direction: row;
-  align-items: stretch;
+  flex-direction: column;
 }
 
 .stage {
@@ -144,15 +143,21 @@
 }
 
 .inspector {
-  width: min(360px, 38%);
-  min-width: 260px;
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  width: min(360px, calc(100% - 24px));
   max-width: 420px;
-  flex-shrink: 0;
+  z-index: 30;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-left: 1px solid var(--dsw-border-subtle, #2a2f3a);
-  background: var(--dsw-surface-raised, #12151c);
+  border: 1px solid var(--dsw-border-subtle, #3a4150);
+  border-radius: 8px;
+  background: rgba(18, 21, 28, 0.94);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  pointer-events: auto;
 }
 
 .inspectorHeader {
@@ -181,13 +186,6 @@
   padding: 10px 12px 14px;
   font-size: 11px;
   user-select: text;
-}
-
-.inspectorEmpty {
-  padding: 16px 12px;
-  font-size: 12px;
-  opacity: 0.55;
-  line-height: 1.45;
 }
 
 .inspectorSection {

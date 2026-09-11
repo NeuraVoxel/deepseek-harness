@@ -4,6 +4,7 @@ import {
   useMemo, useRef, useState,
   type ReactElement,
   type RefObject,
+  type SyntheticEvent,
 } from 'react'
 import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {
@@ -411,7 +412,7 @@ function FlowPane(props: Props): ReactElement {
             fitToken={`${dimension}:${flow.turn ?? 0}:${view.document.nodes.length}`}
             onEvent={onEvent}
           />
-          {view.kind === 'graph' ? (
+          {view.kind === 'graph' && inspection !== null ? (
             <FlowInspectorPanel
               t={t}
               inspection={inspection}
@@ -432,51 +433,50 @@ function FlowInspectorPanel(props: {
   inspection: {
     inspect: FlowNodeInspect
     label: string
-  } | null
+  }
   onClose: () => void
 }): ReactElement {
   const { t, inspection, onClose } = props
-  const inspect = inspection?.inspect
-  const hasIo = inspect !== undefined && (
-    (inspect.inputText !== undefined && inspect.inputText !== '')
+  const { inspect, label } = inspection
+  const hasIo = (inspect.inputText !== undefined && inspect.inputText !== '')
     || (inspect.outputText !== undefined && inspect.outputText !== '')
-  )
-  const hasDetail = inspect?.detail !== undefined && inspect.detail !== ''
+  const hasDetail = inspect.detail !== undefined && inspect.detail !== ''
+  const stopCanvas = (event: SyntheticEvent): void => {
+    event.stopPropagation()
+  }
   return (
-    <aside className={css.inspector} aria-label={t('flow.panel.title')}>
+    <aside
+      className={css.inspector}
+      aria-label={t('flow.panel.title')}
+      onPointerDown={stopCanvas}
+      onDoubleClick={stopCanvas}
+      onWheel={stopCanvas}
+    >
       <div className={css.inspectorHeader}>
-        <div className={css.inspectorTitle}>
-          {inspection?.label ?? t('flow.panel.title')}
-        </div>
-        {inspection !== null ? (
-          <button type="button" className={css.groupButton} onClick={onClose}>
-            {t('flow.panel.close')}
-          </button>
+        <div className={css.inspectorTitle}>{label}</div>
+        <button type="button" className={css.groupButton} onClick={onClose}>
+          {t('flow.panel.close')}
+        </button>
+      </div>
+      <div className={css.inspectorBody}>
+        {hasDetail ? (
+          <>
+            <div className={css.inspectorSection}>{t('flow.panel.detail')}</div>
+            <pre className={css.inspectorPre}>{inspect.detail}</pre>
+          </>
+        ) : null}
+        {hasIo ? (
+          <>
+            <div className={css.inspectorSection}>{t('flow.hover.input')}</div>
+            <pre className={css.inspectorPre}>{inspect.inputText || '—'}</pre>
+            <div className={css.inspectorSection}>{t('flow.hover.output')}</div>
+            <pre className={css.inspectorPre}>{inspect.outputText || '—'}</pre>
+          </>
+        ) : null}
+        {!hasDetail && !hasIo ? (
+          <div className={css.inspectorSection}>{t('flow.panel.empty')}</div>
         ) : null}
       </div>
-      {inspection === null ? (
-        <div className={css.inspectorEmpty}>{t('flow.panel.empty')}</div>
-      ) : (
-        <div className={css.inspectorBody}>
-          {hasDetail ? (
-            <>
-              <div className={css.inspectorSection}>{t('flow.panel.detail')}</div>
-              <pre className={css.inspectorPre}>{inspect!.detail}</pre>
-            </>
-          ) : null}
-          {hasIo ? (
-            <>
-              <div className={css.inspectorSection}>{t('flow.hover.input')}</div>
-              <pre className={css.inspectorPre}>{inspect!.inputText || '—'}</pre>
-              <div className={css.inspectorSection}>{t('flow.hover.output')}</div>
-              <pre className={css.inspectorPre}>{inspect!.outputText || '—'}</pre>
-            </>
-          ) : null}
-          {!hasDetail && !hasIo ? (
-            <div className={css.inspectorEmpty}>{t('flow.panel.empty')}</div>
-          ) : null}
-        </div>
-      )}
     </aside>
   )
 }
