@@ -10,7 +10,7 @@
 - 单击节点 → `sessions.open(id)`
 - 在某轮 Turn 的 assistant-actions 行点 **打开观察** → 直接进入该 Turn 的 **流程**模式并**钉住**（更新的 Turn 不会自动抢走画布）
 - 总览 **双击** → 打开该 Agent **最新** Turn 的流程 Canvas（`focusTurn = null`）
-- Flow 内第二行维度 Tab：**进程流**（现有 `derive-flow`）· **端到端全景** · **Turn/Step 闭环** · **能力缝** · **事件流**（左时间线 / 右 payload）；钉住 Turn 跨维度共享
+- Flow 内第二行维度 Tab：**进程流**（现有 `derive-flow`）· **整合图谱**（全景 + 闭环/能力缝 SubNetwork + 事件红珠）· **端到端全景** · **Turn/Step 闭环** · **能力缝** · **事件流**（左时间线 / 右 payload）；钉住 Turn 跨维度共享
 - 流程 **双击空白画布** → 返回总览（点中节点/边不返回；事件流双栏不绑该手势）
 - 钉住的 Turn 不是 Session 最新时，流程工具栏出现 **跳到最新**；点击清除钉住并留在流程模式
 - **限制：** Turn 由快捷入口 `messageId` 对应的持久化 `assistant/message.id` 反查得出（插件内解析）；本轮不扩展 `packages/` 中的 `AssistantActionOwnerProps`

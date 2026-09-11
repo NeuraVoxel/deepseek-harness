@@ -10,6 +10,7 @@ import type { AgentFlowSnapshot } from '../derive-flow.ts'
 /** Ordered Flow dimension ids (tab strip). */
 export type FlowDimensionId =
   | 'process'
+  | 'integrated'
   | 'panorama'
   | 'loop'
   | 'seam'
@@ -49,7 +50,7 @@ export interface GraphDimensionView {
   /** When true, empty canvas double-click returns to Fleet. */
   readonly blankDoubleClickToFleet: true
   /** Which legend strip FlowPane should render. */
-  readonly legend: 'process' | 'status'
+  readonly legend: 'process' | 'status' | 'integrated'
 }
 
 /** Dual-pane SessionEvent dimension. */

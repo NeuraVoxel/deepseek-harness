@@ -232,6 +232,7 @@ function FlowPane(props: Props): ReactElement {
   } | null>(null)
   const hostRef = useRef<AITopoHostHandle>(null)
   const [zoom, setZoom] = useState(1)
+  const [activeNetworkId, setActiveNetworkId] = useState<string | null>(null)
 
   const showJump = focusTurn !== null
     && flow.latestTurn !== null
@@ -269,6 +270,21 @@ function FlowPane(props: Props): ReactElement {
       case 'viewportChanged':
         setZoom(event.viewport.zoom)
         break
+      case 'subNetworkChanged':
+        setActiveNetworkId(event.activeNetworkId)
+        setInspection(null)
+        break
+      case 'nodeActivated': {
+        if (event.detail !== 'dblclick' || view.kind !== 'graph') break
+        const node = view.document.nodes.find(n => n.id === event.nodeId)
+          ?? Object.values(view.document.networks ?? {})
+            .flatMap(net => net.nodes)
+            .find(n => n.id === event.nodeId)
+        if (node?.networkId !== undefined && activeNetworkId === null) {
+          hostRef.current?.enterSubNetwork(node.networkId)
+        }
+        break
+      }
       case 'selectionChanged': {
         const selectedId = event.selectedIds[0]
         if (selectedId === undefined) {
@@ -282,10 +298,15 @@ function FlowPane(props: Props): ReactElement {
           return
         }
         const inspect = view.inspectByNodeId?.get(selectedId)
-        const label = view.document.nodes.find(node => node.id === selectedId)?.label ?? selectedId
+        const label = (
+          view.document.nodes.find(node => node.id === selectedId)
+          ?? Object.values(view.document.networks ?? {})
+            .flatMap(net => net.nodes)
+            .find(node => node.id === selectedId)
+        )?.label ?? selectedId
         setInspection({
-          inspect: inspect ?? { detail: label },
-          label,
+          inspect: inspect ?? { detail: label || selectedId },
+          label: label || selectedId,
         })
         break
       }
@@ -297,6 +318,10 @@ function FlowPane(props: Props): ReactElement {
   const onBlankDoubleClick = (clientX: number, clientY: number): void => {
     if (view.kind !== 'graph' || !view.blankDoubleClickToFleet) return
     if (hostRef.current?.hitTestAt(clientX, clientY) !== undefined) return
+    if (activeNetworkId !== null) {
+      hostRef.current?.exitSubNetwork()
+      return
+    }
     setInspection(null)
     actions.showFleet()
   }
@@ -315,6 +340,15 @@ function FlowPane(props: Props): ReactElement {
         {showJump ? (
           <button type="button" className={css.groupButton} onClick={() => { actions.showLatest() }}>
             {t('flow.jumpLatest')}
+          </button>
+        ) : null}
+        {activeNetworkId !== null ? (
+          <button
+            type="button"
+            className={css.groupButton}
+            onClick={() => { hostRef.current?.exitSubNetwork() }}
+          >
+            {t('subnetwork.back')}
           </button>
         ) : null}
         <span className={css.hint}>{truncate(String(sessionId), 24)}</span>
@@ -338,6 +372,15 @@ function FlowPane(props: Props): ReactElement {
             <span><i className={`${css.swatch} ${css.swatchEdgeFlow}`} />{t('flow.edge.flow')}</span>
             <span><i className={`${css.swatch} ${css.swatchEdgeData}`} />{t('flow.edge.data')}</span>
             <span><i className={`${css.swatch} ${css.swatchFlowActive}`} />{t('flow.legend.active')}</span>
+          </div>
+        ) : null}
+        {view.kind === 'graph' && view.legend === 'integrated' ? (
+          <div className={css.legend} aria-label={t('legend.title')}>
+            <span><i className={`${css.swatch} ${css.swatchFlowPending}`} />{t('flow.legend.pending')}</span>
+            <span><i className={`${css.swatch} ${css.swatchFlowActive}`} />{t('flow.legend.active')}</span>
+            <span><i className={`${css.swatch} ${css.swatchFlowDone}`} />{t('flow.legend.done')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEventBead}`} />{t('flow.integrated.legend.event')}</span>
+            <span><i className={`${css.swatch} ${css.swatchGateway}`} />{t('flow.integrated.legend.gateway')}</span>
           </div>
         ) : null}
         {view.kind === 'graph' && view.legend === 'status' ? (
@@ -365,6 +408,7 @@ function FlowPane(props: Props): ReactElement {
             data-active={dimension === module.id ? 'true' : 'false'}
             onClick={() => {
               setInspection(null)
+              setActiveNetworkId(null)
               actions.setDimension(module.id)
             }}
           >

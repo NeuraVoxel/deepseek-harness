@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { SessionEventWindow, SessionSnapshot } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionEvent, SessionId, SessionSeq } from '@deepseek-ai/dsh-session/types'
 import { emptyAgentFlow } from '../derive-flow.ts'
+import { deriveIntegratedDimension } from './integrated/index.ts'
 import { deriveEventsDimension, linkedNodeIdForEvent } from './events/index.ts'
 import { deriveLoopDimension } from './loop/index.ts'
 import { derivePanoramaDimension } from './panorama/index.ts'
@@ -185,6 +186,25 @@ describe('skeleton overlays', () => {
     if (view.kind !== 'graph') return
     const toolsProvider = view.document.nodes.find(node => node.id === 'tools-provider')
     expect(toolsProvider?.status).toBe('pending')
+  })
+})
+
+describe('integrated atlas', () => {
+  it('groups panorama with SubNetwork gates and event beads', () => {
+    const view = deriveIntegratedDimension(ctxOf(completedTurn(), 1))
+    expect(view.kind).toBe('graph')
+    if (view.kind !== 'graph') return
+    expect(view.legend).toBe('integrated')
+    expect(view.document.networks?.['net:loop']).toBeDefined()
+    expect(view.document.networks?.['net:seam']).toBeDefined()
+    const loopGate = view.document.nodes.find(node => node.id === 'gate:loop')
+    expect(loopGate?.networkId).toBe('net:loop')
+    const beads = view.document.nodes.filter(node => node.type === 'event')
+    expect(beads.length).toBeGreaterThan(0)
+    expect(beads.every(node => node.w === 16 && node.data?.fill === '#ef4444')).toBe(true)
+    expect(view.document.groups?.map(group => group.id)).toEqual([
+      'g-panorama', 'g-loop', 'g-seam',
+    ])
   })
 })
 

@@ -93,6 +93,15 @@
   border-radius: 50%;
 }
 .swatchKindRender { background: #34d399; }
+.swatchEventBead {
+  background: #ef4444;
+  border-radius: 50%;
+}
+.swatchGateway {
+  background: #1f2a3a;
+  border: 1px solid #5b8def;
+  box-sizing: border-box;
+}
 
 .flowTitle {
   font-size: 13px;

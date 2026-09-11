@@ -3,6 +3,7 @@
  */
 
 import { eventsDimension } from './events/index.ts'
+import { integratedDimension } from './integrated/index.ts'
 import { loopDimension } from './loop/index.ts'
 import { panoramaDimension } from './panorama/index.ts'
 import { processDimension } from './process/index.ts'
@@ -15,6 +16,7 @@ export const DEFAULT_FLOW_DIMENSION: FlowDimensionId = 'process'
 /** Registered dimensions in tab order. */
 export const FLOW_DIMENSIONS: readonly FlowDimensionModule[] = [
   processDimension,
+  integratedDimension,
   panoramaDimension,
   loopDimension,
   seamDimension,
@@ -36,8 +38,8 @@ export function resolveFlowDimension(id: FlowDimensionId): FlowDimensionModule {
  * @returns a known dimension id (falls back to process).
  */
 export function coerceFlowDimension(value: string | null | undefined): FlowDimensionId {
-  if (value === 'process' || value === 'panorama' || value === 'loop'
-    || value === 'seam' || value === 'events') {
+  if (value === 'process' || value === 'integrated' || value === 'panorama'
+    || value === 'loop' || value === 'seam' || value === 'events') {
     return value
   }
   return DEFAULT_FLOW_DIMENSION
