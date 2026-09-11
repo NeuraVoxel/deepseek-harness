@@ -183,6 +183,7 @@ External packages **directly declared** for development, tests, types, or toolin
 | [`execa`](https://github.com/sindresorhus/execa) | MIT |
 | [`extract-zip`](https://github.com/maxogden/extract-zip) | BSD-2-Clause |
 | [`fast-check`](https://github.com/dubzzz/fast-check) | MIT |
+| [`happy-dom`](https://github.com/capricorn86/happy-dom) | MIT |
 | [`http-server`](https://github.com/http-party/http-server) | MIT |
 | [`istanbul-lib-report`](https://github.com/istanbuljs/istanbuljs) | BSD-3-Clause |
 | [`jscpd`](https://github.com/kucherenko/jscpd) | MIT |
