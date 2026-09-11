@@ -277,15 +277,16 @@ function FlowPane(props: Props): ReactElement {
         setInspection(null)
         break
       case 'nodeActivated': {
-        if (event.detail !== 'dblclick' || view.kind !== 'graph') break
+        if (view.kind !== 'graph') break
         const node = view.document.nodes.find(n => n.id === event.nodeId)
           ?? Object.values(view.document.networks ?? {})
             .flatMap(net => net.nodes)
             .find(n => n.id === event.nodeId)
+        // Gateways: enter on click (inspector would cover a right-side gate before dblclick).
         if (node?.networkId !== undefined && activeNetworkId === null) {
-          // Enter runs on pointerup; the wrapping React dblclick arrives next and
-          // would hit-test the child scene (miss) then exit/fleet — swallow it.
           suppressBlankDblClickRef.current = true
+          setInspection(null)
+          setSelection(prev => ({ ...prev, nodeId: null }))
           hostRef.current?.enterSubNetwork(node.networkId)
         }
         break
@@ -296,6 +297,15 @@ function FlowPane(props: Props): ReactElement {
           setInspection(null)
           setSelection(prev => ({ ...prev, nodeId: null }))
           return
+        }
+        if (view.kind === 'graph') {
+          const selectedNode = view.document.nodes.find(node => node.id === selectedId)
+          // Selecting a gateway is only the prelude to enter; skip the overlay panel.
+          if (selectedNode?.networkId !== undefined && activeNetworkId === null) {
+            setSelection(prev => ({ ...prev, nodeId: selectedId }))
+            setInspection(null)
+            return
+          }
         }
         setSelection(prev => ({ ...prev, nodeId: selectedId }))
         if (view.kind !== 'graph') {
