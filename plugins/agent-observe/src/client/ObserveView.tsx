@@ -252,15 +252,22 @@ function FlowPane(props: Props): ReactElement {
     t: t as (key: string, params?: Record<string, string>) => string,
   }), [sessionId, focusTurn, window, sessionLife, flow, t])
 
-  const view = useMemo(() => {
-    if (dimension === 'events') {
-      return deriveEventsDimension({
-        ...ctx,
-        selection,
-      }, eventFilter)
-    }
+  // Graph documents must not depend on selection — a new GraphDocument identity
+  // reloads AITopo and would kick the user out of an entered SubNetwork.
+  const graphView = useMemo(() => {
+    if (dimension === 'events') return null
     return resolveFlowDimension(dimension).derive(ctx)
+  }, [dimension, ctx])
+
+  const eventsView = useMemo(() => {
+    if (dimension !== 'events') return null
+    return deriveEventsDimension({
+      ...ctx,
+      selection,
+    }, eventFilter)
   }, [dimension, ctx, eventFilter, selection])
+
+  const view = dimension === 'events' ? eventsView! : graphView!
 
   const selectedIds = useMemo(() => {
     if (selection.nodeId === null) return []
@@ -277,12 +284,12 @@ function FlowPane(props: Props): ReactElement {
         setInspection(null)
         break
       case 'nodeActivated': {
-        if (view.kind !== 'graph') break
+        if (view.kind !== 'graph' || event.detail !== 'dblclick') break
         const node = view.document.nodes.find(n => n.id === event.nodeId)
           ?? Object.values(view.document.networks ?? {})
             .flatMap(net => net.nodes)
             .find(n => n.id === event.nodeId)
-        // Gateways: enter on click (inspector would cover a right-side gate before dblclick).
+        // Gateways: double-click enters; blank-canvas dblclick must not run after.
         if (node?.networkId !== undefined && activeNetworkId === null) {
           suppressBlankDblClickRef.current = true
           setInspection(null)
@@ -300,7 +307,7 @@ function FlowPane(props: Props): ReactElement {
         }
         if (view.kind === 'graph') {
           const selectedNode = view.document.nodes.find(node => node.id === selectedId)
-          // Selecting a gateway is only the prelude to enter; skip the overlay panel.
+          // Gateway click selects for highlight only — no property panel.
           if (selectedNode?.networkId !== undefined && activeNetworkId === null) {
             setSelection(prev => ({ ...prev, nodeId: selectedId }))
             setInspection(null)
@@ -472,6 +479,7 @@ function FlowPane(props: Props): ReactElement {
             ariaLabel={t('flow.title.none')}
             document={view.document}
             selectedIds={selectedIds}
+            restoreNetworkId={activeNetworkId}
             fitToken={`${dimension}:${flow.turn ?? 0}:${view.document.nodes.length}`}
             onEvent={onEvent}
           />

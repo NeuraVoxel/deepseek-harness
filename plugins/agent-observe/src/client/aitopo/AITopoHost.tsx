@@ -45,6 +45,11 @@ export interface AITopoHostProps {
   readonly fitToken?: string | number | undefined
   /** Selection to apply after each load. */
   readonly selectedIds?: readonly string[] | undefined
+  /**
+   * After `document` reload, re-enter this SubNetwork if still present.
+   * Keeps drill-down across live GraphDocument rebuilds.
+   */
+  readonly restoreNetworkId?: string | null | undefined
 }
 
 /**
@@ -54,11 +59,21 @@ export const AITopoHost = forwardRef(function AITopoHost(
   props: AITopoHostProps,
   ref: React.Ref<AITopoHostHandle>,
 ): ReactElement {
-  const { document: graphDoc, className, ariaLabel, onEvent, fitToken, selectedIds } = props
+  const {
+    document: graphDoc,
+    className,
+    ariaLabel,
+    onEvent,
+    fitToken,
+    selectedIds,
+    restoreNetworkId,
+  } = props
   const containerRef = useRef<HTMLDivElement>(null)
   const networkRef = useRef<Network | null>(null)
   const onEventRef = useRef(onEvent)
   onEventRef.current = onEvent
+  const restoreNetworkIdRef = useRef(restoreNetworkId)
+  restoreNetworkIdRef.current = restoreNetworkId
 
   useImperativeHandle(ref, () => ({
     zoomIn: () => {
@@ -114,6 +129,10 @@ export const AITopoHost = forwardRef(function AITopoHost(
     const network = networkRef.current
     if (network === null) return
     network.load(graphDoc)
+    const stay = restoreNetworkIdRef.current
+    if (stay != null && graphDoc.networks?.[stay] !== undefined) {
+      network.enterSubNetwork(stay)
+    }
   }, [graphDoc])
 
   useEffect(() => {
