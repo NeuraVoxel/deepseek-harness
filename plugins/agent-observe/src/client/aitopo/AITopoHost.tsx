@@ -27,6 +27,11 @@ export interface AITopoHostHandle {
   enterSubNetwork: (id: string) => void
   exitSubNetwork: () => void
   getZoom: () => number
+  /**
+   * Hit-test at a client (viewport) point.
+   * @returns node or edge id, or `undefined` for empty canvas.
+   */
+  hitTestAt: (clientX: number, clientY: number) => string | undefined
 }
 
 export interface AITopoHostProps {
@@ -81,6 +86,14 @@ export const AITopoHost = forwardRef(function AITopoHost(
     enterSubNetwork: (id: string) => { networkRef.current?.enterSubNetwork(id) },
     exitSubNetwork: () => { networkRef.current?.exitSubNetwork() },
     getZoom: () => networkRef.current?.viewport.state.zoom ?? 1,
+    hitTestAt: (clientX: number, clientY: number) => {
+      const network = networkRef.current
+      if (network === null) return undefined
+      const canvas = network.getHitElement()
+      if (canvas === null) return undefined
+      const rect = canvas.getBoundingClientRect()
+      return network.hitTestScreen(clientX - rect.left, clientY - rect.top)?.id
+    },
   }), [])
 
   useEffect(() => {

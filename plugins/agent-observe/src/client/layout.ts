@@ -39,17 +39,28 @@ const PAD = 24
 const GROUP_PAD = 16
 const HEADER = 28
 
+/** Optional layout ordering beyond bucket labels. */
+export interface LayoutOrderOptions {
+  /**
+   * Workspace ids in Harness Workspaces list order.
+   * Used when `mode === 'workspace'` so groups lay out left-to-right to match the sidebar.
+   */
+  readonly workspaceOrder?: readonly string[]
+}
+
 /**
  * Place nodes in columns per group.
  * @param snapshot - topology.
  * @param mode - grouping mode.
  * @param labels - resolved group labels (ungrouped / workspace titles).
+ * @param order - optional list order (Workspace sidebar).
  * @returns layout geometry.
  */
 export function layoutTopology(
   snapshot: AgentObserveSnapshot,
   mode: AgentObserveGroupMode,
   labels: { ungrouped: string; workspaceTitle: (id: string) => string },
+  order: LayoutOrderOptions = {},
 ): CanvasLayout {
   const byId = new Map(snapshot.nodes.map(node => [node.id as string, node]))
   const buckets = new Map<string, AgentObserveNode[]>()
@@ -60,11 +71,7 @@ export function layoutTopology(
     else list.push(node)
   }
 
-  const groupKeys = [...buckets.keys()].sort((a, b) => {
-    if (a === '__ungrouped__') return 1
-    if (b === '__ungrouped__') return -1
-    return a.localeCompare(b)
-  })
+  const groupKeys = sortGroupKeys([...buckets.keys()], mode, order.workspaceOrder)
 
   const groups: LayoutGroup[] = []
   const laid: LaidOutNode[] = []
@@ -129,6 +136,40 @@ export function groupKeyFor(
     case 'teams':
       return node.teamId ?? '__ungrouped__'
   }
+}
+
+/**
+ * Left-to-right group column order.
+ * Workspace mode follows the Harness Workspaces list when `workspaceOrder` is set;
+ * other modes keep stable localeCompare with `__ungrouped__` last.
+ * @param keys - distinct group keys present in the snapshot.
+ * @param mode - grouping mode.
+ * @param workspaceOrder - Harness Workspaces list ids, earliest first.
+ * @returns sorted keys.
+ */
+export function sortGroupKeys(
+  keys: readonly string[],
+  mode: AgentObserveGroupMode,
+  workspaceOrder?: readonly string[],
+): string[] {
+  if (mode === 'workspace' && workspaceOrder !== undefined) {
+    const rank = new Map(workspaceOrder.map((id, index) => [id, index]))
+    return [...keys].sort((a, b) => {
+      if (a === '__ungrouped__') return 1
+      if (b === '__ungrouped__') return -1
+      const ra = rank.get(a)
+      const rb = rank.get(b)
+      if (ra !== undefined && rb !== undefined) return ra - rb
+      if (ra !== undefined) return -1
+      if (rb !== undefined) return 1
+      return a.localeCompare(b)
+    })
+  }
+  return [...keys].sort((a, b) => {
+    if (a === '__ungrouped__') return 1
+    if (b === '__ungrouped__') return -1
+    return a.localeCompare(b)
+  })
 }
 
 function treeRootId(

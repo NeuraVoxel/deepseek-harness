@@ -14,6 +14,11 @@ export interface SnapshotToDocumentOptions {
   readonly labels: { ungrouped: string; workspaceTitle: (id: string) => string }
   /** Highlight the open conversation Session. */
   readonly currentSessionId?: SessionId
+  /**
+   * Workspace ids in Harness Workspaces list order.
+   * When `groupMode === 'workspace'`, groups lay out left-to-right in this order.
+   */
+  readonly workspaceOrder?: readonly string[]
 }
 
 /** Result of fleet → document adaptation. */
@@ -29,8 +34,13 @@ export interface FleetDocumentResult {
  * @param options - snapshot, group mode, labels, current session.
  */
 export function snapshotToDocument(options: SnapshotToDocumentOptions): FleetDocumentResult {
-  const { snapshot, groupMode, labels, currentSessionId } = options
-  const layout = layoutTopology(snapshot, groupMode, labels)
+  const { snapshot, groupMode, labels, currentSessionId, workspaceOrder } = options
+  const layout = layoutTopology(
+    snapshot,
+    groupMode,
+    labels,
+    workspaceOrder === undefined ? {} : { workspaceOrder },
+  )
   const nodes: GraphNode[] = layout.nodes.map(node => {
     const id = node.id as string
     const current = currentSessionId !== undefined && node.id === currentSessionId

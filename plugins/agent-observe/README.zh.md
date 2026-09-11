@@ -6,11 +6,12 @@
 
 - 节点：列表中的全部 Session，状态 `running` / `idle` / `archived`（`cold` 留给 Host 或后续 Remote）
 - 边：subagent 的 `parentId`
-- 分组：默认 **Workspace**，可切 **父子树** / **Agent Teams**（有 `teamId` 时用 SubNetwork）
+- 分组：默认 **Workspace**（列从左到右对齐 Harness Workspaces 列表顺序），可切 **父子树** / **Agent Teams**（有 `teamId` 时用 SubNetwork）
 - 单击节点 → `sessions.open(id)`
 - 在某轮 Turn 的 assistant-actions 行点 **打开观察** → 直接进入该 Turn 的 **流程**模式并**钉住**（更新的 Turn 不会自动抢走画布）
 - 总览 **双击** → 打开该 Agent **最新** Turn 的流程 Canvas（`focusTurn = null`），分区为
   `Client · Web/CLI（Input · session.prompt · session.follow · Render）→ Host · Frame → Host · Step N`
+- 流程 **双击空白画布** → 返回总览（点中节点/边不返回）
 - 钉住的 Turn 不是 Session 最新时，流程工具栏出现 **跳到最新**；点击清除钉住并留在流程模式
 - **限制：** Turn 由快捷入口 `messageId` 对应的持久化 `assistant/message.id` 反查得出（插件内解析）；本轮不扩展 `packages/` 中的 `AssistantActionOwnerProps`
 - **Client↔Host 通信节点：** `session.prompt`（一元 Remote）与 `session.follow`（流式 Remote）；Host 本地总线留在 Host admit / Session 内

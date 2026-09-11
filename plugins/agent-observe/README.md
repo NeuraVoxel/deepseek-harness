@@ -6,11 +6,12 @@ Opt-in plugin: a **Observe** tab beside Chat / Trajectory that shows Session / A
 
 - Nodes: every listed Session (Client list) with `running` / `idle` / `archived` status (`cold` reserved for Host or future Remote)
 - Edges: subagent `parentId` links
-- Groups: **Workspace** (default), **Parent tree**, **Agent Teams** (SubNetwork when `teamId` exists)
+- Groups: **Workspace** (default; columns left-to-right match the Harness Workspaces list), **Parent tree**, **Agent Teams** (SubNetwork when `teamId` exists)
 - Click a node → `sessions.open(id)`
 - **Open Observe** on a Turn’s assistant-actions row → Observe tab in **flow** mode **pinned** to that Turn (newer Turns do not auto-steal the canvas)
 - Fleet **double-click** → process Canvas for that Agent’s **latest** Turn (`focusTurn = null`), banded as
   `Client · Web/CLI (Input · session.prompt · session.follow · Render) → Host · Frame → Host · Step N`
+- Flow **double-click empty canvas** → back to Fleet (node/edge hits stay in flow)
 - **Jump to latest** appears on the flow toolbar when pinned away from the Session’s latest Turn; click clears the pin and stays in flow
 - **Limitation:** Turn is resolved from the durable `assistant/message.id` that owns the shortcut’s `messageId` (plugin reverse-lookup); this cut does not extend `AssistantActionOwnerProps` in `packages/`
 - **Client↔Host wire nodes:** `session.prompt` (unary Remote) and `session.follow` (stream Remote); Host-local buses stay inside Host admit / Session

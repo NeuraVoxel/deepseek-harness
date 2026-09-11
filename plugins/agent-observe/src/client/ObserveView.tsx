@@ -78,6 +78,12 @@ function FleetPane(props: Props): ReactElement {
     return map
   }, [workspaces])
 
+  /** Same order as the Harness Workspaces sidebar list. */
+  const workspaceOrder = useMemo(
+    () => workspaces.items.map(workspace => workspace.workspaceId),
+    [workspaces],
+  )
+
   const adapted = useMemo(() => snapshotToDocument({
     snapshot,
     groupMode,
@@ -86,7 +92,8 @@ function FleetPane(props: Props): ReactElement {
       workspaceTitle: id => workspaceTitles.get(id) ?? id,
     },
     currentSessionId: sessionId,
-  }), [snapshot, groupMode, t, workspaceTitles, sessionId])
+    workspaceOrder,
+  }), [snapshot, groupMode, t, workspaceTitles, workspaceOrder, sessionId])
 
   const selectedIds = useMemo(
     () => (sessionId === undefined ? [] : [sessionId as string]),
@@ -240,6 +247,13 @@ function FlowPane(props: Props): ReactElement {
     }
   }
 
+  /** Empty-canvas double-click returns to Fleet (node/edge hits stay in flow). */
+  const onBlankDoubleClick = (clientX: number, clientY: number): void => {
+    if (hostRef.current?.hitTestAt(clientX, clientY) !== undefined) return
+    setInspection(null)
+    actions.showFleet()
+  }
+
   return (
     <div className={css.root} data-conversation-composer-overlay="">
       <div className={css.toolbar}>
@@ -275,14 +289,26 @@ function FlowPane(props: Props): ReactElement {
           <span><i className={`${css.swatch} ${css.swatchEdgeData}`} />{t('flow.edge.data')}</span>
           <span><i className={`${css.swatch} ${css.swatchFlowActive}`} />{t('flow.legend.active')}</span>
         </div>
+        <span className={css.hint}>{t('flow.hint.blank')}</span>
       </div>
       {adapted.layout.nodes.length === 0 ? (
-        <div className={css.empty}>{t('flow.empty')}</div>
+        <div
+          className={css.empty}
+          onDoubleClick={() => {
+            setInspection(null)
+            actions.showFleet()
+          }}
+        >
+          {t('flow.empty')}
+        </div>
       ) : (
         <div
           className={css.flowStageWrap}
           onPointerDownCapture={event => {
             pointerRef.current = { x: event.clientX, y: event.clientY }
+          }}
+          onDoubleClick={event => {
+            onBlankDoubleClick(event.clientX, event.clientY)
           }}
         >
           <AITopoHost
@@ -331,6 +357,7 @@ function FlowIoTooltip(props: {
       onPointerUp={stopCanvasPointer}
       onWheel={stopCanvasPointer}
       onClick={stopCanvasPointer}
+      onDoubleClick={stopCanvasPointer}
     >
       <div className={css.ioTooltipTitle}>{node.label}</div>
       <div className={css.ioTooltipSection}>{t('flow.hover.input')}</div>
