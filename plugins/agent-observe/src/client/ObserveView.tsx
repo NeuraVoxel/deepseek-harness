@@ -233,6 +233,8 @@ function FlowPane(props: Props): ReactElement {
   const hostRef = useRef<AITopoHostHandle>(null)
   const [zoom, setZoom] = useState(1)
   const [activeNetworkId, setActiveNetworkId] = useState<string | null>(null)
+  /** AITopo dblclick enters a SubNetwork before React's bubble dblclick; ignore that follow-up. */
+  const suppressBlankDblClickRef = useRef(false)
 
   const showJump = focusTurn !== null
     && flow.latestTurn !== null
@@ -281,6 +283,9 @@ function FlowPane(props: Props): ReactElement {
             .flatMap(net => net.nodes)
             .find(n => n.id === event.nodeId)
         if (node?.networkId !== undefined && activeNetworkId === null) {
+          // Enter runs on pointerup; the wrapping React dblclick arrives next and
+          // would hit-test the child scene (miss) then exit/fleet — swallow it.
+          suppressBlankDblClickRef.current = true
           hostRef.current?.enterSubNetwork(node.networkId)
         }
         break
@@ -317,6 +322,10 @@ function FlowPane(props: Props): ReactElement {
 
   const onBlankDoubleClick = (clientX: number, clientY: number): void => {
     if (view.kind !== 'graph' || !view.blankDoubleClickToFleet) return
+    if (suppressBlankDblClickRef.current) {
+      suppressBlankDblClickRef.current = false
+      return
+    }
     if (hostRef.current?.hitTestAt(clientX, clientY) !== undefined) return
     if (activeNetworkId !== null) {
       hostRef.current?.exitSubNetwork()
