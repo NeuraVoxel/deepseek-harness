@@ -1,0 +1,16 @@
+---
+description: Never auto-commit; only commit when the user explicitly asks
+alwaysApply: true
+---
+
+# Git commits require explicit user request
+
+- **Do not** create a git commit after finishing a code change, fix, or feature unless the user explicitly asks to commit (e.g. 「提交」「commit」「帮我 commit」).
+- Editing files, running tests/typecheck, and leaving a dirty working tree is the default end state.
+- If a commit would be useful, **ask** first — do not commit “for convenience” or because a design/brainstorming skill suggested it.
+- Push, amend, rebase, and force-push still require their own explicit requests; this rule does not relax those.
+
+```text
+❌ BAD: fix bug → pnpm test → git commit -m "fix: …"
+✅ GOOD: fix bug → pnpm test → tell the user what changed; wait for “提交”
+```
