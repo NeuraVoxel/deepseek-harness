@@ -114,7 +114,7 @@ export const AITopoHost = forwardRef(function AITopoHost(
   useEffect(() => {
     const parent = containerRef.current
     if (parent === null) return
-    const network = new Network()
+    const network = new Network({ showNodeIcons: false })
     networkRef.current = network
     const unsubscribe = network.on(event => { onEventRef.current?.(event) })
     network.mount(parent)

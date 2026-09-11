@@ -31,6 +31,11 @@ export interface FlowDimensionContext {
   /** Pre-projected process topology (same source as today's Flow pane). */
   readonly agentFlow: AgentFlowSnapshot
   readonly selection: FlowDimensionSelection
+  /**
+   * Atlas-only: when true, event beads + seq edges stay opaque and other
+   * root elements fade to 0.2.
+   */
+  readonly focusEventBeads?: boolean
   /** Locale lookup for labels that dimensions own. */
   readonly t: (key: string, params?: Record<string, string>) => string
 }

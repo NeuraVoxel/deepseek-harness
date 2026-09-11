@@ -230,6 +230,8 @@ function FlowPane(props: Props): ReactElement {
     inspect: FlowNodeInspect
     label: string
   } | null>(null)
+  /** Atlas: highlight event beads + seq edges; fade other root chrome. */
+  const [focusEventBeads, setFocusEventBeads] = useState(false)
   const hostRef = useRef<AITopoHostHandle>(null)
   const [zoom, setZoom] = useState(1)
   const [activeNetworkId, setActiveNetworkId] = useState<string | null>(null)
@@ -249,8 +251,9 @@ function FlowPane(props: Props): ReactElement {
     // Selection is UI-only; keep it out of derive inputs so node picks do not
     // rebuild the GraphDocument and fight wheel zoom / pan.
     selection: { nodeId: null, eventId: null } satisfies FlowDimensionSelection,
+    focusEventBeads,
     t: t as (key: string, params?: Record<string, string>) => string,
-  }), [sessionId, focusTurn, window, sessionLife, flow, t])
+  }), [sessionId, focusTurn, window, sessionLife, flow, focusEventBeads, t])
 
   // Graph documents must not depend on selection — a new GraphDocument identity
   // reloads AITopo and would kick the user out of an entered SubNetwork.
@@ -380,6 +383,17 @@ function FlowPane(props: Props): ReactElement {
         <span className={css.hint}>{truncate(String(sessionId), 24)}</span>
         {view.kind === 'graph' ? (
           <ZoomControls t={t} zoom={zoom} hostRef={hostRef} />
+        ) : null}
+        {dimension === 'integrated' ? (
+          <button
+            type="button"
+            className={css.groupButton}
+            data-active={focusEventBeads ? 'true' : 'false'}
+            aria-pressed={focusEventBeads}
+            onClick={() => { setFocusEventBeads(value => !value) }}
+          >
+            {t('flow.integrated.focusEvents')}
+          </button>
         ) : null}
         {view.kind === 'graph' && view.legend === 'process' ? (
           <div className={css.legend} aria-label={t('legend.title')}>

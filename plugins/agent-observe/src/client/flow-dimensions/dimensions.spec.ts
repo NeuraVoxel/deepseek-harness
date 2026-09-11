@@ -215,6 +215,25 @@ describe('integrated atlas', () => {
     ])
   })
 
+  it('focusEventBeads keeps beads/seq edges opaque and dims other root chrome', () => {
+    const view = deriveIntegratedDimension({
+      ...ctxOf(completedTurn(), 1),
+      focusEventBeads: true,
+    })
+    expect(view.kind).toBe('graph')
+    if (view.kind !== 'graph') return
+    const beads = view.document.nodes.filter(node => node.type === 'event')
+    const stages = view.document.nodes.filter(node => node.type !== 'event')
+    expect(beads.length).toBeGreaterThan(0)
+    expect(beads.every(node => node.style?.alpha === 1 && node.style?.showIcon === false)).toBe(true)
+    expect(stages.every(node => node.style?.alpha === 0.2 && node.style?.showIcon === false)).toBe(true)
+    const seqEdges = view.document.edges.filter(edge => edge.id.startsWith('event-seq:'))
+    const otherEdges = view.document.edges.filter(edge => !edge.id.startsWith('event-seq:'))
+    expect(seqEdges.every(edge => typeof edge.data?.stroke === 'string'
+      && !String(edge.data.stroke).includes('0.2'))).toBe(true)
+    expect(otherEdges.every(edge => String(edge.data?.stroke).includes('0.2'))).toBe(true)
+  })
+
   it('places one bead per Events-tab Turn event (filter all)', () => {
     const base = completedTurn()
     const beforeEnd = base.slice(0, -1)

@@ -9,6 +9,7 @@
 
 import type { GraphDocument, GraphEdge, GraphGroup, GraphNode } from '@neuravoxel/aitopo'
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
+import { colorWithAlpha } from '../../aitopo/color-alpha.ts'
 import { DARK_EVENT_BEAD_STYLE, DARK_FLOW_NODE_STYLE } from '../../aitopo/dark-node-style.ts'
 import { linkedNodeIdForEvent } from '../events/index.ts'
 import { LOOP_SKELETON, deriveLoopDimension } from '../loop/index.ts'
@@ -243,7 +244,9 @@ export function deriveIntegratedDimension(ctx: FlowDimensionContext): GraphDimen
 
   return {
     kind: 'graph',
-    document,
+    document: ctx.focusEventBeads === true
+      ? applyEventBeadFocus(document)
+      : document,
     inspectByNodeId,
     blankDoubleClickToFleet: true,
     legend: 'integrated',
@@ -255,6 +258,67 @@ export const integratedDimension: FlowDimensionModule = {
   id: 'integrated',
   labelKey: 'flow.dim.integrated',
   derive: deriveIntegratedDimension,
+}
+
+/**
+ * Dim non-event root chrome so beads + seq edges read as the focus path.
+ * Nodes use `style.alpha`; edges/groups use rgba strokes (no GraphEdge.alpha yet —
+ * request that from aitopo when available).
+ */
+function applyEventBeadFocus(document: GraphDocument): GraphDocument {
+  const dim = 0.2
+  const nodes = document.nodes.map(node => {
+    const focused = isEventBead(node)
+    const base = node.style ?? (focused ? DARK_EVENT_BEAD_STYLE : DARK_FLOW_NODE_STYLE)
+    return {
+      ...node,
+      style: {
+        ...base,
+        showIcon: base.showIcon ?? false,
+        alpha: focused ? 1 : dim,
+      },
+    }
+  })
+  const edges = document.edges.map(edge => {
+    const focused = edge.id.startsWith('event-seq:')
+    const data = edge.data ?? {}
+    const stroke = typeof data.stroke === 'string' ? data.stroke : '#5a6478'
+    const strokeHover = typeof data.strokeHover === 'string' ? data.strokeHover : '#3b82f6'
+    const alpha = focused ? 1 : dim
+    return {
+      ...edge,
+      data: {
+        ...data,
+        stroke: colorWithAlpha(stroke, alpha),
+        strokeHover: colorWithAlpha(strokeHover, alpha),
+      },
+    }
+  })
+  const groups = document.groups?.map(group => fadeGroup(group, dim))
+  return {
+    ...document,
+    nodes,
+    edges,
+    ...(groups === undefined ? {} : { groups }),
+  }
+}
+
+function fadeGroup(group: GraphGroup, alpha: number): GraphGroup {
+  const style = group.style ?? {}
+  const stroke = typeof style.stroke === 'string' ? style.stroke : '#5a6478'
+  const fill = typeof style.fill === 'string' ? style.fill : 'rgba(90, 100, 120, 0.08)'
+  return {
+    ...group,
+    style: {
+      ...style,
+      stroke: colorWithAlpha(stroke, alpha),
+      fill: colorWithAlpha(fill, alpha),
+    },
+  }
+}
+
+function isEventBead(node: GraphNode): boolean {
+  return node.type === 'event' || node.id.startsWith('event:')
 }
 
 function safeJson(event: SessionEvent): string {
