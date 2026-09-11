@@ -2,7 +2,7 @@
 
 English | [中文](2026-09-11-plugin-local-kit-agent-notes.zh.md)
 
-> **For agentic workers:** Execute tasks in order. Ship as one PR unless noted. Spec: [.agents/notes/proposed/process/2026-09-11-plugin-local-kit-agent-notes.md](../../.agents/notes/proposed/process/2026-09-11-plugin-local-kit-agent-notes.md).
+> **For agentic workers:** Execute tasks in order. Ship as one PR unless noted. Spec: [.agents/notes/implemented/process/2026-09-11-plugin-local-kit-agent-notes.md](../../.agents/notes/implemented/process/2026-09-11-plugin-local-kit-agent-notes.md).
 
 **Goal:** `plugins/agent-observe` owns kit-shaped Agent Notes (`ai-eng verify-notes`); plugin-only PRs stop requiring root `.agents/notes/`; harness product gates stay K1 (no root kit dependency).
 

@@ -4,7 +4,7 @@
 
 可选演示与本地实验包，挂到已发布的 `dsh` profile 上。它们**不是** `packages/` 下的产品包。
 
-**Agent 站立指令**（含：禁止修改 harness 与 `vendor/` 源码；AITopo 需求以提案提交给 peer 仓库）见 [AGENTS.md](AGENTS.md)。
+**Agent 站立指令**（含：禁止修改 harness 与 `vendor/` 源码；AITopo 需求以提案提交给 peer 仓库；`agent-observe` 试点的插件本地 kit Agent Notes）见 [AGENTS.md](AGENTS.md)。
 
 ## 本目录下的包
 

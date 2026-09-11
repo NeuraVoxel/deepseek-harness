@@ -60,6 +60,7 @@ Open any Session → switch to the **Observe** tab.
 - Client status is approximate: `running` and workspace **archived** are exact; non-archived cold Sessions still appear as **idle** until a Host Remote exposes Agent attachment.
 - Agent Teams grouping needs membership (`teamId`); without it the tab shows the unavailable hint. With `teamId`, double-click enters a SubNetwork.
 - Graph rendering uses `@neuravoxel/aitopo` (vendored under `vendor/aitopo`).
+- Non-trivial observe-only decisions use kit Agent Notes under `.agents/notes/` (`pnpm run verify-notes`); see [AGENTS.md](AGENTS.md).
 
 ## Model Experience
 

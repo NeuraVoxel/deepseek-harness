@@ -2,7 +2,7 @@
 
 [English](2026-09-11-plugin-local-kit-agent-notes.md) | 中文
 
-> **给执行代理：** 按任务顺序做，默认一个 PR。规格：[.agents/notes/proposed/process/2026-09-11-plugin-local-kit-agent-notes.md](../../.agents/notes/proposed/process/2026-09-11-plugin-local-kit-agent-notes.md)。
+> **给执行代理：** 按任务顺序做，默认一个 PR。规格：[.agents/notes/implemented/process/2026-09-11-plugin-local-kit-agent-notes.md](../../.agents/notes/implemented/process/2026-09-11-plugin-local-kit-agent-notes.md)。
 
 **目标：** `plugins/agent-observe` 自有 kit 形态 Agent Notes（`ai-eng verify-notes`）；仅插件 PR 不再强制根 `.agents/notes/`；harness 产品门禁保持 K1（根不依赖 kit）。
 

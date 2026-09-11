@@ -4,7 +4,7 @@ English | [中文](README.zh.md)
 
 Opt-in demos and local experiment packages that mount onto a shipped `dsh` profile. They are **not** product packages under `packages/`.
 
-**Agent standing orders** (including: do not modify harness or `vendor/` source; AITopo needs go as requirements proposals to the peer repo) live in [AGENTS.md](AGENTS.md).
+**Agent standing orders** (including: do not modify harness or `vendor/` source; AITopo needs go as requirements proposals to the peer repo; plugin-local kit Agent Notes for the `agent-observe` pilot) live in [AGENTS.md](AGENTS.md).
 
 ## Packages here
 

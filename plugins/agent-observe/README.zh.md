@@ -60,6 +60,7 @@ pnpm dsh --profile web-observe-demo
 - Client 状态是近似的：`running` 与 workspace **已归档**精确；非归档的冷会话在挂 Host Remote 前仍显示为 **idle**。
 - Agent Teams 分组依赖成员 `teamId`；没有时提示不可用。有 `teamId` 时双击进入 SubNetwork。
 - 图形渲染使用 `@neuravoxel/aitopo`（源码在 `vendor/aitopo`）。
+- 非平凡、仅 observe 的决策使用 `.agents/notes/` 下的 kit Agent Notes（`pnpm run verify-notes`）；见 [AGENTS.md](AGENTS.md)。
 
 ## 模型体验
 

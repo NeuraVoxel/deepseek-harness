@@ -39,7 +39,8 @@
     "bundle": "tsc -b && tsdown --config tsdown.config.mjs --config-loader tsx",
     "watch": "tsdown --config tsdown.config.mjs --config-loader tsx --watch",
     "test": "vitest run --config vitest.config.ts",
-    "typecheck": "tsc -b --pretty false"
+    "typecheck": "tsc -b --pretty false",
+    "verify-notes": "node ./scripts/verify-notes.mjs"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^"
@@ -64,6 +65,7 @@
     "@deepseek-ai/dsh-client-ui-session": "workspace:^",
     "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
     "@deepseek-ai/dsh-llm": "workspace:^",
+    "@neuravoxel/ai-eng": "github:NeuraVoxel/ai-eng-kit#v0.1.6",
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.0",
     "react": "^18.2.0",
