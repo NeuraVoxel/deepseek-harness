@@ -146,3 +146,14 @@ Owner-local package tests only (no harness recorded-session requirement for this
 - Five tabs increase chrome density on small widths — mitigated by a compact second-row tab strip and shorter legends on skeleton dimensions.
 - Event→node maps are hand-maintained and can go stale when skeletons change — accepted; maps live next to each dimension module so updates stay local.
 - Capability-seam live highlight will often be sparse — accepted; the tab’s primary job is the design lesson, not a complete runtime inventory.
+
+## Implementation plan
+
+Temporary checklist for this branch (delete or fold into Consequences when the note moves to `implemented/`).
+
+1. **Shell** — `nav-store.dimension` + `setDimension`; locale keys for five tabs; `FlowPane` second-row tab strip; blank double-click still Fleet-only on graph dims.
+2. **Registry** — `src/client/flow-dimensions/{types,registry}.ts`; `process/` wraps existing `derive-flow` + `flowToDocument`.
+3. **Context inject** — expose Session `eventSource` + `session` snapshots beside `agentFlow` so skeleton/events dims can read durable events without Host changes.
+4. **Skeletons** — `panorama`, `loop`, `seam` TS graphs via shared skeleton→`GraphDocument` helper; conservative overlays + unit tests (including unmapped gray).
+5. **Events** — dual-pane list + payload; Turn filter; optional `linkedNodeId` into selection when switching dims.
+6. **Docs/tests** — README mention of five dims; package `test` + `typecheck` + `verify-notes`.

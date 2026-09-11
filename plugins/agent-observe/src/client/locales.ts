@@ -56,6 +56,19 @@ export const zh = {
   'flow.parallel': '并行',
   'flow.hover.input': '输入',
   'flow.hover.output': '输出',
+  'flow.dim.process': '进程流',
+  'flow.dim.panorama': '端到端全景',
+  'flow.dim.loop': 'Turn / Step 闭环',
+  'flow.dim.seam': '能力缝',
+  'flow.dim.events': '事件流',
+  'flow.dim.group': '流程维度',
+  'flow.events.filter': '事件过滤',
+  'flow.events.filter.all': '全部',
+  'flow.events.filter.surface': 'Surface',
+  'flow.events.filter.control': '控制',
+  'flow.events.empty': '当前 Turn 暂无事件',
+  'flow.events.payloadEmpty': '选择左侧事件查看 payload',
+  'flow.events.linkedNode': '关联节点：{id}',
 }
 
 /** English dictionary (same key set). */
@@ -111,6 +124,19 @@ export const en: Record<AgentObserveKey, string> = {
   'flow.parallel': 'Parallel',
   'flow.hover.input': 'Input',
   'flow.hover.output': 'Output',
+  'flow.dim.process': 'Process',
+  'flow.dim.panorama': 'End-to-end',
+  'flow.dim.loop': 'Turn / Step loop',
+  'flow.dim.seam': 'Capability seam',
+  'flow.dim.events': 'Events',
+  'flow.dim.group': 'Flow dimensions',
+  'flow.events.filter': 'Event filter',
+  'flow.events.filter.all': 'All',
+  'flow.events.filter.surface': 'Surface',
+  'flow.events.filter.control': 'Control',
+  'flow.events.empty': 'No events in this Turn',
+  'flow.events.payloadEmpty': 'Select an event to inspect its payload',
+  'flow.events.linkedNode': 'Linked node: {id}',
 }
 
 /** Union of this namespace's dictionary keys. */

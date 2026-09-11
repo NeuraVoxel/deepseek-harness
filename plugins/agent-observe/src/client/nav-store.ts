@@ -5,6 +5,11 @@
  */
 
 import { defineStore, type EngineStoreHandle } from '@deepseek-ai/dsh-client-store'
+import {
+  coerceFlowDimension,
+  DEFAULT_FLOW_DIMENSION,
+} from './flow-dimensions/registry.ts'
+import type { FlowDimensionId } from './flow-dimensions/types.ts'
 
 /** Fleet overview or single-Agent process canvas. */
 export type ObserveViewMode = 'fleet' | 'flow'
@@ -14,6 +19,8 @@ export interface NavState {
   mode: ObserveViewMode
   /** Pinned Turn number, or `null` for the Session latest. */
   focusTurn: number | null
+  /** Active Flow dimension tab. */
+  dimension: FlowDimensionId
 }
 
 /** Observe navigation write set. */
@@ -21,6 +28,7 @@ export type NavActions = {
   showFleet: (draft: NavState) => void
   showFlow: (draft: NavState, turn?: number) => void
   showLatest: (draft: NavState) => void
+  setDimension: (draft: NavState, dimension: FlowDimensionId) => void
 }
 
 /**
@@ -29,7 +37,11 @@ export type NavActions = {
  */
 export function createObserveNavStore(): EngineStoreHandle<NavState, NavActions> {
   const inner = defineStore({
-    init: (): NavState => ({ mode: 'fleet', focusTurn: null }),
+    init: (): NavState => ({
+      mode: 'fleet',
+      focusTurn: null,
+      dimension: DEFAULT_FLOW_DIMENSION,
+    }),
     actions: {
       showFleet: (state) => {
         state.mode = 'fleet'
@@ -42,6 +54,9 @@ export function createObserveNavStore(): EngineStoreHandle<NavState, NavActions>
       showLatest: (state) => {
         state.mode = 'flow'
         state.focusTurn = null
+      },
+      setDimension: (state, dimension) => {
+        state.dimension = coerceFlowDimension(dimension)
       },
     },
   })

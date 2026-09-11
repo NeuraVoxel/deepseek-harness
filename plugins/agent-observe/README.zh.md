@@ -9,9 +9,9 @@
 - 分组：默认 **Workspace**（列从左到右对齐 Harness Workspaces 列表顺序），可切 **父子树** / **Agent Teams**（有 `teamId` 时用 SubNetwork）
 - 单击节点 → `sessions.open(id)`
 - 在某轮 Turn 的 assistant-actions 行点 **打开观察** → 直接进入该 Turn 的 **流程**模式并**钉住**（更新的 Turn 不会自动抢走画布）
-- 总览 **双击** → 打开该 Agent **最新** Turn 的流程 Canvas（`focusTurn = null`），分区为
-  `Client · Web/CLI（Input · session.prompt · session.follow · Render）→ Host · Frame → Host · Step N`
-- 流程 **双击空白画布** → 返回总览（点中节点/边不返回）
+- 总览 **双击** → 打开该 Agent **最新** Turn 的流程 Canvas（`focusTurn = null`）
+- Flow 内第二行维度 Tab：**进程流**（现有 `derive-flow`）· **端到端全景** · **Turn/Step 闭环** · **能力缝** · **事件流**（左时间线 / 右 payload）；钉住 Turn 跨维度共享
+- 流程 **双击空白画布** → 返回总览（点中节点/边不返回；事件流双栏不绑该手势）
 - 钉住的 Turn 不是 Session 最新时，流程工具栏出现 **跳到最新**；点击清除钉住并留在流程模式
 - **限制：** Turn 由快捷入口 `messageId` 对应的持久化 `assistant/message.id` 反查得出（插件内解析）；本轮不扩展 `packages/` 中的 `AssistantActionOwnerProps`
 - **Client↔Host 通信节点：** `session.prompt`（一元 Remote）与 `session.follow`（流式 Remote）；Host 本地总线留在 Host admit / Session 内
@@ -20,6 +20,7 @@
 - **边：** 灰色 **flow** = 控制 / 收束；青色 **data** = 载荷（`Client input → Host admit`、`Session → Envelope`、`Memory/Envelope → Context`、`Context → Model`、`Model → Tool`、`Model/Tool → Session`、`Session → Client render`）
 - 同一条 assistant 里的多个 tool 竖排为**并行列**，再汇入 Join
 - 渲染：[@neuravoxel/aitopo](../../vendor/aitopo) Canvas Network（dirty-rect）；无 SVG 舞台
+- 骨架维（全景 / 闭环 / 能力缝）为 TypeScript 常量图 + 保守实况高亮（无证据则保持灰态说明）
 
 **不修改** `packages/`，通过 patch / `dsh plugin` 挂载。
 
@@ -49,7 +50,8 @@ pnpm dsh --profile web-observe-demo
 | `src/topology.ts` | Host 侧 live 拓扑 |
 | `src/client/index.ts` | 注册 `conversation.view`（id `observe`）+ 输入框快捷图标 |
 | `src/client/ViewShortcut.tsx` | Turn 尾栏打开观察 Tab 的图标 |
-| `src/client/ObserveView.tsx` | 工具条 + AITopo 总览 / 流程 |
+| `src/client/ObserveView.tsx` | 工具条 + 维度 Tab + AITopo / 事件流 |
+| `src/client/flow-dimensions/` | 维度注册、骨架图、实况叠加、事件双栏 |
 | `src/client/aitopo/` | `AITopoHost` + snapshot/flow → `GraphDocument` 适配 |
 | `src/client/derive-topology.ts` | Client 列表 → 总览 snapshot |
 | `src/client/derive-flow.ts` | Session 事件 → 流程拓扑 |

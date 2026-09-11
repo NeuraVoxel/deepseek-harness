@@ -7,11 +7,15 @@ import {
   type SyntheticEvent,
 } from 'react'
 import type { ConvViewProps } from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type {
+  SessionEventWindow,
+  SessionSnapshot,
+} from '@deepseek-ai/dsh-api-session-controller/client'
 import type { InjectFace, PropsLocale, PropsStore } from '@deepseek-ai/dsh-client-ui-slots'
 import type { SnapshotSelectorHook } from '@deepseek-ai/dsh-client-store'
 import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import { deriveClientTopology } from './derive-topology.ts'
-import type { AgentFlowNode, AgentFlowSnapshot } from './derive-flow.ts'
+import type { AgentFlowSnapshot } from './derive-flow.ts'
 import type { AgentObserveGroupMode } from '../types.ts'
 import { NS } from './locales.ts'
 import type { createObserveNavStore } from './nav-store.ts'
@@ -22,7 +26,14 @@ import {
   type GraphEvent,
 } from './aitopo/AITopoHost.tsx'
 import { snapshotToDocument } from './aitopo/snapshot-to-document.ts'
-import { flowToDocument } from './aitopo/flow-to-document.ts'
+import { FLOW_DIMENSIONS, resolveFlowDimension } from './flow-dimensions/registry.ts'
+import { deriveEventsDimension } from './flow-dimensions/events/index.ts'
+import { EventsPane } from './flow-dimensions/events/EventsPane.tsx'
+import type {
+  EventListFilter,
+  FlowDimensionSelection,
+  FlowNodeInspect,
+} from './flow-dimensions/types.ts'
 import css from './ObserveView.module.css'
 
 /** Injected callbacks and hooks from the plugin apply closure. */
@@ -32,6 +43,10 @@ export interface ObserveViewInjected {
   hooks: {
     /** Latest-turn process topology for the current Session. */
     agentFlow: import('@deepseek-ai/dsh-client-store').ObservableSnapshot<AgentFlowSnapshot>
+    /** Contiguous Session event window for skeleton overlays and events. */
+    eventWindow: import('@deepseek-ai/dsh-client-store').ObservableSnapshot<SessionEventWindow>
+    /** Session lifecycle snapshot. */
+    sessionLife: import('@deepseek-ai/dsh-client-store').ObservableSnapshot<SessionSnapshot>
   }
 }
 
@@ -40,7 +55,11 @@ type Props = ConvViewProps
   & PropsLocale<typeof NS>
   & PropsStore<NavHandle>
   & InjectFace<ObserveViewInjected>
-  & { useAgentFlow: SnapshotSelectorHook<AgentFlowSnapshot> }
+  & {
+    useAgentFlow: SnapshotSelectorHook<AgentFlowSnapshot>
+    useEventWindow: SnapshotSelectorHook<SessionEventWindow>
+    useSessionLife: SnapshotSelectorHook<SessionSnapshot>
+  }
 
 const GROUP_MODES: readonly AgentObserveGroupMode[] = ['workspace', 'tree', 'teams']
 
@@ -194,30 +213,52 @@ function FleetPane(props: Props): ReactElement {
 }
 
 function FlowPane(props: Props): ReactElement {
-  const { t, actions, useAgentFlow, sessionId } = props
+  const {
+    t, actions, useAgentFlow, useEventWindow, useSessionLife, sessionId,
+  } = props
   const focusTurn = props.useStore(state => state.focusTurn)
+  const dimension = props.useStore(state => state.dimension)
   const flow = useAgentFlow(state => state)
-  const showJump = focusTurn !== null
-    && flow.latestTurn !== null
-    && focusTurn !== flow.latestTurn
-  const adapted = useMemo(() => flowToDocument(flow, {
-    join: t('flow.join'),
-    parallel: t('flow.parallel'),
-  }), [flow, t])
-  const hostRef = useRef<AITopoHostHandle>(null)
-  const [zoom, setZoom] = useState(1)
-  /** IO tooltip pinned at the click that selected the node; null when nothing is selected. */
+  const window = useEventWindow(state => state)
+  const sessionLife = useSessionLife(state => state)
+  const [eventFilter, setEventFilter] = useState<EventListFilter>('all')
+  const [selection, setSelection] = useState<FlowDimensionSelection>({
+    nodeId: null,
+    eventId: null,
+  })
   const [inspection, setInspection] = useState<{
-    node: AgentFlowNode
+    inspect: FlowNodeInspect
+    label: string
     clientX: number
     clientY: number
   } | null>(null)
-  /** Latest pointer position; capture-phase pointerdown records the click before AITopo selects. */
   const pointerRef = useRef({ x: 0, y: 0 })
-  const nodeById = useMemo(
-    () => new Map(flow.nodes.map(node => [node.id, node])),
-    [flow.nodes],
-  )
+  const hostRef = useRef<AITopoHostHandle>(null)
+  const [zoom, setZoom] = useState(1)
+
+  const showJump = focusTurn !== null
+    && flow.latestTurn !== null
+    && focusTurn !== flow.latestTurn
+
+  const ctx = useMemo(() => ({
+    sessionId: sessionId ?? ('' as SessionId),
+    focusTurn,
+    window,
+    session: sessionLife,
+    agentFlow: flow,
+    selection,
+    t: t as (key: string, params?: Record<string, string>) => string,
+  }), [sessionId, focusTurn, window, sessionLife, flow, selection, t])
+
+  const view = useMemo(() => {
+    if (dimension === 'events') return deriveEventsDimension(ctx, eventFilter)
+    return resolveFlowDimension(dimension).derive(ctx)
+  }, [dimension, ctx, eventFilter])
+
+  const selectedIds = useMemo(() => {
+    if (selection.nodeId === null) return []
+    return [selection.nodeId]
+  }, [selection.nodeId])
 
   const onEvent = (event: GraphEvent): void => {
     switch (event.type) {
@@ -228,15 +269,19 @@ function FlowPane(props: Props): ReactElement {
         const selectedId = event.selectedIds[0]
         if (selectedId === undefined) {
           setInspection(null)
+          setSelection(prev => ({ ...prev, nodeId: null }))
           return
         }
-        const node = nodeById.get(selectedId)
-        if (node === undefined) {
+        setSelection(prev => ({ ...prev, nodeId: selectedId }))
+        if (view.kind !== 'graph') {
           setInspection(null)
           return
         }
+        const inspect = view.inspectByNodeId?.get(selectedId)
+        const label = view.document.nodes.find(node => node.id === selectedId)?.label ?? selectedId
         setInspection({
-          node,
+          inspect: inspect ?? { detail: label },
+          label,
           clientX: pointerRef.current.x,
           clientY: pointerRef.current.y,
         })
@@ -247,8 +292,8 @@ function FlowPane(props: Props): ReactElement {
     }
   }
 
-  /** Empty-canvas double-click returns to Fleet (node/edge hits stay in flow). */
   const onBlankDoubleClick = (clientX: number, clientY: number): void => {
+    if (view.kind !== 'graph' || !view.blankDoubleClickToFleet) return
     if (hostRef.current?.hitTestAt(clientX, clientY) !== undefined) return
     setInspection(null)
     actions.showFleet()
@@ -271,27 +316,75 @@ function FlowPane(props: Props): ReactElement {
           </button>
         ) : null}
         <span className={css.hint}>{truncate(String(sessionId), 24)}</span>
-        <ZoomControls t={t} zoom={zoom} hostRef={hostRef} />
-        <div className={css.legend} aria-label={t('legend.title')}>
-          <span><i className={`${css.swatch} ${css.swatchKindInput}`} />{t('flow.kind.client-input')}</span>
-          <span><i className={`${css.swatch} ${css.swatchKindPrompt}`} />{t('flow.kind.remote-prompt')}</span>
-          <span><i className={`${css.swatch} ${css.swatchKindFollow}`} />{t('flow.kind.remote-follow')}</span>
-          <span><i className={`${css.swatch} ${css.swatchKindAdmit}`} />{t('flow.kind.host-admit')}</span>
-          <span><i className={`${css.swatch} ${css.swatchKindProfile}`} />{t('flow.kind.profile')}</span>
-          <span><i className={`${css.swatch} ${css.swatchKindSession}`} />{t('flow.kind.session')}</span>
-          <span><i className={`${css.swatch} ${css.swatchKindEnvelope}`} />{t('flow.kind.envelope')}</span>
-          <span><i className={`${css.swatch} ${css.swatchKindMemory}`} />{t('flow.kind.memory')}</span>
-          <span><i className={`${css.swatch} ${css.swatchKindContext}`} />{t('flow.kind.context')}</span>
-          <span><i className={`${css.swatch} ${css.swatchKindModel}`} />{t('flow.kind.model')}</span>
-          <span><i className={`${css.swatch} ${css.swatchKindTool}`} />{t('flow.kind.tool')}</span>
-          <span><i className={`${css.swatch} ${css.swatchKindRender}`} />{t('flow.kind.client-render')}</span>
-          <span><i className={`${css.swatch} ${css.swatchEdgeFlow}`} />{t('flow.edge.flow')}</span>
-          <span><i className={`${css.swatch} ${css.swatchEdgeData}`} />{t('flow.edge.data')}</span>
-          <span><i className={`${css.swatch} ${css.swatchFlowActive}`} />{t('flow.legend.active')}</span>
-        </div>
-        <span className={css.hint}>{t('flow.hint.blank')}</span>
+        {view.kind === 'graph' ? (
+          <ZoomControls t={t} zoom={zoom} hostRef={hostRef} />
+        ) : null}
+        {view.kind === 'graph' && view.legend === 'process' ? (
+          <div className={css.legend} aria-label={t('legend.title')}>
+            <span><i className={`${css.swatch} ${css.swatchKindInput}`} />{t('flow.kind.client-input')}</span>
+            <span><i className={`${css.swatch} ${css.swatchKindPrompt}`} />{t('flow.kind.remote-prompt')}</span>
+            <span><i className={`${css.swatch} ${css.swatchKindFollow}`} />{t('flow.kind.remote-follow')}</span>
+            <span><i className={`${css.swatch} ${css.swatchKindAdmit}`} />{t('flow.kind.host-admit')}</span>
+            <span><i className={`${css.swatch} ${css.swatchKindProfile}`} />{t('flow.kind.profile')}</span>
+            <span><i className={`${css.swatch} ${css.swatchKindSession}`} />{t('flow.kind.session')}</span>
+            <span><i className={`${css.swatch} ${css.swatchKindEnvelope}`} />{t('flow.kind.envelope')}</span>
+            <span><i className={`${css.swatch} ${css.swatchKindMemory}`} />{t('flow.kind.memory')}</span>
+            <span><i className={`${css.swatch} ${css.swatchKindContext}`} />{t('flow.kind.context')}</span>
+            <span><i className={`${css.swatch} ${css.swatchKindModel}`} />{t('flow.kind.model')}</span>
+            <span><i className={`${css.swatch} ${css.swatchKindTool}`} />{t('flow.kind.tool')}</span>
+            <span><i className={`${css.swatch} ${css.swatchKindRender}`} />{t('flow.kind.client-render')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEdgeFlow}`} />{t('flow.edge.flow')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEdgeData}`} />{t('flow.edge.data')}</span>
+            <span><i className={`${css.swatch} ${css.swatchFlowActive}`} />{t('flow.legend.active')}</span>
+          </div>
+        ) : null}
+        {view.kind === 'graph' && view.legend === 'status' ? (
+          <div className={css.legend} aria-label={t('legend.title')}>
+            <span><i className={`${css.swatch} ${css.swatchFlowPending}`} />{t('flow.legend.pending')}</span>
+            <span><i className={`${css.swatch} ${css.swatchFlowActive}`} />{t('flow.legend.active')}</span>
+            <span><i className={`${css.swatch} ${css.swatchFlowDone}`} />{t('flow.legend.done')}</span>
+            <span><i className={`${css.swatch} ${css.swatchFlowError}`} />{t('flow.legend.error')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEdgeFlow}`} />{t('flow.edge.flow')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEdgeData}`} />{t('flow.edge.data')}</span>
+          </div>
+        ) : null}
+        {view.kind === 'graph' ? (
+          <span className={css.hint}>{t('flow.hint.blank')}</span>
+        ) : null}
       </div>
-      {adapted.layout.nodes.length === 0 ? (
+      <div className={css.dimTabs} role="tablist" aria-label={t('flow.dim.group')}>
+        {FLOW_DIMENSIONS.map(module => (
+          <button
+            key={module.id}
+            type="button"
+            role="tab"
+            className={css.dimTab}
+            aria-selected={dimension === module.id}
+            data-active={dimension === module.id ? 'true' : 'false'}
+            onClick={() => {
+              setInspection(null)
+              actions.setDimension(module.id)
+            }}
+          >
+            {t(module.labelKey as Parameters<typeof t>[0])}
+          </button>
+        ))}
+      </div>
+      {view.kind === 'events' ? (
+        <EventsPane
+          t={t as (key: string, params?: Record<string, string>) => string}
+          entries={view.entries}
+          selected={view.selected}
+          filter={eventFilter}
+          onFilter={setEventFilter}
+          onSelect={entry => {
+            setSelection({
+              eventId: entry.id,
+              nodeId: entry.linkedNodeId ?? null,
+            })
+          }}
+        />
+      ) : view.document.nodes.length === 0 ? (
         <div
           className={css.empty}
           onDoubleClick={() => {
@@ -315,14 +408,16 @@ function FlowPane(props: Props): ReactElement {
             ref={hostRef}
             className={css.stage}
             ariaLabel={t('flow.title.none')}
-            document={adapted.document}
-            fitToken={`${flow.turn ?? 0}:${adapted.layout.width}x${adapted.layout.height}`}
+            document={view.document}
+            selectedIds={selectedIds}
+            fitToken={`${dimension}:${flow.turn ?? 0}:${view.document.nodes.length}`}
             onEvent={onEvent}
           />
           {inspection !== null ? (
             <FlowIoTooltip
               t={t}
-              node={inspection.node}
+              label={inspection.label}
+              inspect={inspection.inspect}
               clientX={inspection.clientX}
               clientY={inspection.clientY}
             />
@@ -335,23 +430,25 @@ function FlowPane(props: Props): ReactElement {
 
 function FlowIoTooltip(props: {
   t: Props['t']
-  node: AgentFlowNode
+  label: string
+  inspect: FlowNodeInspect
   clientX: number
   clientY: number
 }): ReactElement {
-  const { t, node, clientX, clientY } = props
+  const { t, label, inspect, clientX, clientY } = props
   const left = Math.min(clientX + 14, typeof window !== 'undefined' ? window.innerWidth - 360 : clientX + 14)
   const top = Math.min(clientY + 14, typeof window !== 'undefined' ? window.innerHeight - 280 : clientY + 14)
-  /** Keep pointer work on the panel (select / copy / scroll) off the canvas stage. */
   const stopCanvasPointer = (event: SyntheticEvent): void => {
     event.stopPropagation()
   }
+  const hasIo = (inspect.inputText !== undefined && inspect.inputText !== '')
+    || (inspect.outputText !== undefined && inspect.outputText !== '')
   return (
     <div
       className={css.ioTooltip}
       style={{ left, top }}
       role="dialog"
-      aria-label={node.label}
+      aria-label={label}
       onPointerDown={stopCanvasPointer}
       onPointerMove={stopCanvasPointer}
       onPointerUp={stopCanvasPointer}
@@ -359,11 +456,18 @@ function FlowIoTooltip(props: {
       onClick={stopCanvasPointer}
       onDoubleClick={stopCanvasPointer}
     >
-      <div className={css.ioTooltipTitle}>{node.label}</div>
-      <div className={css.ioTooltipSection}>{t('flow.hover.input')}</div>
-      <pre className={css.ioTooltipBody}>{node.inputText || '—'}</pre>
-      <div className={css.ioTooltipSection}>{t('flow.hover.output')}</div>
-      <pre className={css.ioTooltipBody}>{node.outputText || '—'}</pre>
+      <div className={css.ioTooltipTitle}>{label}</div>
+      {inspect.detail !== undefined && inspect.detail !== '' ? (
+        <div className={css.ioTooltipSection}>{inspect.detail}</div>
+      ) : null}
+      {hasIo ? (
+        <>
+          <div className={css.ioTooltipSection}>{t('flow.hover.input')}</div>
+          <pre className={css.ioTooltipBody}>{inspect.inputText || '—'}</pre>
+          <div className={css.ioTooltipSection}>{t('flow.hover.output')}</div>
+          <pre className={css.ioTooltipBody}>{inspect.outputText || '—'}</pre>
+        </>
+      ) : null}
     </div>
   )
 }

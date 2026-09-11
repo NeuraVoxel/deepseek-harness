@@ -9,9 +9,9 @@ Opt-in plugin: a **Observe** tab beside Chat / Trajectory that shows Session / A
 - Groups: **Workspace** (default; columns left-to-right match the Harness Workspaces list), **Parent tree**, **Agent Teams** (SubNetwork when `teamId` exists)
 - Click a node → `sessions.open(id)`
 - **Open Observe** on a Turn’s assistant-actions row → Observe tab in **flow** mode **pinned** to that Turn (newer Turns do not auto-steal the canvas)
-- Fleet **double-click** → process Canvas for that Agent’s **latest** Turn (`focusTurn = null`), banded as
-  `Client · Web/CLI (Input · session.prompt · session.follow · Render) → Host · Frame → Host · Step N`
-- Flow **double-click empty canvas** → back to Fleet (node/edge hits stay in flow)
+- Fleet **double-click** → process Canvas for that Agent’s **latest** Turn (`focusTurn = null`)
+- Inside Flow, a second-row dimension strip: **Process** (existing `derive-flow`), **End-to-end**, **Turn / Step loop**, **Capability seam**, **Events** (timeline + payload); the Turn pin is shared across dimensions
+- Flow **double-click empty canvas** → back to Fleet (node/edge hits stay in flow; the events dual-pane does not bind that gesture)
 - **Jump to latest** appears on the flow toolbar when pinned away from the Session’s latest Turn; click clears the pin and stays in flow
 - **Limitation:** Turn is resolved from the durable `assistant/message.id` that owns the shortcut’s `messageId` (plugin reverse-lookup); this cut does not extend `AssistantActionOwnerProps` in `packages/`
 - **Client↔Host wire nodes:** `session.prompt` (unary Remote) and `session.follow` (stream Remote); Host-local buses stay inside Host admit / Session
@@ -20,6 +20,7 @@ Opt-in plugin: a **Observe** tab beside Chat / Trajectory that shows Session / A
 - **Edges:** gray **flow** = control / settle; teal **data** = payload (`Client input → Host admit`, `Session → Envelope`, `Memory/Envelope → Context`, `Context → Model`, `Model → Tool`, `Model/Tool → Session`, `Session → Client render`)
 - Sibling tools from one assistant message stack in a **parallel column** and rejoin at Join
 - Rendering: **[@neuravoxel/aitopo](../../vendor/aitopo)** Canvas Network (dirty-rect); no SVG stage
+- Skeleton dimensions (panorama / loop / seam) are TypeScript constant graphs plus conservative live overlays (unmapped nodes stay explanatory gray)
 
 Does **not** modify `packages/` — mounts via patch / `dsh plugin`.
 
@@ -49,7 +50,8 @@ Open any Session → switch to the **Observe** tab.
 | `src/topology.ts` | Live Host topology fold |
 | `src/client/index.ts` | Registers `conversation.view` id `observe` + composer shortcut |
 | `src/client/ViewShortcut.tsx` | Turn-tail icon that opens the Observe tab |
-| `src/client/ObserveView.tsx` | Toolbar + AITopo fleet / flow panes |
+| `src/client/ObserveView.tsx` | Toolbar + dimension tabs + AITopo / events panes |
+| `src/client/flow-dimensions/` | Dimension registry, skeletons, overlays, events dual-pane |
 | `src/client/aitopo/` | `AITopoHost` + snapshot/flow → `GraphDocument` adapters |
 | `src/client/derive-topology.ts` | Client list → fleet snapshot |
 | `src/client/derive-flow.ts` | Session events → process topology |

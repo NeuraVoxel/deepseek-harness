@@ -99,6 +99,31 @@
   font-weight: 600;
 }
 
+.dimTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--dsw-border-subtle, #2a2f3a);
+  flex-shrink: 0;
+}
+
+.dimTab {
+  appearance: none;
+  border: 1px solid var(--dsw-border-subtle, #3a4150);
+  background: transparent;
+  color: inherit;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.dimTab[data-active='true'] {
+  background: var(--dsw-surface-raised, #1c2230);
+  border-color: var(--dsw-accent, #5b8def);
+}
+
 .flowStageWrap {
   flex: 1;
   min-height: 0;

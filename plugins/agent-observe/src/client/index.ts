@@ -17,6 +17,7 @@ import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-session/client'
 import type {} from '@deepseek-ai/dsh-api-session-controller/client'
+import type { SessionEventWindow, SessionSnapshot } from '@deepseek-ai/dsh-api-session-controller/client'
 import { ObserveView, type ObserveViewInjected } from './ObserveView.tsx'
 import { ViewShortcut, type ViewShortcutInjected } from './ViewShortcut.tsx'
 import { createAgentFlowSource, type ObserveNavInstance } from './flow-source.ts'
@@ -50,6 +51,35 @@ export function apply(ctx: ClientContext): void {
     getSnapshot: () => emptyAgentFlow(),
     subscribe: () => () => {},
   }
+  const emptyWindow: ObservableSnapshot<SessionEventWindow> = {
+    getSnapshot: () => ({
+      entries: [],
+      hasMore: false,
+      revision: 0,
+      change: { kind: 'replace', entries: [] },
+    }),
+    subscribe: () => () => {},
+  }
+  const emptySessionLife: ObservableSnapshot<SessionSnapshot> = {
+    getSnapshot: () => ({
+      sessionId: '' as SessionId,
+      queue: [],
+      pendingSubmissions: [],
+      running: false,
+      subagent: null,
+      removed: false,
+      openState: 'cold',
+      openError: null,
+      hasMore: false,
+      loadingOlder: false,
+      promptError: null,
+      blank: true,
+      lastAgentError: null,
+      promptAttempted: false,
+      awaitingFirstTurn: false,
+    }) as SessionSnapshot,
+    subscribe: () => () => {},
+  }
 
   const flowSource = (
     binding: SessionBinding | undefined,
@@ -76,7 +106,11 @@ export function apply(ctx: ClientContext): void {
       const nav = navStore.create(sessionId)
       return {
         openSession: (id) => { ctx.sessions.open(id) },
-        hooks: { agentFlow: flowSource(binding, nav) },
+        hooks: {
+          agentFlow: flowSource(binding, nav),
+          eventWindow: binding?.eventSource ?? emptyWindow,
+          sessionLife: binding?.session ?? emptySessionLife,
+        },
       }
     },
   }, ObserveView))
