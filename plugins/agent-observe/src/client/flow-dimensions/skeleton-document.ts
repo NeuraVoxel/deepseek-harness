@@ -6,6 +6,7 @@ import type { GraphDocument, GraphEdge, GraphGroup, GraphNode } from '@neuravoxe
 import type { FlowNodeStatus } from '../derive-flow.ts'
 import { alarmsFromStatus } from '../aitopo/alarms-from-status.ts'
 import { DARK_FLOW_NODE_STYLE } from '../aitopo/dark-node-style.ts'
+import { flowEdgeStyle } from '../aitopo/flow-edge-style.ts'
 
 /** One skeleton node before live status is applied. */
 export interface SkeletonNode {
@@ -90,12 +91,13 @@ export function skeletonToDocument(
       from: edge.from,
       to: edge.to,
       kind: edge.kind ?? 'flow',
-      data: {
+      ...(edge.label === undefined ? {} : { label: edge.label }),
+      style: flowEdgeStyle({
+        kind: edge.kind ?? 'flow',
         stroke: isData ? '#3a4846' : '#5a6478',
         strokeHover: isData ? '#5eead4' : '#3b82f6',
         lineWidth: isData ? 1.2 : 1.25,
-        ...(edge.label === undefined ? {} : { label: edge.label }),
-      },
+      }),
     }
   })
 

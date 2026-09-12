@@ -8,6 +8,7 @@
 
 import type { GraphDocument, GraphEdge, GraphGroup, GraphNode } from '@neuravoxel/aitopo'
 import { DARK_FLOW_NODE_STYLE } from '../../aitopo/dark-node-style.ts'
+import { flowEdgeStyle } from '../../aitopo/flow-edge-style.ts'
 import {
   appendTurnEventBeads,
   applyEventBeadFocus,
@@ -111,8 +112,8 @@ export function deriveArchitectureDimension(ctx: FlowDimensionContext): GraphDim
       rootNodes.push({
         ...node,
         id,
-        x: node.x,
-        y: node.y + loopGroupRect.y,
+        x: node.x ?? 0,
+        y: (node.y ?? 0) + loopGroupRect.y,
         groupId: 'g-turn-loop',
       })
       const prior = loop.inspectByNodeId?.get(node.id)
@@ -164,8 +165,8 @@ export function deriveArchitectureDimension(ctx: FlowDimensionContext): GraphDim
       rootNodes.push({
         ...node,
         id,
-        x: node.x + seamGroupRect.x,
-        y: node.y + seamGroupRect.y,
+        x: (node.x ?? 0) + seamGroupRect.x,
+        y: (node.y ?? 0) + seamGroupRect.y,
         groupId: 'g-seam',
       })
       const prior = seam.inspectByNodeId?.get(node.id)
@@ -290,12 +291,13 @@ function scopeBridge(from: string, to: string, label: string): GraphEdge {
     from,
     to,
     kind: 'data',
-    data: {
+    label,
+    style: flowEdgeStyle({
+      kind: 'data',
       stroke: '#f59e0b',
       strokeHover: '#fcd34d',
       lineWidth: 1.25,
       strokeDash: [6, 4],
-      label,
-    },
+    }),
   }
 }

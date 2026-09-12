@@ -215,8 +215,8 @@ describe('architecture dimension', () => {
       const summary = view.document.nodes.find(node => node.id === id)!
       const groupId = id === 'loop:summary' ? 'g-turn-loop' : 'g-seam'
       const group = view.document.groups?.find(g => g.id === groupId)!
-      expect(summary.x).toBe(group.x + (group.w - summary.w) / 2)
-      expect(summary.y).toBe(group.y + (group.h - summary.h) / 2)
+      expect(summary.x).toBe((group.x ?? 0) + ((group.w ?? 0) - (summary.w ?? 0)) / 2)
+      expect(summary.y).toBe((group.y ?? 0) + ((group.h ?? 0) - (summary.h ?? 0)) / 2)
     }
     const beads = view.document.nodes.filter(node => node.type === 'event')
     expect(beads.length).toBeGreaterThan(1)
@@ -251,9 +251,8 @@ describe('architecture dimension', () => {
     expect(stages.every(node => node.style?.alpha === 0.2 && node.style?.showIcon === false)).toBe(true)
     const seqEdges = view.document.edges.filter(edge => edge.id.startsWith('event-seq:'))
     const otherEdges = view.document.edges.filter(edge => !edge.id.startsWith('event-seq:'))
-    expect(seqEdges.every(edge => typeof edge.data?.stroke === 'string'
-      && !String(edge.data.stroke).includes('0.2'))).toBe(true)
-    expect(otherEdges.every(edge => String(edge.data?.stroke).includes('0.2'))).toBe(true)
+    expect(seqEdges.every(edge => edge.style?.alpha === 1 || edge.style?.alpha === undefined)).toBe(true)
+    expect(otherEdges.every(edge => edge.style?.alpha === 0.2)).toBe(true)
   })
 
   it('places one bead per Events-tab Turn event (filter all)', () => {
@@ -330,7 +329,7 @@ describe('architecture dimension', () => {
     expect(view.document.nodes.some(node => node.id === 'seam:summary')).toBe(true)
     const bridges = view.document.edges.filter(edge => edge.id.startsWith('bridge:'))
     expect(bridges.length).toBe(4)
-    expect(bridges.every(edge => Array.isArray(edge.data?.strokeDash))).toBe(true)
+    expect(bridges.every(edge => Array.isArray(edge.style?.strokeDash))).toBe(true)
     const beads = view.document.nodes.filter(node => node.type === 'event')
     expect(beads.length).toBeGreaterThan(1)
     expect(beads.some(node => node.groupId === 'g-turn-loop')).toBe(true)

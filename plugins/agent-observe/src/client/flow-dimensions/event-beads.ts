@@ -9,6 +9,7 @@ import type { GraphDocument, GraphEdge, GraphGroup, GraphNode } from '@neuravoxe
 import type { SessionEvent } from '@deepseek-ai/dsh-session/types'
 import { colorWithAlpha } from '../aitopo/color-alpha.ts'
 import { DARK_EVENT_BEAD_STYLE, DARK_FLOW_NODE_STYLE } from '../aitopo/dark-node-style.ts'
+import { flowEdgeStyle } from '../aitopo/flow-edge-style.ts'
 import { linkedNodeIdForEvent } from './events/index.ts'
 import {
   collectTurnEvidence,
@@ -101,7 +102,7 @@ export function appendTurnEventBeads(args: AppendEventBeadsArgs): string[] {
       y: ay,
       w: EVENT_DIAMETER,
       h: EVENT_DIAMETER,
-      groupId: anchor.groupId,
+      ...(anchor.groupId === undefined ? {} : { groupId: anchor.groupId }),
       style: DARK_EVENT_BEAD_STYLE,
       data: {
         meta: event.type,
@@ -115,11 +116,12 @@ export function appendTurnEventBeads(args: AppendEventBeadsArgs): string[] {
       from: anchorId,
       to: beadId,
       kind: 'data',
-      data: {
+      style: flowEdgeStyle({
+        kind: 'data',
         stroke: BEAD_EDGE_STROKE,
         strokeHover: BEAD_EDGE_HOVER,
         lineWidth: 1,
-      },
+      }),
     })
     inspectByNodeId.set(beadId, {
       detail: `${event.type} · seq ${seqLabel}`,
@@ -138,12 +140,13 @@ export function appendTurnEventBeads(args: AppendEventBeadsArgs): string[] {
       from,
       to,
       kind: 'data',
-      data: {
+      style: flowEdgeStyle({
+        kind: 'data',
         stroke: BEAD_SEQ_STROKE,
         strokeHover: BEAD_SEQ_HOVER,
         lineWidth: 1.5,
         strokeDash: [5, 4],
-      },
+      }),
     })
   }
 
@@ -204,16 +207,14 @@ export function applyEventBeadFocus(document: GraphDocument): GraphDocument {
   })
   const edges = document.edges.map(edge => {
     const focused = edge.id.startsWith('event-seq:')
-    const data = edge.data ?? {}
-    const stroke = typeof data.stroke === 'string' ? data.stroke : '#5a6478'
-    const strokeHover = typeof data.strokeHover === 'string' ? data.strokeHover : '#3b82f6'
-    const alpha = focused ? 1 : dim
+    const base = edge.style ?? {}
     return {
       ...edge,
-      data: {
-        ...data,
-        stroke: colorWithAlpha(stroke, alpha),
-        strokeHover: colorWithAlpha(strokeHover, alpha),
+      style: {
+        ...base,
+        arrowFrom: false,
+        arrowTo: false,
+        alpha: focused ? 1 : dim,
       },
     }
   })

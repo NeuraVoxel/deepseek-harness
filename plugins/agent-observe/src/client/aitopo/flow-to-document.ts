@@ -7,6 +7,7 @@ import type { AgentFlowSnapshot } from '../derive-flow.ts'
 import { layoutAgentFlow, type FlowLayout } from '../layout-flow.ts'
 import { alarmsFromStatus } from './alarms-from-status.ts'
 import { DARK_FLOW_NODE_STYLE } from './dark-node-style.ts'
+import { flowEdgeStyle } from './flow-edge-style.ts'
 
 /** Result of flow → document adaptation. */
 export interface FlowDocumentResult {
@@ -70,13 +71,13 @@ export function flowToDocument(
       from: edge.from,
       to: edge.to,
       kind: edge.kind,
-      data: {
-        // Data edges stay muted at rest; strokeHover (teal) fires on edge hit or related-node hover.
+      ...(edge.label === undefined ? {} : { label: edge.label }),
+      style: flowEdgeStyle({
+        kind: edge.kind,
         stroke: isData ? '#3a4846' : '#5a6478',
         strokeHover: isData ? '#5eead4' : '#3b82f6',
         lineWidth: isData ? 1.2 : 1.25,
-        ...(edge.label === undefined ? {} : { label: edge.label }),
-      },
+      }),
     }
   })
 

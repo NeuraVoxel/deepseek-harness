@@ -7,6 +7,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { AgentObserveGroupMode, AgentObserveNode, AgentObserveSnapshot } from '../../types.ts'
 import { layoutTopology, NODE_SIZE, type CanvasLayout } from '../layout.ts'
 import { DARK_FLOW_NODE_STYLE } from './dark-node-style.ts'
+import { flowEdgeStyle } from './flow-edge-style.ts'
 
 /** Inputs for {@link snapshotToDocument}. */
 export interface SnapshotToDocumentOptions {
@@ -78,6 +79,7 @@ export function snapshotToDocument(options: SnapshotToDocumentOptions): FleetDoc
     from: edge.from as string,
     to: edge.to as string,
     kind: edge.kind,
+    style: flowEdgeStyle({ kind: edge.kind }),
   }))
 
   const groups: GraphGroup[] = layout.groups.map(group => ({

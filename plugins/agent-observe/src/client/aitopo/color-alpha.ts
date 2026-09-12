@@ -1,5 +1,7 @@
 /**
- * Apply opacity to CSS colors without mutating AITopo (edges lack style.alpha).
+ * Apply opacity to CSS colors for surfaces without a typed alpha field
+ * (e.g. GraphGroupStyle). Prefer GraphEdgeStyle.alpha / GraphNodeStyle.alpha
+ * when fading nodes or edges.
  */
 
 /**
