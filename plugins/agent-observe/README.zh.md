@@ -10,9 +10,9 @@
 - 单击节点 → `sessions.open(id)`
 - 在某轮 Turn 的 assistant-actions 行点 **打开观察** → 直接进入该 Turn 的 **流程**模式并**钉住**（更新的 Turn 不会自动抢走画布）
 - 总览 **双击** → 打开该 Agent **最新** Turn 的流程 Canvas（`focusTurn = null`）
-- Flow 内第二行维度 Tab：**架构**（默认；端到端 + Turn 环 / 能力缝 Group，可展开或 SubNetwork 下钻，含事件珠）· **数据流**（架构式端到端主干 + 真实 N×Step 带与 Session 载荷检视）· **进程流**（`derive-flow` 机制说明）· **事件流**（左时间线 / 右 payload）；钉住 Turn 跨维度共享
+- Flow 内第二行维度 Tab：**架构**（默认；端到端 + Turn 环 / 能力缝 Group，可展开或 SubNetwork 下钻，含事件珠）· **数据流**（架构式端到端主干 + 真实 N×Step 带与 Session 载荷检视，Step 优先事件珠）· **进程流**（`derive-flow` 机制说明）· **事件流**（左时间线 / 右 payload）；钉住 Turn 跨维度共享
 - 架构图把全景 / 闭环 / 能力缝骨架作为层嵌入（不再单独占 Tab）
-- 数据流在端到端 Group 下按每个 `step/start`…`step/end` 展开（Step 内以 Model 为中心）；检视器为真实载荷与 **组织结果**——不复用进程流的 Remote 教学文案
+- 数据流在端到端 Group 下按每个 `step/start`…`step/end` 展开（Step 内以 Model 为中心）；检视器为真实载荷与 **组织结果**——不复用进程流的 Remote 教学文案；事件珠复用架构图的「聚焦事件」开关
 - 流程 **双击空白画布** → 返回总览（点中节点/边不返回；事件流双栏不绑该手势）
 - 钉住的 Turn 不是 Session 最新时，流程工具栏出现 **跳到最新**；点击清除钉住并留在流程模式
 - **限制：** Turn 由快捷入口 `messageId` 对应的持久化 `assistant/message.id` 反查得出（插件内解析）；本轮不扩展 `packages/` 中的 `AssistantActionOwnerProps`

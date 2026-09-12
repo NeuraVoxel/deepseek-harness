@@ -595,6 +595,196 @@ describe('dataflow dimension', () => {
     expect(view.document.nodes.some(n => n.id === 'df:turn:start')).toBe(true)
     expect(view.document.nodes.some(n => n.id === 'df:turn:end')).toBe(true)
   })
+
+  it('overlays Turn event beads on Step-first anchors', () => {
+    const view = deriveDataFlowDimension(ctxOf(completedTurn(), 1))
+    expect(view.kind).toBe('graph')
+    if (view.kind !== 'graph') return
+    const beads = view.document.nodes.filter(node => node.type === 'event')
+    expect(beads.length).toBeGreaterThan(1)
+    const byId = new Map(view.document.nodes.map(node => [node.id, node]))
+    const turnStartBead = byId.get('event:1')
+    const userBead = byId.get('event:2')
+    const assistantBead = byId.get('event:5')
+    const toolBead = byId.get('event:6')
+    expect(turnStartBead).toBeDefined()
+    expect(userBead).toBeDefined()
+    expect(assistantBead).toBeDefined()
+    expect(toolBead).toBeDefined()
+    // Stem edges: bead from is the anchor.
+    const stemOf = (beadId: string) =>
+      view.document.edges.find(edge => edge.to === beadId && !edge.id.startsWith('event-seq:'))
+    expect(stemOf('event:1')?.from).toBe('df:turn:start')
+    expect(stemOf('event:2')?.from).toBe('df:e2e:client')
+    expect(stemOf('event:5')?.from).toBe('df:s1:model')
+    expect(stemOf('event:6')?.from).toBe('df:s1:tool:c1')
+    expect(view.inspectByNodeId!.get('event:5')?.detail).toContain('assistant/message')
+  })
+
+  it('places Events without Turn/Step hosts on the E2E spine', () => {
+    const base = completedTurn()
+    const withoutEnd = base.slice(0, -1)
+    const turnEnd = {
+      ...base[base.length - 1]!,
+      seq: seq(100),
+      time: 100,
+    }
+    const withSystem = [
+      ...withoutEnd,
+      {
+        type: 'system/message',
+        seq: seq(50),
+        time: 50,
+        data: {
+          turn: 1,
+          step: 1,
+          message: {
+            id: 'sys1',
+            role: 'system',
+            content: [{ type: 'text', text: 'note' }],
+            source: { kind: 'plugin', plugin: '@deepseek-ai/dsh-system-prompt' },
+          },
+        },
+        surfaceOp: 'append',
+      },
+      turnEnd,
+    ] as SessionEvent[]
+    const listed = deriveEventsDimension(ctxOf(withSystem, 1), 'all')
+    const view = deriveDataFlowDimension(ctxOf(withSystem, 1))
+    expect(view.kind).toBe('graph')
+    if (view.kind !== 'graph') return
+    const beads = view.document.nodes.filter(node => node.type === 'event')
+    expect(beads.length).toBe(listed.entries.length)
+    const stemOf = (beadId: string) =>
+      view.document.edges.find(edge => edge.to === beadId && !edge.id.startsWith('event-seq:'))
+    expect(stemOf('event:50')?.from).toBe('df:e2e:write')
+    expect(beads.some(node =>
+      node.id === 'event:50' && node.groupId === 'g-df-e2e',
+    )).toBe(true)
+  })
+
+  it('aligns DataFlow E2E fallbacks with Architecture panorama roles', () => {
+    // No Step bands: force E2E-only hosts (turn brackets still present when turn starts).
+    const e2eOnly: SessionEvent[] = [
+      { type: 'turn/start', seq: seq(1), time: 1, data: { turn: 1 } },
+      {
+        type: 'user/message',
+        seq: seq(2),
+        time: 2,
+        data: {
+          id: 'u1',
+          role: 'user',
+          content: [{ type: 'text', text: 'hi' }],
+          source: { kind: 'user' },
+        },
+        surfaceOp: 'append',
+      },
+      {
+        type: 'request/header',
+        seq: seq(3),
+        time: 3,
+        data: {
+          turn: 1,
+          step: 1,
+          reason: 'initial',
+          header: {
+            tools: [],
+            call: {},
+            config: { provider: 'mock', model: 'm1' },
+          },
+        },
+      },
+      {
+        type: 'turn/end',
+        seq: seq(4),
+        time: 4,
+        data: { turn: 1, reason: { kind: 'completed' } },
+      },
+    ] as SessionEvent[]
+    const view = deriveDataFlowDimension(ctxOf(e2eOnly, 1))
+    expect(view.kind).toBe('graph')
+    if (view.kind !== 'graph') return
+    const stemOf = (beadId: string) =>
+      view.document.edges.find(edge => edge.to === beadId && !edge.id.startsWith('event-seq:'))
+    // turn/end prefers Turn bracket when present; Architecture E2E role is admit.
+    expect(stemOf('event:4')?.from === 'df:turn:end'
+      || stemOf('event:4')?.from === 'df:e2e:admit').toBe(true)
+    expect(stemOf('event:2')?.from).toBe('df:e2e:client')
+    // request with no Step request node → session (Architecture envelope).
+    expect(stemOf('event:3')?.from).toBe('df:e2e:session')
+  })
+
+  it('anchors multi-Step assistant beads on the owning Step model', () => {
+    const twoSteps: SessionEvent[] = [
+      ...completedTurn().flatMap(event => {
+        if (event.type === 'step/end' || event.type === 'turn/end') return []
+        return [event]
+      }),
+      { type: 'step/end', seq: seq(12), time: 13, data: { turn: 1, step: 1 } } as SessionEvent,
+      { type: 'step/start', seq: seq(13), time: 14, data: { turn: 1, step: 2 } } as SessionEvent,
+      {
+        type: 'request/header',
+        seq: seq(14),
+        time: 15,
+        data: {
+          turn: 1,
+          step: 2,
+          reason: 'change',
+          header: {
+            tools: [],
+            call: {},
+            config: { provider: 'mock', model: 'm1' },
+          },
+        },
+      } as SessionEvent,
+      {
+        type: 'assistant/message',
+        seq: seq(15),
+        time: 16,
+        data: {
+          turn: 1,
+          step: 2,
+          message: {
+            id: 'a2',
+            role: 'assistant',
+            content: [{ type: 'text', text: 'done2' }],
+            source: { kind: 'model', provider: 'mock', model: 'm1' },
+          },
+        },
+        surfaceOp: 'append',
+      } as SessionEvent,
+      { type: 'step/end', seq: seq(16), time: 17, data: { turn: 1, step: 2 } } as SessionEvent,
+      {
+        type: 'turn/end',
+        seq: seq(17),
+        time: 18,
+        data: { turn: 1, reason: { kind: 'completed' } },
+      } as SessionEvent,
+    ]
+    const view = deriveDataFlowDimension(ctxOf(twoSteps, 1))
+    expect(view.kind).toBe('graph')
+    if (view.kind !== 'graph') return
+    const stemOf = (beadId: string) =>
+      view.document.edges.find(edge => edge.to === beadId && !edge.id.startsWith('event-seq:'))
+    expect(stemOf('event:5')?.from).toBe('df:s1:model')
+    expect(stemOf('event:15')?.from).toBe('df:s2:model')
+  })
+
+  it('focusEventBeads dims DataFlow chrome while keeping beads opaque', () => {
+    const view = deriveDataFlowDimension({
+      ...ctxOf(completedTurn(), 1),
+      focusEventBeads: true,
+    })
+    expect(view.kind).toBe('graph')
+    if (view.kind !== 'graph') return
+    const beads = view.document.nodes.filter(node => node.type === 'event')
+    const stages = view.document.nodes.filter(node => node.type !== 'event')
+    expect(beads.length).toBeGreaterThan(0)
+    expect(beads.every(node => node.style?.alpha === 1)).toBe(true)
+    expect(stages.every(node => node.style?.alpha === 0.2)).toBe(true)
+    const seqEdges = view.document.edges.filter(edge => edge.id.startsWith('event-seq:'))
+    expect(seqEdges.every(edge => edge.style?.alpha === 1 || edge.style?.alpha === undefined)).toBe(true)
+  })
 })
 
 describe('events dimension', () => {

@@ -15,6 +15,7 @@ DataFlow does **not** reuse Process topology. It builds its own graph:
 1. **End-to-end Group** — same spine idea as Architecture panorama (`Client → admit → Session → Model ↔ Tools → Session write → Client render`), with Session-backed inspect and short payload edge labels (`session.prompt`, `assistant`, `session.follow`, …).
 2. **Real N×Step Group** — replaces Architecture’s single abstract Turn/Step loop. For each `step/start` in the focused Turn, emit a Step band: `step/start → request assemble → Model → [Tools group with real tool nodes above/below the trunk slot] → step/end`. No standalone Tools hub node. Tool results rejoin `step/end`, append to Session write (`surface`), and when another Step follows, feed that Step’s request (`tool.result → next` / `surface → next`). Bracket with `turn/start` / `turn/end`. Step-internal control edges stay visible; E2E↔Step bridges are optional via `showDataFlowControlEdges`.
 3. **Model** is the hub on both E2E (overview) and each Step (request in / `assistant/message` out).
+4. **Event beads** — shared `appendTurnEventBeads` with Step-first anchors (`createDataFlowEventAnchorResolver`); reuses Architecture `focusEventBeads`. See [DataFlow Turn event beads](./2026-09-12-dataflow-event-beads.md).
 
 Inspector fields bind Session events only (`organizedText` when useful). Process teaching Remote / `llm.stream` prose is never used as DataFlow payload text.
 

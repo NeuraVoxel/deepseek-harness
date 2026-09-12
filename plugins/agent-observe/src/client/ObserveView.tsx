@@ -479,15 +479,26 @@ function FlowPane(props: Props): ReactElement {
           </>
         ) : null}
         {dimension === 'dataflow' ? (
-          <button
-            type="button"
-            className={css.groupButton}
-            data-active={showDataFlowControlEdges ? 'true' : 'false'}
-            aria-pressed={showDataFlowControlEdges}
-            onClick={() => { setShowDataFlowControlEdges(value => !value) }}
-          >
-            {t('flow.dataflow.showControlEdges')}
-          </button>
+          <>
+            <button
+              type="button"
+              className={css.groupButton}
+              data-active={focusEventBeads ? 'true' : 'false'}
+              aria-pressed={focusEventBeads}
+              onClick={() => { setFocusEventBeads(value => !value) }}
+            >
+              {t('flow.architecture.focusEvents')}
+            </button>
+            <button
+              type="button"
+              className={css.groupButton}
+              data-active={showDataFlowControlEdges ? 'true' : 'false'}
+              aria-pressed={showDataFlowControlEdges}
+              onClick={() => { setShowDataFlowControlEdges(value => !value) }}
+            >
+              {t('flow.dataflow.showControlEdges')}
+            </button>
+          </>
         ) : null}
         {view.kind === 'graph' && view.legend === 'process' ? (
           <div className={css.legend} aria-label={t('legend.title')}>
@@ -513,6 +524,10 @@ function FlowPane(props: Props): ReactElement {
             <span><i className={`${css.swatch} ${css.swatchFlowPending}`} />{t('flow.legend.pending')}</span>
             <span><i className={`${css.swatch} ${css.swatchFlowActive}`} />{t('flow.legend.active')}</span>
             <span><i className={`${css.swatch} ${css.swatchFlowDone}`} />{t('flow.legend.done')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEventBead}`} />{t('flow.architecture.legend.event')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEventStart}`} />{t('flow.architecture.legend.eventStart')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEventEnd}`} />{t('flow.architecture.legend.eventEnd')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEventSeq}`} />{t('flow.architecture.legend.eventSeq')}</span>
             <span><i className={`${css.swatch} ${css.swatchEdgeData}`} />{t('flow.dataflow.legend.data')}</span>
             <span><i className={`${css.swatch} ${css.swatchEdgeFlow}`} />{t('flow.dataflow.legend.control')}</span>
           </div>

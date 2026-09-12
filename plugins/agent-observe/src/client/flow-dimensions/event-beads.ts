@@ -1,5 +1,5 @@
 /**
- * Turn-scoped event beads shared by Atlas and Architecture dimensions.
+ * Turn-scoped event beads shared by Architecture and DataFlow dimensions.
  *
  * Beads are 1:1 with the Events tab Turn list (filter `all`). Mid beads and
  * seq / stem edges use orange; first seq is start (red), last is end (green).
@@ -57,12 +57,34 @@ export interface AppendEventBeadsArgs {
    * Resolve which existing node id should host the bead.
    * @param linked - Events-tab linkedNodeId, or undefined when unmapped.
    * @param anchorById - nodes present on the canvas.
+   * @param event - durable Session event being placed (DataFlow uses step/callId).
    */
   readonly resolveAnchor: (
     linked: string | undefined,
     anchorById: ReadonlyMap<string, GraphNode>,
+    event: SessionEvent,
   ) => string | undefined
 }
+
+/** Map Events linked ids onto DataFlow E2E spine nodes.
+ *
+ * Mirrors {@link EVENT_ANCHOR_PANORAMA} onto DataFlow’s coarser E2E stages:
+ * `envelope`/`context` → `session`, `durable` → `write`, `preset` → `session`.
+ */
+export const EVENT_ANCHOR_DATAFLOW_E2E: Readonly<Record<string, string>> = {
+  'turn-start': 'df:e2e:admit',
+  'turn-end': 'df:e2e:admit',
+  'step-start': 'df:e2e:session',
+  'step-end': 'df:e2e:session',
+  request: 'df:e2e:session',
+  model: 'df:e2e:model',
+  tools: 'df:e2e:tools',
+  client: 'df:e2e:client',
+  preset: 'df:e2e:session',
+}
+
+/** DataFlow stand-in for Architecture’s `durable` (Session write) stage. */
+export const DATAFLOW_E2E_DURABLE = 'df:e2e:write'
 
 /**
  * Append beads + stem + seq edges for the focused Turn (mutates arrays/maps).
@@ -82,7 +104,7 @@ export function appendTurnEventBeads(args: AppendEventBeadsArgs): string[] {
 
   for (const event of turnEvents) {
     const linked = linkedNodeIdForEvent(event)
-    const anchorId = resolveAnchor(linked, anchorById)
+    const anchorId = resolveAnchor(linked, anchorById, event)
     if (anchorId === undefined) continue
     const anchor = anchorById.get(anchorId)
     if (anchor === undefined) continue
@@ -185,6 +207,132 @@ export function resolveArchitectureEventAnchor(
     if (anchorById.has(onLoop)) return onLoop
   }
   return resolvePanoramaEventAnchor(linked, anchorById)
+}
+
+/**
+ * DataFlow Step-first resolver: track the latest step/start and prefer
+ * `df:sN:*` / tool nodes, else Turn brackets / E2E spine. Events with no
+ * Turn/Step host still land on the E2E spine (Session fallback).
+ * @returns resolveAnchor suitable for {@link appendTurnEventBeads}.
+ */
+export function createDataFlowEventAnchorResolver(): AppendEventBeadsArgs['resolveAnchor'] {
+  let currentStep: number | undefined
+  return (linked, anchorById, event) => {
+    const stepFromEvent = stepNumberOf(event)
+    if (event.type === 'step/start' && stepFromEvent !== undefined) {
+      currentStep = stepFromEvent
+    }
+    const step = stepFromEvent ?? currentStep
+
+    if (event.type === 'turn/start') {
+      return firstPresent(anchorById, ['df:turn:start', 'df:e2e:admit'])
+    }
+    if (event.type === 'turn/end') {
+      return firstPresent(anchorById, ['df:turn:end', 'df:e2e:admit'])
+    }
+
+    if (linked === 'step-start' || event.type === 'step/start') {
+      if (step !== undefined) {
+        return firstPresent(anchorById, [`df:s${step}:start`, 'df:e2e:session'])
+      }
+      return firstPresent(anchorById, ['df:e2e:session'])
+    }
+    if (linked === 'step-end' || event.type === 'step/end') {
+      if (step !== undefined) {
+        return firstPresent(anchorById, [`df:s${step}:end`, 'df:e2e:session'])
+      }
+      return firstPresent(anchorById, ['df:e2e:session'])
+    }
+    if (linked === 'request') {
+      if (step !== undefined) {
+        return firstPresent(anchorById, [`df:s${step}:request`, 'df:e2e:session'])
+      }
+      return firstPresent(anchorById, ['df:e2e:session'])
+    }
+    if (linked === 'model') {
+      if (step !== undefined) {
+        return firstPresent(anchorById, [`df:s${step}:model`, 'df:e2e:model'])
+      }
+      return firstPresent(anchorById, ['df:e2e:model'])
+    }
+    if (linked === 'tools' || event.type === 'tool/call' || event.type === 'tool/result') {
+      const callId = toolCallIdOf(event)
+      if (callId !== undefined && step !== undefined) {
+        const toolId = `df:s${step}:tool:${callId}`
+        if (anchorById.has(toolId)) return toolId
+      }
+      if (step !== undefined) {
+        return firstPresent(anchorById, [`df:s${step}:model`, 'df:e2e:tools'])
+      }
+      return firstPresent(anchorById, ['df:e2e:tools'])
+    }
+    if (linked === 'client') {
+      return firstPresent(anchorById, ['df:e2e:client'])
+    }
+
+    return resolveDataFlowE2eFallback(linked, anchorById, event)
+  }
+}
+
+/**
+ * Place events that have no Turn/Step host onto the E2E spine.
+ * Aligns with Architecture panorama roles where DataFlow has a stage.
+ * @param linked - Events linkedNodeId when known.
+ * @param anchorById - canvas nodes.
+ * @param event - durable Session event.
+ */
+export function resolveDataFlowE2eFallback(
+  linked: string | undefined,
+  anchorById: ReadonlyMap<string, GraphNode>,
+  event: SessionEvent,
+): string | undefined {
+  if (linked !== undefined) {
+    const e2e = EVENT_ANCHOR_DATAFLOW_E2E[linked]
+    if (e2e !== undefined && anchorById.has(e2e)) return e2e
+  }
+  // Architecture unmapped / system → `durable`; DataFlow stand-in is write.
+  if (event.type === 'system/message' || linked === undefined) {
+    return firstPresent(anchorById, [
+      DATAFLOW_E2E_DURABLE,
+      'df:e2e:session',
+      'df:e2e:admit',
+    ])
+  }
+  return firstPresent(anchorById, [
+    DATAFLOW_E2E_DURABLE,
+    'df:e2e:session',
+    'df:e2e:admit',
+  ])
+}
+
+function firstPresent(
+  anchorById: ReadonlyMap<string, GraphNode>,
+  ids: readonly string[],
+): string | undefined {
+  for (const id of ids) {
+    if (anchorById.has(id)) return id
+  }
+  return undefined
+}
+
+function stepNumberOf(event: SessionEvent): number | undefined {
+  const data = event.data as { step?: number } | undefined
+  return typeof data?.step === 'number' ? data.step : undefined
+}
+
+function toolCallIdOf(event: SessionEvent): string | undefined {
+  if (event.type === 'tool/call') {
+    const callId = event.data.callId
+    return typeof callId === 'string' ? callId : undefined
+  }
+  if (event.type !== 'tool/result') return undefined
+  const data = event.data as {
+    callId?: string
+    message?: { content: readonly { type: string, toolCallId?: string }[] }
+  }
+  if (typeof data.callId === 'string') return data.callId
+  const block = data.message?.content.find(part => part.type === 'tool-result')
+  return block?.toolCallId
 }
 
 /**
