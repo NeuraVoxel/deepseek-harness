@@ -15,10 +15,17 @@ interface HostSessionHeader {
   readonly origin?: 'subagent'
 }
 
+interface HostSessionEvent {
+  readonly type: string
+  readonly data?: { readonly turn?: number }
+}
+
 interface HostSession {
   readonly id: SessionId
   readonly seq: number
   readonly header: HostSessionHeader
+  /** Present on live `Session` instances from `dsh-session`. */
+  snapshotEvents?(): readonly HostSessionEvent[]
 }
 
 interface HostAgent {
@@ -59,6 +66,7 @@ export function buildLiveTopology(ctx: Context): AgentObserveSnapshot {
       ? 'cold' as const
       : agent.status === 'running' ? 'running' as const : 'idle' as const
     const parentId = session.header.parentSession
+    const turnCount = turnCountFromSession(session)
     nodes.push({
       id,
       title: String(id),
@@ -67,6 +75,7 @@ export function buildLiveTopology(ctx: Context): AgentObserveSnapshot {
       ...(parentId === undefined ? {} : { parentId }),
       ...(session.header.origin === undefined ? {} : { origin: session.header.origin }),
       blank: session.seq === 0,
+      ...(turnCount === undefined ? {} : { turnCount }),
     })
     if (parentId !== undefined) {
       edges.push({ from: parentId, to: id, kind: 'parent' })
@@ -84,4 +93,19 @@ export function buildLiveTopology(ctx: Context): AgentObserveSnapshot {
   }
 
   return { nodes, edges, updatedAt: new Date().toISOString() }
+}
+
+/**
+ * Max `turn/start` turn number in the Session log (0 when none).
+ * @param session - Host Session row.
+ */
+export function turnCountFromSession(session: HostSession): number | undefined {
+  if (typeof session.snapshotEvents !== 'function') return undefined
+  let max = 0
+  for (const event of session.snapshotEvents()) {
+    if (event.type !== 'turn/start') continue
+    const turn = event.data?.turn
+    if (typeof turn === 'number' && turn > max) max = turn
+  }
+  return max
 }

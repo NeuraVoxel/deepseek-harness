@@ -7,7 +7,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session/types'
 import type { AgentObserveGroupMode, AgentObserveNode, AgentObserveSnapshot } from '../../types.ts'
 import { layoutTopology, NODE_SIZE, type CanvasLayout } from '../layout.ts'
 import { DARK_FLOW_NODE_STYLE } from './dark-node-style.ts'
-import { flowEdgeStyle } from './flow-edge-style.ts'
+import { flowEdgeStyle, DARK_FLOW_GROUP_STYLE, observeLayoutGroup } from './flow-edge-style.ts'
 
 /** Inputs for {@link snapshotToDocument}. */
 export interface SnapshotToDocumentOptions {
@@ -51,6 +51,7 @@ export function snapshotToDocument(options: SnapshotToDocumentOptions): FleetDoc
       : undefined
     // AITopo paints running/idle/cold; archive reuses cold chrome (gray).
     const paintStatus = node.status === 'archived' ? 'cold' : node.status
+    const alarms = turnCountAlarms(id, node.turnCount)
     return {
       id,
       type: 'agent',
@@ -63,6 +64,7 @@ export function snapshotToDocument(options: SnapshotToDocumentOptions): FleetDoc
       groupId: node.groupKey,
       style: DARK_FLOW_NODE_STYLE,
       ...(networkId === undefined ? {} : { networkId }),
+      ...(alarms === undefined ? {} : { alarms }),
       data: {
         meta: [
           node.status,
@@ -82,7 +84,7 @@ export function snapshotToDocument(options: SnapshotToDocumentOptions): FleetDoc
     style: flowEdgeStyle({ kind: edge.kind }),
   }))
 
-  const groups: GraphGroup[] = layout.groups.map(group => ({
+  const groups: GraphGroup[] = layout.groups.map(group => observeLayoutGroup({
     id: group.key,
     label: group.label,
     memberIds: layout.nodes.filter(n => n.groupKey === group.key).map(n => n.id as string),
@@ -90,6 +92,7 @@ export function snapshotToDocument(options: SnapshotToDocumentOptions): FleetDoc
     y: group.y,
     w: group.width,
     h: group.height,
+    style: DARK_FLOW_GROUP_STYLE,
   }))
 
   const networks = groupMode === 'teams' ? buildTeamNetworks(snapshot, labels) : undefined
@@ -107,6 +110,23 @@ export function snapshotToDocument(options: SnapshotToDocumentOptions): FleetDoc
       ...(hasTeamNetworks ? { networks } : {}),
     },
   }
+}
+
+/**
+ * Warm Turn-count badge for Fleet nodes (`warn` = orange, not red `error`).
+ * @param nodeId - graph node id.
+ * @param turnCount - distinct Turn count when known.
+ */
+export function turnCountAlarms(
+  nodeId: string,
+  turnCount: number | undefined,
+): GraphNode['alarms'] {
+  if (turnCount === undefined) return undefined
+  return [{
+    id: `turns:${nodeId}`,
+    level: 'warn',
+    message: String(turnCount),
+  }]
 }
 
 function buildTeamNetworks(

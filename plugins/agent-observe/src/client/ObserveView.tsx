@@ -238,6 +238,8 @@ function FlowPane(props: Props): ReactElement {
   const [expandArchitectureLoop, setExpandArchitectureLoop] = useState(false)
   /** Architecture tab: inline Capability-seam Group (default off — gateway SubNetwork). */
   const [expandArchitectureSeam, setExpandArchitectureSeam] = useState(false)
+  /** DataFlow: show muted control/flow edges (default off — data only). */
+  const [showDataFlowControlEdges, setShowDataFlowControlEdges] = useState(false)
   const hostRef = useRef<AITopoHostHandle>(null)
   const [zoom, setZoom] = useState(1)
   const [activeNetworkId, setActiveNetworkId] = useState<string | null>(null)
@@ -261,6 +263,7 @@ function FlowPane(props: Props): ReactElement {
     focusArchitectureE2e,
     expandArchitectureLoop,
     expandArchitectureSeam,
+    showDataFlowControlEdges,
     t: t as (key: string, params?: Record<string, string>) => string,
   }), [
     sessionId,
@@ -272,6 +275,7 @@ function FlowPane(props: Props): ReactElement {
     focusArchitectureE2e,
     expandArchitectureLoop,
     expandArchitectureSeam,
+    showDataFlowControlEdges,
     t,
   ])
 
@@ -474,6 +478,17 @@ function FlowPane(props: Props): ReactElement {
             </button>
           </>
         ) : null}
+        {dimension === 'dataflow' ? (
+          <button
+            type="button"
+            className={css.groupButton}
+            data-active={showDataFlowControlEdges ? 'true' : 'false'}
+            aria-pressed={showDataFlowControlEdges}
+            onClick={() => { setShowDataFlowControlEdges(value => !value) }}
+          >
+            {t('flow.dataflow.showControlEdges')}
+          </button>
+        ) : null}
         {view.kind === 'graph' && view.legend === 'process' ? (
           <div className={css.legend} aria-label={t('legend.title')}>
             <span><i className={`${css.swatch} ${css.swatchKindInput}`} />{t('flow.kind.client-input')}</span>
@@ -491,6 +506,15 @@ function FlowPane(props: Props): ReactElement {
             <span><i className={`${css.swatch} ${css.swatchEdgeFlow}`} />{t('flow.edge.flow')}</span>
             <span><i className={`${css.swatch} ${css.swatchEdgeData}`} />{t('flow.edge.data')}</span>
             <span><i className={`${css.swatch} ${css.swatchFlowActive}`} />{t('flow.legend.active')}</span>
+          </div>
+        ) : null}
+        {view.kind === 'graph' && view.legend === 'dataflow' ? (
+          <div className={css.legend} aria-label={t('legend.title')}>
+            <span><i className={`${css.swatch} ${css.swatchFlowPending}`} />{t('flow.legend.pending')}</span>
+            <span><i className={`${css.swatch} ${css.swatchFlowActive}`} />{t('flow.legend.active')}</span>
+            <span><i className={`${css.swatch} ${css.swatchFlowDone}`} />{t('flow.legend.done')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEdgeData}`} />{t('flow.dataflow.legend.data')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEdgeFlow}`} />{t('flow.dataflow.legend.control')}</span>
           </div>
         ) : null}
         {view.kind === 'graph' && view.legend === 'architecture' ? (
@@ -609,6 +633,7 @@ function FlowInspectorPanel(props: {
   const hasIo = (inspect.inputText !== undefined && inspect.inputText !== '')
     || (inspect.outputText !== undefined && inspect.outputText !== '')
   const hasDetail = inspect.detail !== undefined && inspect.detail !== ''
+  const hasOrganized = inspect.organizedText !== undefined && inspect.organizedText !== ''
   const stopCanvas = (event: SyntheticEvent): void => {
     event.stopPropagation()
   }
@@ -641,7 +666,13 @@ function FlowInspectorPanel(props: {
             <pre className={css.inspectorPre}>{inspect.outputText || '—'}</pre>
           </>
         ) : null}
-        {!hasDetail && !hasIo ? (
+        {hasOrganized ? (
+          <>
+            <div className={css.inspectorSection}>{t('flow.panel.organized')}</div>
+            <pre className={css.inspectorPre}>{inspect.organizedText}</pre>
+          </>
+        ) : null}
+        {!hasDetail && !hasIo && !hasOrganized ? (
           <div className={css.inspectorSection}>{t('flow.panel.empty')}</div>
         ) : null}
       </div>

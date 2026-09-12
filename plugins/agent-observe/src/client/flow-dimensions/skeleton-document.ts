@@ -6,7 +6,7 @@ import type { GraphDocument, GraphEdge, GraphGroup, GraphNode } from '@neuravoxe
 import type { FlowNodeStatus } from '../derive-flow.ts'
 import { alarmsFromStatus } from '../aitopo/alarms-from-status.ts'
 import { DARK_FLOW_NODE_STYLE } from '../aitopo/dark-node-style.ts'
-import { flowEdgeStyle } from '../aitopo/flow-edge-style.ts'
+import { flowEdgeStyle, DARK_FLOW_GROUP_STYLE, observeLayoutGroup } from '../aitopo/flow-edge-style.ts'
 
 /** One skeleton node before live status is applied. */
 export interface SkeletonNode {
@@ -101,7 +101,7 @@ export function skeletonToDocument(
     }
   })
 
-  const groups: GraphGroup[] | undefined = skeleton.groups?.map(group => ({
+  const groups: GraphGroup[] | undefined = skeleton.groups?.map(group => observeLayoutGroup({
     id: group.id,
     label: group.label,
     memberIds: group.memberIds,
@@ -109,6 +109,7 @@ export function skeletonToDocument(
     y: group.y,
     w: group.w,
     h: group.h,
+    style: DARK_FLOW_GROUP_STYLE,
   }))
 
   return {

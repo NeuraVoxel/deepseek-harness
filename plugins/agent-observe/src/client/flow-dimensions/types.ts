@@ -10,6 +10,7 @@ import type { AgentFlowSnapshot } from '../derive-flow.ts'
 /** Ordered Flow dimension ids (tab strip). */
 export type FlowDimensionId =
   | 'architecture'
+  | 'dataflow'
   | 'process'
   | 'events'
 
@@ -48,6 +49,11 @@ export interface FlowDimensionContext {
    * canvas. Default false — SubNetwork gateway with dblclick drill-in.
    */
   readonly expandArchitectureSeam?: boolean
+  /**
+   * DataFlow tab: when true, keep control/flow edges visible (default false —
+   * data edges only).
+   */
+  readonly showDataFlowControlEdges?: boolean
   /** Locale lookup for labels that dimensions own. */
   readonly t: (key: string, params?: Record<string, string>) => string
 }
@@ -57,6 +63,8 @@ export interface FlowNodeInspect {
   readonly inputText?: string
   readonly outputText?: string
   readonly detail?: string
+  /** DataFlow: assembled / organized view of payloads for this stage. */
+  readonly organizedText?: string
 }
 
 /** AITopo-hosted dimension. */
@@ -67,7 +75,7 @@ export interface GraphDimensionView {
   /** When true, empty canvas double-click returns to Fleet. */
   readonly blankDoubleClickToFleet: true
   /** Which legend strip FlowPane should render. */
-  readonly legend: 'process' | 'status' | 'architecture'
+  readonly legend: 'process' | 'status' | 'architecture' | 'dataflow'
 }
 
 /** Dual-pane SessionEvent dimension. */

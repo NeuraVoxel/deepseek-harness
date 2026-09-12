@@ -7,7 +7,7 @@ import type { AgentFlowSnapshot } from '../derive-flow.ts'
 import { layoutAgentFlow, type FlowLayout } from '../layout-flow.ts'
 import { alarmsFromStatus } from './alarms-from-status.ts'
 import { DARK_FLOW_NODE_STYLE } from './dark-node-style.ts'
-import { flowEdgeStyle } from './flow-edge-style.ts'
+import { flowEdgeStyle, DARK_FLOW_GROUP_STYLE, observeLayoutGroup } from './flow-edge-style.ts'
 
 /** Result of flow → document adaptation. */
 export interface FlowDocumentResult {
@@ -89,7 +89,7 @@ export function flowToDocument(
         : group.label.replace(/ · parallel$/, '').replace(/ · .*$/, '')
       label = `${base} · ${labels.parallel}`
     }
-    return {
+    return observeLayoutGroup({
       id: group.key,
       label,
       memberIds: layout.nodes
@@ -99,7 +99,8 @@ export function flowToDocument(
       y: group.y,
       w: group.width,
       h: group.height,
-    }
+      style: DARK_FLOW_GROUP_STYLE,
+    })
   })
 
   return {

@@ -41,6 +41,7 @@ export function deriveClientTopology(
     const parentId = row.parentId
     const workspaceId = workspaceBySession.get(id)
       ?? matchWorkspaceByCwd(workspaces, row.cwd)
+    const turnCount = turnCountFromSummary(row)
     nodes.push({
       id,
       title: row.displayTitle,
@@ -50,6 +51,7 @@ export function deriveClientTopology(
       ...(row.origin === undefined ? {} : { origin: row.origin }),
       blank: row.blank,
       ...(workspaceId === undefined ? {} : { workspaceId }),
+      ...(turnCount === undefined ? {} : { turnCount }),
     })
     if (parentId !== undefined) {
       edges.push({ from: parentId, to: id as SessionId, kind: 'parent' })
@@ -68,6 +70,29 @@ export function clientNodeStatus(row: Pick<SessionSummary, 'running'>, isArchive
   if (row.running) return 'running'
   if (isArchived) return 'archived'
   return 'idle'
+}
+
+/**
+ * Real Turn count for a list row when evidence exists.
+ * Blank Sessions are 0; otherwise `sessionStats.turns` when projected.
+ * @param row - Client session list summary.
+ */
+export function turnCountFromSummary(row: SessionSummary): number | undefined {
+  if (row.blank) return 0
+  const stats = sessionStatsOf(row)
+  if (stats === undefined) return undefined
+  return stats.turns
+}
+
+function sessionStatsOf(
+  row: SessionSummary,
+): { readonly turns: number } | undefined {
+  const values = row.projectionValues as
+    | Readonly<{ readonly sessionStats?: { readonly turns?: number } }>
+    | undefined
+  const turns = values?.sessionStats?.turns
+  if (typeof turns !== 'number' || !Number.isFinite(turns) || turns < 0) return undefined
+  return { turns }
 }
 
 function matchWorkspaceByCwd(

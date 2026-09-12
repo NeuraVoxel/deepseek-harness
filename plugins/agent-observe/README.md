@@ -10,8 +10,9 @@ Opt-in plugin: a **Observe** tab beside Chat / Trajectory that shows Session / A
 - Click a node → `sessions.open(id)`
 - **Open Observe** on a Turn’s assistant-actions row → Observe tab in **flow** mode **pinned** to that Turn (newer Turns do not auto-steal the canvas)
 - Fleet **double-click** → process Canvas for that Agent’s **latest** Turn (`focusTurn = null`)
-- Inside Flow, a second-row dimension strip: **Architecture** (default; E2E + Turn-loop / Capability-seam Groups with expand and SubNetwork drill-in; event beads), **Process** (`derive-flow`), **Events** (timeline + payload); the Turn pin is shared across dimensions
+- Inside Flow, a second-row dimension strip: **Architecture** (default; E2E + Turn-loop / Capability-seam Groups with expand and SubNetwork drill-in; event beads), **Data flow** (Architecture-style E2E spine + real N×Step bands with Session-backed payload inspect), **Process** (`derive-flow` teaching pipeline), **Events** (timeline + payload); the Turn pin is shared across dimensions
 - Architecture embeds panorama / loop / seam skeletons as layers (not separate tabs)
+- Data flow expands each `step/start`…`step/end` under the E2E Group (Model-centric per Step); inspector shows real payloads + **Organized** — not Process Remote teaching prose
 - Flow **double-click empty canvas** → back to Fleet (node/edge hits stay in flow; the events dual-pane does not bind that gesture)
 - **Jump to latest** appears on the flow toolbar when pinned away from the Session’s latest Turn; click clears the pin and stays in flow
 - **Limitation:** Turn is resolved from the durable `assistant/message.id` that owns the shortcut’s `messageId` (plugin reverse-lookup); this cut does not extend `AssistantActionOwnerProps` in `packages/`
@@ -52,7 +53,7 @@ Open any Session → switch to the **Observe** tab.
 | `src/client/index.ts` | Registers `conversation.view` id `observe` + composer shortcut |
 | `src/client/ViewShortcut.tsx` | Turn-tail icon that opens the Observe tab |
 | `src/client/ObserveView.tsx` | Toolbar + dimension tabs + AITopo / events panes |
-| `src/client/flow-dimensions/` | Dimension registry, skeletons, overlays, events dual-pane |
+| `src/client/flow-dimensions/` | Dimension registry (architecture / dataflow / process / events), skeletons, overlays, events dual-pane |
 | `src/client/aitopo/` | `AITopoHost` + snapshot/flow → `GraphDocument` adapters |
 | `src/client/derive-topology.ts` | Client list → fleet snapshot |
 | `src/client/derive-flow.ts` | Session events → process topology |
@@ -61,6 +62,8 @@ Open any Session → switch to the **Observe** tab.
 ## Notes
 
 - Client status is approximate: `running` and workspace **archived** are exact; non-archived cold Sessions still appear as **idle** until a Host Remote exposes Agent attachment.
+- Fleet nodes show a warm Alarm badge (top-right) with the Session’s real Turn count when known: Client uses `sessionStats.turns` (blank → `0`); Host `snapshot()` folds max `turn/start`.
+- Graph groups use `observeLayoutGroup` (`expanded: true`, `autoFit: false`) because AITopo defaults groups to collapsed.
 - Agent Teams grouping needs membership (`teamId`); without it the tab shows the unavailable hint. With `teamId`, double-click enters a SubNetwork.
 - Graph rendering uses `@neuravoxel/aitopo` (vendored under `vendor/aitopo`).
 - Non-trivial observe-only decisions use kit Agent Notes under `.agents/notes/` (`pnpm run verify-notes`); see [AGENTS.md](AGENTS.md).

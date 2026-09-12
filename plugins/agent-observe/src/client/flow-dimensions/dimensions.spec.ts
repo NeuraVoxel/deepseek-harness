@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { SessionEventWindow, SessionSnapshot } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionEvent, SessionId, SessionSeq } from '@deepseek-ai/dsh-session/types'
-import { emptyAgentFlow } from '../derive-flow.ts'
+import { deriveAgentFlow } from '../derive-flow.ts'
 import { deriveArchitectureDimension } from './architecture/index.ts'
+import { deriveDataFlowDimension } from './dataflow/index.ts'
 import { deriveEventsDimension, linkedNodeIdForEvent } from './events/index.ts'
 import { deriveLoopDimension } from './loop/index.ts'
 import { derivePanoramaDimension } from './panorama/index.ts'
@@ -78,7 +79,11 @@ function completedTurn(): SessionEvent[] {
         turn: 1,
         step: 1,
         reason: 'initial',
-        header: { tools: [], call: {} },
+        header: {
+          tools: [],
+          call: {},
+          config: { provider: 'mock', model: 'm1' },
+        },
       },
     },
     {
@@ -110,10 +115,18 @@ function completedTurn(): SessionEvent[] {
       data: {
         turn: 1,
         step: 1,
-        callId: 'c1',
-        name: 'bash',
-        output: 'done',
-        isError: false,
+        message: {
+          id: 'tr1',
+          role: 'user',
+          content: [{
+            type: 'tool-result',
+            toolCallId: 'c1',
+            toolName: 'bash',
+            content: [{ type: 'text', text: 'done' }],
+            isError: false,
+          }],
+          source: { kind: 'tool', callId: 'c1' },
+        },
       },
       surfaceOp: 'append',
     },
@@ -135,7 +148,7 @@ function ctxOf(events: SessionEvent[], focusTurn: number | null = null): FlowDim
     focusTurn,
     window,
     session,
-    agentFlow: emptyAgentFlow(),
+    agentFlow: deriveAgentFlow(window, session, focusTurn),
     selection: { nodeId: null, eventId: null },
     t: (key) => key,
   }
@@ -200,6 +213,17 @@ describe('architecture dimension', () => {
     expect(view.document.groups?.map(group => group.id)).toEqual([
       'g-e2e', 'g-turn-loop', 'g-seam',
     ])
+    for (const group of view.document.groups ?? []) {
+      expect(group.style?.label?.maxChars).toBe(0)
+      expect(group.label.length).toBeGreaterThan(0)
+      // Locale keys used as labels in this fixture exceed the old 18-char paint cap.
+      expect(group.label.startsWith('flow.architecture.group.')).toBe(true)
+      expect(group.label.length).toBeGreaterThan(18)
+    }
+    const e2e = view.document.groups!.find(g => g.id === 'g-e2e')!
+    const loop = view.document.groups!.find(g => g.id === 'g-turn-loop')!
+    // Outside topLeft labels need clearance between stacked bands.
+    expect((loop.y ?? 0) - ((e2e.y ?? 0) + (e2e.h ?? 0))).toBeGreaterThanOrEqual(36)
     const loopGate = view.document.nodes.find(node => node.id === 'loop:summary')
     const seamGate = view.document.nodes.find(node => node.id === 'seam:summary')
     expect(loopGate?.type).toBe('gateway')
@@ -374,6 +398,202 @@ describe('architecture dimension', () => {
     )).toBe(true)
     expect(focused.document.nodes.some(node => node.id === 'client')).toBe(true)
     expect(focused.document.nodes.some(node => node.id === 'loop:summary')).toBe(true)
+  })
+})
+
+describe('dataflow dimension', () => {
+  it('builds E2E + real Step bands with Session payloads (not Process teaching prose)', () => {
+    const view = deriveDataFlowDimension(ctxOf(completedTurn(), 1))
+    expect(view.kind).toBe('graph')
+    if (view.kind !== 'graph') return
+    expect(view.legend).toBe('dataflow')
+    expect(view.document.groups?.some(g => g.id === 'g-df-e2e')).toBe(true)
+    expect(view.document.groups?.some(g => g.id === 'g-df-step-1')).toBe(true)
+    expect(view.document.groups?.every(g => g.style?.label?.maxChars === 0)).toBe(true)
+    expect(view.document.nodes.some(n => n.id === 'df:s1:start')).toBe(true)
+    expect(view.document.nodes.some(n => n.id === 'df:s1:end')).toBe(true)
+    expect(view.document.nodes.some(n => n.id === 'df:s1:model')).toBe(true)
+    expect(view.document.edges.some(edge => edge.kind === 'data')).toBe(true)
+    // Step-internal control edges stay so step/start…step/end remains a closed loop.
+    expect(view.document.edges.some(edge =>
+      edge.kind === 'flow' && edge.from === 'df:s1:start' && edge.to === 'df:s1:request',
+    )).toBe(true)
+    // E2E↔Step bridges stay hidden until the control-edge toggle.
+    expect(view.document.edges.every(edge =>
+      !(edge.kind === 'flow' && edge.from.startsWith('df:e2e:')),
+    )).toBe(true)
+
+    const client = view.inspectByNodeId!.get('df:e2e:client')
+    expect(client?.inputText).toContain('hi')
+    expect(client?.inputText).not.toContain('Typert Remote')
+
+    const model = view.inspectByNodeId!.get('df:s1:model')
+    expect(model?.outputText).toContain('ok')
+    expect(model?.inputText).toContain('"reason": "initial"')
+    expect(model?.inputText).not.toContain('llm.stream(GenerateOptions)')
+
+    const tool = view.inspectByNodeId!.get('df:s1:tool:c1')
+    expect(tool?.inputText).toContain('{}')
+    expect(tool?.outputText).toContain('done')
+
+    const request = view.inspectByNodeId!.get('df:s1:request')
+    expect(request?.organizedText).toContain('"reason": "initial"')
+
+    const render = view.inspectByNodeId!.get('df:e2e:render')
+    expect(render?.organizedText).toContain('assistant/message')
+    expect(render?.inputText).not.toContain('Typert Remote')
+  })
+
+  it('centers the Step trunk and fans tools above/below the Tools group slot', () => {
+    const multiTool = [
+      ...completedTurn().filter(event => event.type !== 'step/end' && event.type !== 'turn/end'),
+      {
+        type: 'tool/call',
+        seq: seq(10),
+        time: 11,
+        data: { turn: 1, step: 1, callId: 'c2', name: 'grep', arguments: '{}' },
+      },
+      {
+        type: 'tool/result',
+        seq: seq(11),
+        time: 12,
+        data: {
+          turn: 1,
+          step: 1,
+          message: {
+            id: 'tr2',
+            role: 'user',
+            content: [{
+              type: 'tool-result',
+              toolCallId: 'c2',
+              toolName: 'grep',
+              content: [{ type: 'text', text: 'hit' }],
+              isError: false,
+            }],
+            source: { kind: 'tool', callId: 'c2' },
+          },
+        },
+        surfaceOp: 'append',
+      },
+      { type: 'step/end', seq: seq(12), time: 13, data: { turn: 1, step: 1 } },
+      {
+        type: 'turn/end',
+        seq: seq(13),
+        time: 14,
+        data: { turn: 1, reason: { kind: 'completed' } },
+      },
+    ] as SessionEvent[]
+
+    const view = deriveDataFlowDimension(ctxOf(multiTool, 1))
+    expect(view.kind).toBe('graph')
+    if (view.kind !== 'graph') return
+    expect(view.document.nodes.some(n => n.id === 'df:s1:tools')).toBe(false)
+    expect(view.document.groups?.some(g => g.id === 'g-df-s1-tools')).toBe(true)
+    const byId = new Map(view.document.nodes.map(n => [n.id, n]))
+    const start = byId.get('df:s1:start')!
+    const request = byId.get('df:s1:request')!
+    const model = byId.get('df:s1:model')!
+    const end = byId.get('df:s1:end')!
+    const tool1 = byId.get('df:s1:tool:c1')!
+    const tool2 = byId.get('df:s1:tool:c2')!
+    expect(Math.abs((start.y! + start.h! / 2) - (request.y! + request.h! / 2))).toBeLessThan(2)
+    expect(Math.abs((start.y! + start.h! / 2) - (model.y! + model.h! / 2))).toBeLessThan(2)
+    expect(Math.abs((start.y! + start.h! / 2) - (end.y! + end.h! / 2))).toBeLessThan(2)
+    expect(start.x!).toBeLessThan(request.x!)
+    expect(request.x!).toBeLessThan(model.x!)
+    expect(model.x!).toBeLessThan(end.x!)
+    expect(tool1.groupId).toBe('g-df-s1-tools')
+    expect(tool2.groupId).toBe('g-df-s1-tools')
+    const trunkMidY = start.y! + start.h! / 2
+    const toolsGroup = view.document.groups!.find(g => g.id === 'g-df-s1-tools')!
+    expect(toolsGroup.expanded).toBe(true)
+    const slotMidX = (toolsGroup.x ?? 0) + (toolsGroup.w ?? 0) / 2
+    const t1cx = tool1.x! + tool1.w! / 2
+    const t1cy = tool1.y! + tool1.h! / 2
+    const t2cx = tool2.x! + tool2.w! / 2
+    const t2cy = tool2.y! + tool2.h! / 2
+    expect(t1cy).toBeLessThan(trunkMidY)
+    expect(t2cy).toBeGreaterThan(trunkMidY)
+    expect(Math.abs(t1cx - slotMidX)).toBeLessThan(8)
+    expect(Math.abs(t2cx - slotMidX)).toBeLessThan(8)
+    expect(view.document.edges.some(e =>
+      e.from === 'df:s1:tool:c1' && e.to === 'df:e2e:write' && e.label === 'surface',
+    )).toBe(true)
+  })
+
+  it('routes tool results into the next Step request', () => {
+    const twoSteps: SessionEvent[] = [
+      ...completedTurn().flatMap(event => {
+        if (event.type === 'step/end' || event.type === 'turn/end') return []
+        return [event]
+      }),
+      { type: 'step/end', seq: seq(12), time: 13, data: { turn: 1, step: 1 } } as SessionEvent,
+      { type: 'step/start', seq: seq(13), time: 14, data: { turn: 1, step: 2 } } as SessionEvent,
+      {
+        type: 'request/header',
+        seq: seq(14),
+        time: 15,
+        data: {
+          turn: 1,
+          step: 2,
+          reason: 'change',
+          header: {
+            tools: [],
+            call: {},
+            config: { provider: 'mock', model: 'm1' },
+          },
+        },
+      } as SessionEvent,
+      {
+        type: 'assistant/message',
+        seq: seq(15),
+        time: 16,
+        data: {
+          turn: 1,
+          step: 2,
+          message: {
+            id: 'a2',
+            role: 'assistant',
+            content: [{ type: 'text', text: 'done2' }],
+            source: { kind: 'model', provider: 'mock', model: 'm1' },
+          },
+        },
+        surfaceOp: 'append',
+      } as SessionEvent,
+      { type: 'step/end', seq: seq(16), time: 17, data: { turn: 1, step: 2 } } as SessionEvent,
+      {
+        type: 'turn/end',
+        seq: seq(17),
+        time: 18,
+        data: { turn: 1, reason: { kind: 'completed' } },
+      } as SessionEvent,
+    ]
+    const view = deriveDataFlowDimension(ctxOf(twoSteps, 1))
+    expect(view.kind).toBe('graph')
+    if (view.kind !== 'graph') return
+    expect(view.document.nodes.some(n => n.id === 'df:s2:request')).toBe(true)
+    expect(view.document.edges.some(e =>
+      e.from === 'df:s1:tool:c1'
+      && e.to === 'df:s2:request'
+      && e.kind === 'data',
+    )).toBe(true)
+    expect(view.document.edges.some(e =>
+      e.from === 'df:s1:end'
+      && e.to === 'df:s2:request'
+      && e.label === 'surface → next',
+    )).toBe(true)
+  })
+
+  it('keeps control edges when showDataFlowControlEdges is true', () => {
+    const view = deriveDataFlowDimension({
+      ...ctxOf(completedTurn(), 1),
+      showDataFlowControlEdges: true,
+    })
+    expect(view.kind).toBe('graph')
+    if (view.kind !== 'graph') return
+    expect(view.document.edges.some(edge => edge.kind === 'flow')).toBe(true)
+    expect(view.document.nodes.some(n => n.id === 'df:turn:start')).toBe(true)
+    expect(view.document.nodes.some(n => n.id === 'df:turn:end')).toBe(true)
   })
 })
 

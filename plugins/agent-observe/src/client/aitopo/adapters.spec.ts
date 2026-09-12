@@ -136,4 +136,45 @@ describe('aitopo adapters', () => {
     expect(document.nodes[0]?.status).toBe('cold')
     expect(document.nodes[0]?.data?.meta).toBe('archived')
   })
+
+  it('maps fleet turnCount to a warm warn alarm badge message', () => {
+    const snapshot: AgentObserveSnapshot = {
+      updatedAt: '2026-09-07T00:00:00.000Z',
+      nodes: [
+        {
+          id: sid('s1'),
+          title: 'S1',
+          status: 'idle',
+          blank: false,
+          turnCount: 12,
+        },
+        {
+          id: sid('s2'),
+          title: 'S2',
+          status: 'idle',
+          blank: true,
+          turnCount: 0,
+        },
+        {
+          id: sid('s3'),
+          title: 'S3',
+          status: 'idle',
+          blank: false,
+        },
+      ],
+      edges: [],
+    }
+    const { document } = snapshotToDocument({
+      snapshot,
+      groupMode: 'workspace',
+      labels: { ungrouped: 'Ungrouped', workspaceTitle: id => id },
+    })
+    expect(document.nodes[0]?.alarms).toEqual([{
+      id: 'turns:s1',
+      level: 'warn',
+      message: '12',
+    }])
+    expect(document.nodes[1]?.alarms?.[0]?.message).toBe('0')
+    expect(document.nodes[2]?.alarms).toBeUndefined()
+  })
 })

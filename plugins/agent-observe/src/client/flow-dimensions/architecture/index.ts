@@ -8,7 +8,12 @@
 
 import type { GraphDocument, GraphEdge, GraphGroup, GraphNode } from '@neuravoxel/aitopo'
 import { DARK_FLOW_NODE_STYLE } from '../../aitopo/dark-node-style.ts'
-import { flowEdgeStyle } from '../../aitopo/flow-edge-style.ts'
+import {
+  flowEdgeStyle,
+  DARK_FLOW_GROUP_STYLE,
+  GROUP_OUTSIDE_LABEL_CLEARANCE,
+  observeLayoutGroup,
+} from '../../aitopo/flow-edge-style.ts'
 import {
   appendTurnEventBeads,
   applyEventBeadFocus,
@@ -31,8 +36,10 @@ const NET_SEAM = 'net:seam'
 const LOOP_PREFIX = 'loop:'
 const SEAM_PREFIX = 'seam:'
 
+/** End-to-end band geometry (label sits above the next band — leave clearance). */
+const E2E_GROUP = { x: 20, y: 12, w: 1280, h: 280 } as const
 /** Vertical start of the second architecture band. */
-const BAND2_Y = 300
+const BAND2_Y = E2E_GROUP.y + E2E_GROUP.h + GROUP_OUTSIDE_LABEL_CLEARANCE
 const COLLAPSED = { w: 280, h: 48, groupW: 420, groupH: 160 } as const
 const EXPANDED_LOOP = { x: 20, y: BAND2_Y, w: 880, h: 340 } as const
 const EXPANDED_SEAM = { w: 860, h: 360 } as const
@@ -95,13 +102,13 @@ export function deriveArchitectureDimension(ctx: FlowDimensionContext): GraphDim
     : expandSeam
       ? {
         x: 20,
-        y: loopGroupRect.y + loopGroupRect.h + 24,
+        y: loopGroupRect.y + loopGroupRect.h + GROUP_OUTSIDE_LABEL_CLEARANCE,
         w: EXPANDED_SEAM.w,
         h: EXPANDED_SEAM.h,
       }
       : {
         x: 20,
-        y: loopGroupRect.y + loopGroupRect.h + 24,
+        y: loopGroupRect.y + loopGroupRect.h + GROUP_OUTSIDE_LABEL_CLEARANCE,
         w: COLLAPSED.groupW,
         h: COLLAPSED.groupH,
       }
@@ -221,27 +228,27 @@ export function deriveArchitectureDimension(ctx: FlowDimensionContext): GraphDim
   })
 
   const groups: GraphGroup[] = [
-    {
+    observeLayoutGroup({
       id: 'g-e2e',
       label: ctx.t('flow.architecture.group.e2e'),
       memberIds: rootNodes.filter(n => n.groupId === 'g-e2e').map(n => n.id),
-      x: 20,
-      y: 12,
-      w: 1280,
-      h: 280,
-    },
-    {
+      ...E2E_GROUP,
+      style: DARK_FLOW_GROUP_STYLE,
+    }),
+    observeLayoutGroup({
       id: 'g-turn-loop',
       label: ctx.t('flow.architecture.group.loop'),
       memberIds: rootNodes.filter(n => n.groupId === 'g-turn-loop').map(n => n.id),
       ...loopGroupRect,
-    },
-    {
+      style: DARK_FLOW_GROUP_STYLE,
+    }),
+    observeLayoutGroup({
       id: 'g-seam',
       label: ctx.t('flow.architecture.group.seam'),
       memberIds: rootNodes.filter(n => n.groupId === 'g-seam').map(n => n.id),
       ...seamGroupRect,
-    },
+      style: DARK_FLOW_GROUP_STYLE,
+    }),
   ]
 
   const document: GraphDocument = {

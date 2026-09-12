@@ -10,8 +10,9 @@
 - 单击节点 → `sessions.open(id)`
 - 在某轮 Turn 的 assistant-actions 行点 **打开观察** → 直接进入该 Turn 的 **流程**模式并**钉住**（更新的 Turn 不会自动抢走画布）
 - 总览 **双击** → 打开该 Agent **最新** Turn 的流程 Canvas（`focusTurn = null`）
-- Flow 内第二行维度 Tab：**架构**（默认；端到端 + Turn 环 / 能力缝 Group，可展开或 SubNetwork 下钻，含事件珠）· **进程流**（`derive-flow`）· **事件流**（左时间线 / 右 payload）；钉住 Turn 跨维度共享
+- Flow 内第二行维度 Tab：**架构**（默认；端到端 + Turn 环 / 能力缝 Group，可展开或 SubNetwork 下钻，含事件珠）· **数据流**（架构式端到端主干 + 真实 N×Step 带与 Session 载荷检视）· **进程流**（`derive-flow` 机制说明）· **事件流**（左时间线 / 右 payload）；钉住 Turn 跨维度共享
 - 架构图把全景 / 闭环 / 能力缝骨架作为层嵌入（不再单独占 Tab）
+- 数据流在端到端 Group 下按每个 `step/start`…`step/end` 展开（Step 内以 Model 为中心）；检视器为真实载荷与 **组织结果**——不复用进程流的 Remote 教学文案
 - 流程 **双击空白画布** → 返回总览（点中节点/边不返回；事件流双栏不绑该手势）
 - 钉住的 Turn 不是 Session 最新时，流程工具栏出现 **跳到最新**；点击清除钉住并留在流程模式
 - **限制：** Turn 由快捷入口 `messageId` 对应的持久化 `assistant/message.id` 反查得出（插件内解析）；本轮不扩展 `packages/` 中的 `AssistantActionOwnerProps`
@@ -52,7 +53,7 @@ pnpm dsh --profile web-observe-demo
 | `src/client/index.ts` | 注册 `conversation.view`（id `observe`）+ 输入框快捷图标 |
 | `src/client/ViewShortcut.tsx` | Turn 尾栏打开观察 Tab 的图标 |
 | `src/client/ObserveView.tsx` | 工具条 + 维度 Tab + AITopo / 事件流 |
-| `src/client/flow-dimensions/` | 维度注册、骨架图、实况叠加、事件双栏 |
+| `src/client/flow-dimensions/` | 维度注册（架构 / 数据流 / 进程流 / 事件流）、骨架图、实况叠加、事件双栏 |
 | `src/client/aitopo/` | `AITopoHost` + snapshot/flow → `GraphDocument` 适配 |
 | `src/client/derive-topology.ts` | Client 列表 → 总览 snapshot |
 | `src/client/derive-flow.ts` | Session 事件 → 流程拓扑 |
@@ -61,6 +62,8 @@ pnpm dsh --profile web-observe-demo
 ## 说明
 
 - Client 状态是近似的：`running` 与 workspace **已归档**精确；非归档的冷会话在挂 Host Remote 前仍显示为 **idle**。
+- Fleet 节点右上角用暖色 Alarm 徽章显示真实 Turn 数（有证据时）：Client 取 `sessionStats.turns`（blank → `0`）；Host `snapshot()` 取日志中最大 `turn/start`。
+- Graph Group 经 `observeLayoutGroup` 发出（`expanded: true`，`autoFit: false`），因 AITopo 默认折叠 Group。
 - Agent Teams 分组依赖成员 `teamId`；没有时提示不可用。有 `teamId` 时双击进入 SubNetwork。
 - 图形渲染使用 `@neuravoxel/aitopo`（源码在 `vendor/aitopo`）。
 - 非平凡、仅 observe 的决策使用 `.agents/notes/` 下的 kit Agent Notes（`pnpm run verify-notes`）；见 [AGENTS.md](AGENTS.md)。

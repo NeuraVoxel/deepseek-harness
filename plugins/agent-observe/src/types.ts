@@ -30,6 +30,11 @@ export interface AgentObserveNode {
   readonly workspaceId?: string
   /** Optional Agent Teams membership label when Teams is composed. */
   readonly teamId?: string
+  /**
+   * Distinct Turn count for this Session when known (Host log or Client
+   * sessionStats / blank). Omitted when the Client list has no evidence yet.
+   */
+  readonly turnCount?: number
 }
 
 /** Directed edge between two Session ids. */

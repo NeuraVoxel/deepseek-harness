@@ -3,6 +3,7 @@
  */
 
 import { architectureDimension } from './architecture/index.ts'
+import { dataflowDimension } from './dataflow/index.ts'
 import { eventsDimension } from './events/index.ts'
 import { processDimension } from './process/index.ts'
 import type { FlowDimensionId, FlowDimensionModule } from './types.ts'
@@ -13,6 +14,7 @@ export const DEFAULT_FLOW_DIMENSION: FlowDimensionId = 'architecture'
 /** Registered dimensions in tab order. */
 export const FLOW_DIMENSIONS: readonly FlowDimensionModule[] = [
   architectureDimension,
+  dataflowDimension,
   processDimension,
   eventsDimension,
 ]
@@ -32,7 +34,8 @@ export function resolveFlowDimension(id: FlowDimensionId): FlowDimensionModule {
  * @returns a known dimension id (falls back to the default architecture tab).
  */
 export function coerceFlowDimension(value: string | null | undefined): FlowDimensionId {
-  if (value === 'architecture' || value === 'process' || value === 'events') {
+  if (value === 'architecture' || value === 'dataflow' || value === 'process'
+    || value === 'events') {
     return value
   }
   return DEFAULT_FLOW_DIMENSION
