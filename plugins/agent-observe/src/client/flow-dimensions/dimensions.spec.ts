@@ -309,23 +309,34 @@ describe('integrated atlas', () => {
 })
 
 describe('architecture dimension', () => {
-  it('defaults to a SubNetwork gateway for the Turn-loop Group', () => {
+  it('defaults to SubNetwork gateways for Turn-loop and Capability-seam Groups', () => {
     const view = deriveArchitectureDimension(ctxOf(completedTurn(), 1))
     expect(view.kind).toBe('graph')
     if (view.kind !== 'graph') return
     expect(view.legend).toBe('architecture')
     expect(view.document.networks?.['net:loop']).toBeDefined()
-    expect(view.document.groups?.map(group => group.id)).toEqual(['g-e2e', 'g-turn-loop'])
-    const gateway = view.document.nodes.find(node => node.id === 'loop:summary')
-    expect(gateway?.type).toBe('gateway')
-    expect(gateway?.networkId).toBe('net:loop')
-    expect(view.document.nodes.every(node => !node.id.startsWith('loop:') || node.id === 'loop:summary')).toBe(true)
+    expect(view.document.networks?.['net:seam']).toBeDefined()
+    expect(view.document.groups?.map(group => group.id)).toEqual([
+      'g-e2e', 'g-turn-loop', 'g-seam',
+    ])
+    const loopGate = view.document.nodes.find(node => node.id === 'loop:summary')
+    const seamGate = view.document.nodes.find(node => node.id === 'seam:summary')
+    expect(loopGate?.type).toBe('gateway')
+    expect(loopGate?.networkId).toBe('net:loop')
+    expect(seamGate?.type).toBe('gateway')
+    expect(seamGate?.networkId).toBe('net:seam')
+    expect(view.document.nodes.every(node =>
+      (!node.id.startsWith('loop:') || node.id === 'loop:summary')
+      && (!node.id.startsWith('seam:') || node.id === 'seam:summary'),
+    )).toBe(true)
     expect(view.document.edges.every(edge => !edge.id.startsWith('bridge:'))).toBe(true)
-    const summary = gateway!
-    const group = view.document.groups?.find(g => g.id === 'g-turn-loop')
-    expect(group).toBeDefined()
-    expect(summary.x).toBe(group!.x + (group!.w - summary.w) / 2)
-    expect(summary.y).toBe(group!.y + (group!.h - summary.h) / 2)
+    for (const id of ['loop:summary', 'seam:summary'] as const) {
+      const summary = view.document.nodes.find(node => node.id === id)!
+      const groupId = id === 'loop:summary' ? 'g-turn-loop' : 'g-seam'
+      const group = view.document.groups?.find(g => g.id === groupId)!
+      expect(summary.x).toBe(group.x + (group.w - summary.w) / 2)
+      expect(summary.y).toBe(group.y + (group.h - summary.h) / 2)
+    }
     const beads = view.document.nodes.filter(node => node.type === 'event')
     expect(beads.length).toBeGreaterThan(0)
     expect(beads.every(node => node.groupId === 'g-e2e')).toBe(true)
@@ -342,6 +353,7 @@ describe('architecture dimension', () => {
     expect(view.document.nodes.some(node => node.id === 'model')).toBe(true)
     expect(view.document.nodes.some(node => node.id === 'loop:model')).toBe(true)
     expect(view.document.nodes.every(node => node.id !== 'loop:summary')).toBe(true)
+    expect(view.document.nodes.some(node => node.id === 'seam:summary')).toBe(true)
     const bridges = view.document.edges.filter(edge => edge.id.startsWith('bridge:'))
     expect(bridges.length).toBe(4)
     expect(bridges.every(edge => Array.isArray(edge.data?.strokeDash))).toBe(true)
@@ -352,6 +364,43 @@ describe('architecture dimension', () => {
       edge.to.startsWith('event:') && edge.from.startsWith('loop:'),
     )
     expect(stemToLoop).toBe(true)
+  })
+
+  it('inlines Capability-seam nodes when expandSeam is true', () => {
+    const view = deriveArchitectureDimension({
+      ...ctxOf(completedTurn(), 1),
+      expandArchitectureSeam: true,
+    })
+    expect(view.kind).toBe('graph')
+    if (view.kind !== 'graph') return
+    expect(view.document.nodes.some(node => node.id === 'seam:def')).toBe(true)
+    expect(view.document.nodes.some(node => node.id === 'seam:tools-consumer')).toBe(true)
+    expect(view.document.nodes.every(node => node.id !== 'seam:summary')).toBe(true)
+    expect(view.document.nodes.some(node => node.id === 'loop:summary')).toBe(true)
+    const seamBridges = view.document.edges.filter(edge =>
+      edge.id.startsWith('bridge:') && edge.to.startsWith('seam:'),
+    )
+    expect(seamBridges.length).toBe(3)
+  })
+
+  it('focusArchitectureE2e hides event beads and event edges', () => {
+    const withEvents = deriveArchitectureDimension(ctxOf(completedTurn(), 1))
+    const focused = deriveArchitectureDimension({
+      ...ctxOf(completedTurn(), 1),
+      focusArchitectureE2e: true,
+    })
+    expect(withEvents.kind).toBe('graph')
+    expect(focused.kind).toBe('graph')
+    if (withEvents.kind !== 'graph' || focused.kind !== 'graph') return
+    expect(withEvents.document.nodes.some(node => node.type === 'event')).toBe(true)
+    expect(focused.document.nodes.every(node => node.type !== 'event')).toBe(true)
+    expect(focused.document.edges.every(edge =>
+      !edge.id.startsWith('event-seq:')
+      && !edge.id.includes('->event:')
+      && !edge.to.startsWith('event:'),
+    )).toBe(true)
+    expect(focused.document.nodes.some(node => node.id === 'client')).toBe(true)
+    expect(focused.document.nodes.some(node => node.id === 'loop:summary')).toBe(true)
   })
 })
 

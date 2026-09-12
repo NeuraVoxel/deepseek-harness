@@ -38,10 +38,20 @@ export interface FlowDimensionContext {
    */
   readonly focusEventBeads?: boolean
   /**
+   * Architecture tab: when true, hide event beads + stem/seq edges to focus
+   * on End-to-end stages (and other architecture Groups).
+   */
+  readonly focusArchitectureE2e?: boolean
+  /**
    * Architecture tab: when true, inline the Turn/Step Group on the root canvas.
    * Default false — show a SubNetwork gateway; dblclick drills into the loop.
    */
   readonly expandArchitectureLoop?: boolean
+  /**
+   * Architecture tab: when true, inline the Capability-seam Group on the root
+   * canvas. Default false — SubNetwork gateway with dblclick drill-in.
+   */
+  readonly expandArchitectureSeam?: boolean
   /** Locale lookup for labels that dimensions own. */
   readonly t: (key: string, params?: Record<string, string>) => string
 }

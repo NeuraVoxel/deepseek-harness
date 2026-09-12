@@ -232,8 +232,12 @@ function FlowPane(props: Props): ReactElement {
   } | null>(null)
   /** Atlas: highlight event beads + seq edges; fade other root chrome. */
   const [focusEventBeads, setFocusEventBeads] = useState(false)
+  /** Architecture tab: hide event beads to focus End-to-end stages. */
+  const [focusArchitectureE2e, setFocusArchitectureE2e] = useState(false)
   /** Architecture tab: inline Turn-loop Group (default off — gateway SubNetwork). */
   const [expandArchitectureLoop, setExpandArchitectureLoop] = useState(false)
+  /** Architecture tab: inline Capability-seam Group (default off — gateway SubNetwork). */
+  const [expandArchitectureSeam, setExpandArchitectureSeam] = useState(false)
   const hostRef = useRef<AITopoHostHandle>(null)
   const [zoom, setZoom] = useState(1)
   const [activeNetworkId, setActiveNetworkId] = useState<string | null>(null)
@@ -254,9 +258,22 @@ function FlowPane(props: Props): ReactElement {
     // rebuild the GraphDocument and fight wheel zoom / pan.
     selection: { nodeId: null, eventId: null } satisfies FlowDimensionSelection,
     focusEventBeads,
+    focusArchitectureE2e,
     expandArchitectureLoop,
+    expandArchitectureSeam,
     t: t as (key: string, params?: Record<string, string>) => string,
-  }), [sessionId, focusTurn, window, sessionLife, flow, focusEventBeads, expandArchitectureLoop, t])
+  }), [
+    sessionId,
+    focusTurn,
+    window,
+    sessionLife,
+    flow,
+    focusEventBeads,
+    focusArchitectureE2e,
+    expandArchitectureLoop,
+    expandArchitectureSeam,
+    t,
+  ])
 
   // Graph documents must not depend on selection — a new GraphDocument identity
   // reloads AITopo and would kick the user out of an entered SubNetwork.
@@ -393,30 +410,71 @@ function FlowPane(props: Props): ReactElement {
             className={css.groupButton}
             data-active={focusEventBeads ? 'true' : 'false'}
             aria-pressed={focusEventBeads}
-            onClick={() => { setFocusEventBeads(value => !value) }}
+            onClick={() => {
+              setFocusEventBeads(value => {
+                const next = !value
+                if (next) setFocusArchitectureE2e(false)
+                return next
+              })
+            }}
           >
             {t('flow.integrated.focusEvents')}
           </button>
         ) : null}
         {dimension === 'architecture' ? (
-          <button
-            type="button"
-            className={css.groupButton}
-            data-active={expandArchitectureLoop ? 'true' : 'false'}
-            aria-pressed={expandArchitectureLoop}
-            onClick={() => {
-              setExpandArchitectureLoop(value => {
-                const next = !value
-                if (next && activeNetworkId !== null) {
-                  hostRef.current?.exitSubNetwork()
-                  setActiveNetworkId(null)
-                }
-                return next
-              })
-            }}
-          >
-            {t('flow.architecture.expandLoop')}
-          </button>
+          <>
+            <button
+              type="button"
+              className={css.groupButton}
+              data-active={focusArchitectureE2e ? 'true' : 'false'}
+              aria-pressed={focusArchitectureE2e}
+              onClick={() => {
+                setFocusArchitectureE2e(value => {
+                  const next = !value
+                  if (next) setFocusEventBeads(false)
+                  return next
+                })
+              }}
+            >
+              {t('flow.architecture.focusE2e')}
+            </button>
+            <button
+              type="button"
+              className={css.groupButton}
+              data-active={expandArchitectureLoop ? 'true' : 'false'}
+              aria-pressed={expandArchitectureLoop}
+              onClick={() => {
+                setExpandArchitectureLoop(value => {
+                  const next = !value
+                  if (next && activeNetworkId !== null) {
+                    hostRef.current?.exitSubNetwork()
+                    setActiveNetworkId(null)
+                  }
+                  return next
+                })
+              }}
+            >
+              {t('flow.architecture.expandLoop')}
+            </button>
+            <button
+              type="button"
+              className={css.groupButton}
+              data-active={expandArchitectureSeam ? 'true' : 'false'}
+              aria-pressed={expandArchitectureSeam}
+              onClick={() => {
+                setExpandArchitectureSeam(value => {
+                  const next = !value
+                  if (next && activeNetworkId !== null) {
+                    hostRef.current?.exitSubNetwork()
+                    setActiveNetworkId(null)
+                  }
+                  return next
+                })
+              }}
+            >
+              {t('flow.architecture.expandSeam')}
+            </button>
+          </>
         ) : null}
         {view.kind === 'graph' && view.legend === 'process' ? (
           <div className={css.legend} aria-label={t('legend.title')}>

@@ -304,6 +304,33 @@ function isEventBead(node: GraphNode): boolean {
   return node.type === 'event' || node.id.startsWith('event:')
 }
 
+/**
+ * Remove event beads and their stem / seq edges so the architecture stages read alone.
+ * @param document - graph that may include event chrome.
+ */
+export function stripEventBeads(document: GraphDocument): GraphDocument {
+  const beadIds = new Set(
+    document.nodes.filter(isEventBead).map(node => node.id),
+  )
+  if (beadIds.size === 0) return document
+  const nodes = document.nodes.filter(node => !beadIds.has(node.id))
+  const edges = document.edges.filter(edge =>
+    !edge.id.startsWith('event-seq:')
+    && !beadIds.has(edge.from)
+    && !beadIds.has(edge.to),
+  )
+  const groups = document.groups?.map(group => ({
+    ...group,
+    memberIds: group.memberIds.filter(id => !beadIds.has(id)),
+  }))
+  return {
+    ...document,
+    nodes,
+    edges,
+    ...(groups === undefined ? {} : { groups }),
+  }
+}
+
 function safeJson(event: SessionEvent): string {
   try {
     return JSON.stringify(event, null, 2)
