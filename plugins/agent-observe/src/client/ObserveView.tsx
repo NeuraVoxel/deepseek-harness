@@ -232,6 +232,8 @@ function FlowPane(props: Props): ReactElement {
   } | null>(null)
   /** Atlas: highlight event beads + seq edges; fade other root chrome. */
   const [focusEventBeads, setFocusEventBeads] = useState(false)
+  /** Architecture tab: inline Turn-loop Group (default off — gateway SubNetwork). */
+  const [expandArchitectureLoop, setExpandArchitectureLoop] = useState(false)
   const hostRef = useRef<AITopoHostHandle>(null)
   const [zoom, setZoom] = useState(1)
   const [activeNetworkId, setActiveNetworkId] = useState<string | null>(null)
@@ -252,8 +254,9 @@ function FlowPane(props: Props): ReactElement {
     // rebuild the GraphDocument and fight wheel zoom / pan.
     selection: { nodeId: null, eventId: null } satisfies FlowDimensionSelection,
     focusEventBeads,
+    expandArchitectureLoop,
     t: t as (key: string, params?: Record<string, string>) => string,
-  }), [sessionId, focusTurn, window, sessionLife, flow, focusEventBeads, t])
+  }), [sessionId, focusTurn, window, sessionLife, flow, focusEventBeads, expandArchitectureLoop, t])
 
   // Graph documents must not depend on selection — a new GraphDocument identity
   // reloads AITopo and would kick the user out of an entered SubNetwork.
@@ -384,7 +387,7 @@ function FlowPane(props: Props): ReactElement {
         {view.kind === 'graph' ? (
           <ZoomControls t={t} zoom={zoom} hostRef={hostRef} />
         ) : null}
-        {dimension === 'integrated' ? (
+        {dimension === 'integrated' || dimension === 'architecture' ? (
           <button
             type="button"
             className={css.groupButton}
@@ -393,6 +396,26 @@ function FlowPane(props: Props): ReactElement {
             onClick={() => { setFocusEventBeads(value => !value) }}
           >
             {t('flow.integrated.focusEvents')}
+          </button>
+        ) : null}
+        {dimension === 'architecture' ? (
+          <button
+            type="button"
+            className={css.groupButton}
+            data-active={expandArchitectureLoop ? 'true' : 'false'}
+            aria-pressed={expandArchitectureLoop}
+            onClick={() => {
+              setExpandArchitectureLoop(value => {
+                const next = !value
+                if (next && activeNetworkId !== null) {
+                  hostRef.current?.exitSubNetwork()
+                  setActiveNetworkId(null)
+                }
+                return next
+              })
+            }}
+          >
+            {t('flow.architecture.expandLoop')}
           </button>
         ) : null}
         {view.kind === 'graph' && view.legend === 'process' ? (
@@ -423,6 +446,19 @@ function FlowPane(props: Props): ReactElement {
             <span><i className={`${css.swatch} ${css.swatchEventStart}`} />{t('flow.integrated.legend.eventStart')}</span>
             <span><i className={`${css.swatch} ${css.swatchEventEnd}`} />{t('flow.integrated.legend.eventEnd')}</span>
             <span><i className={`${css.swatch} ${css.swatchEventSeq}`} />{t('flow.integrated.legend.eventSeq')}</span>
+            <span><i className={`${css.swatch} ${css.swatchGateway}`} />{t('flow.integrated.legend.gateway')}</span>
+          </div>
+        ) : null}
+        {view.kind === 'graph' && view.legend === 'architecture' ? (
+          <div className={css.legend} aria-label={t('legend.title')}>
+            <span><i className={`${css.swatch} ${css.swatchFlowPending}`} />{t('flow.legend.pending')}</span>
+            <span><i className={`${css.swatch} ${css.swatchFlowActive}`} />{t('flow.legend.active')}</span>
+            <span><i className={`${css.swatch} ${css.swatchFlowDone}`} />{t('flow.legend.done')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEventBead}`} />{t('flow.integrated.legend.event')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEventStart}`} />{t('flow.integrated.legend.eventStart')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEventEnd}`} />{t('flow.integrated.legend.eventEnd')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEventSeq}`} />{t('flow.integrated.legend.eventSeq')}</span>
+            <span><i className={`${css.swatch} ${css.swatchArchBridge}`} />{t('flow.architecture.legend.bridge')}</span>
             <span><i className={`${css.swatch} ${css.swatchGateway}`} />{t('flow.integrated.legend.gateway')}</span>
           </div>
         ) : null}

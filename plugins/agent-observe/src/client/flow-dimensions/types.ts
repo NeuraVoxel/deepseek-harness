@@ -12,6 +12,7 @@ export type FlowDimensionId =
   | 'process'
   | 'integrated'
   | 'panorama'
+  | 'architecture'
   | 'loop'
   | 'seam'
   | 'events'
@@ -36,6 +37,11 @@ export interface FlowDimensionContext {
    * root elements fade to 0.2.
    */
   readonly focusEventBeads?: boolean
+  /**
+   * Architecture tab: when true, inline the Turn/Step Group on the root canvas.
+   * Default false — show a SubNetwork gateway; dblclick drills into the loop.
+   */
+  readonly expandArchitectureLoop?: boolean
   /** Locale lookup for labels that dimensions own. */
   readonly t: (key: string, params?: Record<string, string>) => string
 }
@@ -55,7 +61,7 @@ export interface GraphDimensionView {
   /** When true, empty canvas double-click returns to Fleet. */
   readonly blankDoubleClickToFleet: true
   /** Which legend strip FlowPane should render. */
-  readonly legend: 'process' | 'status' | 'integrated'
+  readonly legend: 'process' | 'status' | 'integrated' | 'architecture'
 }
 
 /** Dual-pane SessionEvent dimension. */

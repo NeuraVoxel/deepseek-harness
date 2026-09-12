@@ -119,6 +119,13 @@
   border: 1px solid #5b8def;
   box-sizing: border-box;
 }
+.swatchArchBridge {
+  width: 16px;
+  height: 0;
+  border-top: 2px dashed #f59e0b;
+  background: transparent;
+  border-radius: 0;
+}
 
 .flowTitle {
   font-size: 13px;

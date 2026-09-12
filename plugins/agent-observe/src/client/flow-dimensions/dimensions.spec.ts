@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { SessionEventWindow, SessionSnapshot } from '@deepseek-ai/dsh-api-session-controller/client'
 import type { SessionEvent, SessionId, SessionSeq } from '@deepseek-ai/dsh-session/types'
 import { emptyAgentFlow } from '../derive-flow.ts'
+import { deriveArchitectureDimension } from './architecture/index.ts'
 import { deriveIntegratedDimension } from './integrated/index.ts'
 import { deriveEventsDimension, linkedNodeIdForEvent } from './events/index.ts'
 import { deriveLoopDimension } from './loop/index.ts'
@@ -304,6 +305,53 @@ describe('integrated atlas', () => {
         return `event:${entry.seq}->event:${next.seq}`
       }),
     )
+  })
+})
+
+describe('architecture dimension', () => {
+  it('defaults to a SubNetwork gateway for the Turn-loop Group', () => {
+    const view = deriveArchitectureDimension(ctxOf(completedTurn(), 1))
+    expect(view.kind).toBe('graph')
+    if (view.kind !== 'graph') return
+    expect(view.legend).toBe('architecture')
+    expect(view.document.networks?.['net:loop']).toBeDefined()
+    expect(view.document.groups?.map(group => group.id)).toEqual(['g-e2e', 'g-turn-loop'])
+    const gateway = view.document.nodes.find(node => node.id === 'loop:summary')
+    expect(gateway?.type).toBe('gateway')
+    expect(gateway?.networkId).toBe('net:loop')
+    expect(view.document.nodes.every(node => !node.id.startsWith('loop:') || node.id === 'loop:summary')).toBe(true)
+    expect(view.document.edges.every(edge => !edge.id.startsWith('bridge:'))).toBe(true)
+    const summary = gateway!
+    const group = view.document.groups?.find(g => g.id === 'g-turn-loop')
+    expect(group).toBeDefined()
+    expect(summary.x).toBe(group!.x + (group!.w - summary.w) / 2)
+    expect(summary.y).toBe(group!.y + (group!.h - summary.h) / 2)
+    const beads = view.document.nodes.filter(node => node.type === 'event')
+    expect(beads.length).toBeGreaterThan(0)
+    expect(beads.every(node => node.groupId === 'g-e2e')).toBe(true)
+  })
+
+  it('inlines Turn-loop nodes and scope bridges when expand is true', () => {
+    const view = deriveArchitectureDimension({
+      ...ctxOf(completedTurn(), 1),
+      expandArchitectureLoop: true,
+    })
+    expect(view.kind).toBe('graph')
+    if (view.kind !== 'graph') return
+    expect(view.document.networks?.['net:loop']).toBeDefined()
+    expect(view.document.nodes.some(node => node.id === 'model')).toBe(true)
+    expect(view.document.nodes.some(node => node.id === 'loop:model')).toBe(true)
+    expect(view.document.nodes.every(node => node.id !== 'loop:summary')).toBe(true)
+    const bridges = view.document.edges.filter(edge => edge.id.startsWith('bridge:'))
+    expect(bridges.length).toBe(4)
+    expect(bridges.every(edge => Array.isArray(edge.data?.strokeDash))).toBe(true)
+    const beads = view.document.nodes.filter(node => node.type === 'event')
+    expect(beads.length).toBeGreaterThan(1)
+    expect(beads.some(node => node.groupId === 'g-turn-loop')).toBe(true)
+    const stemToLoop = view.document.edges.some(edge =>
+      edge.to.startsWith('event:') && edge.from.startsWith('loop:'),
+    )
+    expect(stemToLoop).toBe(true)
   })
 })
 
