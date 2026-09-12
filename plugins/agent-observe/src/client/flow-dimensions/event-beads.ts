@@ -254,10 +254,10 @@ export function markEventBeadEndpoints(
     const fill = role === 'end' ? BEAD_END_FILL : BEAD_START_FILL
     const stroke = role === 'start' ? BEAD_START_STROKE : BEAD_END_STROKE
     const roleLabel = role === 'start'
-      ? t('flow.integrated.bead.start')
+      ? t('flow.architecture.bead.start')
       : role === 'end'
-        ? t('flow.integrated.bead.end')
-        : t('flow.integrated.bead.both')
+        ? t('flow.architecture.bead.end')
+        : t('flow.architecture.bead.both')
     nodes[index] = {
       ...node,
       style: DARK_EVENT_BEAD_STYLE,

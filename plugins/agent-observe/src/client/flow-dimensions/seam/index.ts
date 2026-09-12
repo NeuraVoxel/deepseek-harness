@@ -7,7 +7,6 @@ import { skeletonToDocument, type SkeletonGraph } from '../skeleton-document.ts'
 import { collectTurnEvidence, statusFromSeen } from '../turn-evidence.ts'
 import type {
   FlowDimensionContext,
-  FlowDimensionModule,
   FlowNodeInspect,
   GraphDimensionView,
 } from '../types.ts'
@@ -58,7 +57,7 @@ export const SEAM_SKELETON: SkeletonGraph = {
 
 /**
  * @param ctx - shared dimension context.
- * @returns seam graph view.
+ * @returns seam graph view (Architecture SubNetwork / inline layer).
  */
 export function deriveSeamDimension(ctx: FlowDimensionContext): GraphDimensionView {
   const evidence = collectTurnEvidence(ctx.window, ctx.session, ctx.focusTurn)
@@ -100,11 +99,4 @@ export function deriveSeamDimension(ctx: FlowDimensionContext): GraphDimensionVi
     blankDoubleClickToFleet: true,
     legend: 'status',
   }
-}
-
-/** Seam dimension module. */
-export const seamDimension: FlowDimensionModule = {
-  id: 'seam',
-  labelKey: 'flow.dim.seam',
-  derive: deriveSeamDimension,
 }

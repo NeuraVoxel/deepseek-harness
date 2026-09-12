@@ -7,7 +7,6 @@ import { skeletonToDocument, type SkeletonGraph } from '../skeleton-document.ts'
 import { collectTurnEvidence, statusFromSeen } from '../turn-evidence.ts'
 import type {
   FlowDimensionContext,
-  FlowDimensionModule,
   FlowNodeInspect,
   GraphDimensionView,
 } from '../types.ts'
@@ -44,7 +43,7 @@ export const LOOP_SKELETON: SkeletonGraph = {
 
 /**
  * @param ctx - shared dimension context.
- * @returns loop graph view.
+ * @returns loop graph view (Architecture SubNetwork / inline layer).
  */
 export function deriveLoopDimension(ctx: FlowDimensionContext): GraphDimensionView {
   const evidence = collectTurnEvidence(ctx.window, ctx.session, ctx.focusTurn)
@@ -99,11 +98,4 @@ export function deriveLoopDimension(ctx: FlowDimensionContext): GraphDimensionVi
     blankDoubleClickToFleet: true,
     legend: 'status',
   }
-}
-
-/** Loop dimension module. */
-export const loopDimension: FlowDimensionModule = {
-  id: 'loop',
-  labelKey: 'flow.dim.loop',
-  derive: deriveLoopDimension,
 }

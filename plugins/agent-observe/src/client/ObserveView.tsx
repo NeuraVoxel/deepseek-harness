@@ -404,25 +404,23 @@ function FlowPane(props: Props): ReactElement {
         {view.kind === 'graph' ? (
           <ZoomControls t={t} zoom={zoom} hostRef={hostRef} />
         ) : null}
-        {dimension === 'integrated' || dimension === 'architecture' ? (
-          <button
-            type="button"
-            className={css.groupButton}
-            data-active={focusEventBeads ? 'true' : 'false'}
-            aria-pressed={focusEventBeads}
-            onClick={() => {
-              setFocusEventBeads(value => {
-                const next = !value
-                if (next) setFocusArchitectureE2e(false)
-                return next
-              })
-            }}
-          >
-            {t('flow.integrated.focusEvents')}
-          </button>
-        ) : null}
         {dimension === 'architecture' ? (
           <>
+            <button
+              type="button"
+              className={css.groupButton}
+              data-active={focusEventBeads ? 'true' : 'false'}
+              aria-pressed={focusEventBeads}
+              onClick={() => {
+                setFocusEventBeads(value => {
+                  const next = !value
+                  if (next) setFocusArchitectureE2e(false)
+                  return next
+                })
+              }}
+            >
+              {t('flow.architecture.focusEvents')}
+            </button>
             <button
               type="button"
               className={css.groupButton}
@@ -495,29 +493,17 @@ function FlowPane(props: Props): ReactElement {
             <span><i className={`${css.swatch} ${css.swatchFlowActive}`} />{t('flow.legend.active')}</span>
           </div>
         ) : null}
-        {view.kind === 'graph' && view.legend === 'integrated' ? (
-          <div className={css.legend} aria-label={t('legend.title')}>
-            <span><i className={`${css.swatch} ${css.swatchFlowPending}`} />{t('flow.legend.pending')}</span>
-            <span><i className={`${css.swatch} ${css.swatchFlowActive}`} />{t('flow.legend.active')}</span>
-            <span><i className={`${css.swatch} ${css.swatchFlowDone}`} />{t('flow.legend.done')}</span>
-            <span><i className={`${css.swatch} ${css.swatchEventBead}`} />{t('flow.integrated.legend.event')}</span>
-            <span><i className={`${css.swatch} ${css.swatchEventStart}`} />{t('flow.integrated.legend.eventStart')}</span>
-            <span><i className={`${css.swatch} ${css.swatchEventEnd}`} />{t('flow.integrated.legend.eventEnd')}</span>
-            <span><i className={`${css.swatch} ${css.swatchEventSeq}`} />{t('flow.integrated.legend.eventSeq')}</span>
-            <span><i className={`${css.swatch} ${css.swatchGateway}`} />{t('flow.integrated.legend.gateway')}</span>
-          </div>
-        ) : null}
         {view.kind === 'graph' && view.legend === 'architecture' ? (
           <div className={css.legend} aria-label={t('legend.title')}>
             <span><i className={`${css.swatch} ${css.swatchFlowPending}`} />{t('flow.legend.pending')}</span>
             <span><i className={`${css.swatch} ${css.swatchFlowActive}`} />{t('flow.legend.active')}</span>
             <span><i className={`${css.swatch} ${css.swatchFlowDone}`} />{t('flow.legend.done')}</span>
-            <span><i className={`${css.swatch} ${css.swatchEventBead}`} />{t('flow.integrated.legend.event')}</span>
-            <span><i className={`${css.swatch} ${css.swatchEventStart}`} />{t('flow.integrated.legend.eventStart')}</span>
-            <span><i className={`${css.swatch} ${css.swatchEventEnd}`} />{t('flow.integrated.legend.eventEnd')}</span>
-            <span><i className={`${css.swatch} ${css.swatchEventSeq}`} />{t('flow.integrated.legend.eventSeq')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEventBead}`} />{t('flow.architecture.legend.event')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEventStart}`} />{t('flow.architecture.legend.eventStart')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEventEnd}`} />{t('flow.architecture.legend.eventEnd')}</span>
+            <span><i className={`${css.swatch} ${css.swatchEventSeq}`} />{t('flow.architecture.legend.eventSeq')}</span>
             <span><i className={`${css.swatch} ${css.swatchArchBridge}`} />{t('flow.architecture.legend.bridge')}</span>
-            <span><i className={`${css.swatch} ${css.swatchGateway}`} />{t('flow.integrated.legend.gateway')}</span>
+            <span><i className={`${css.swatch} ${css.swatchGateway}`} />{t('flow.architecture.legend.gateway')}</span>
           </div>
         ) : null}
         {view.kind === 'graph' && view.legend === 'status' ? (

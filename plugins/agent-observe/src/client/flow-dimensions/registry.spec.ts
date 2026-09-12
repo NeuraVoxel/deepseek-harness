@@ -7,14 +7,15 @@ import {
 } from './registry.ts'
 
 describe('flow dimension registry', () => {
-  it('registers seven dimensions in tab order with architecture default', () => {
+  it('registers architecture, process, and events with architecture default', () => {
     expect(FLOW_DIMENSIONS.map(module => module.id)).toEqual([
-      'architecture', 'process', 'integrated', 'panorama', 'loop', 'seam', 'events',
+      'architecture', 'process', 'events',
     ])
     expect(DEFAULT_FLOW_DIMENSION).toBe('architecture')
-    expect(resolveFlowDimension('loop').id).toBe('loop')
+    expect(resolveFlowDimension('process').id).toBe('process')
     expect(coerceFlowDimension('nope')).toBe('architecture')
-    expect(coerceFlowDimension('integrated')).toBe('integrated')
-    expect(coerceFlowDimension('architecture')).toBe('architecture')
+    expect(coerceFlowDimension('events')).toBe('events')
+    expect(coerceFlowDimension('integrated')).toBe('architecture')
+    expect(coerceFlowDimension('loop')).toBe('architecture')
   })
 })

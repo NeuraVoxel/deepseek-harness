@@ -9,12 +9,8 @@ import type { AgentFlowSnapshot } from '../derive-flow.ts'
 
 /** Ordered Flow dimension ids (tab strip). */
 export type FlowDimensionId =
-  | 'process'
-  | 'integrated'
-  | 'panorama'
   | 'architecture'
-  | 'loop'
-  | 'seam'
+  | 'process'
   | 'events'
 
 /** Cross-dimension selection hints (Session-scoped UI state). */
@@ -33,7 +29,7 @@ export interface FlowDimensionContext {
   readonly agentFlow: AgentFlowSnapshot
   readonly selection: FlowDimensionSelection
   /**
-   * Atlas-only: when true, event beads + seq edges stay opaque and other
+   * Architecture: when true, event beads + seq edges stay opaque and other
    * root elements fade to 0.2.
    */
   readonly focusEventBeads?: boolean
@@ -71,7 +67,7 @@ export interface GraphDimensionView {
   /** When true, empty canvas double-click returns to Fleet. */
   readonly blankDoubleClickToFleet: true
   /** Which legend strip FlowPane should render. */
-  readonly legend: 'process' | 'status' | 'integrated' | 'architecture'
+  readonly legend: 'process' | 'status' | 'architecture'
 }
 
 /** Dual-pane SessionEvent dimension. */

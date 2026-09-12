@@ -10,7 +10,8 @@
 - 单击节点 → `sessions.open(id)`
 - 在某轮 Turn 的 assistant-actions 行点 **打开观察** → 直接进入该 Turn 的 **流程**模式并**钉住**（更新的 Turn 不会自动抢走画布）
 - 总览 **双击** → 打开该 Agent **最新** Turn 的流程 Canvas（`focusTurn = null`）
-- Flow 内第二行维度 Tab：**进程流**（现有 `derive-flow`）· **整合图谱**（全景 + 闭环/能力缝 SubNetwork + 事件红珠）· **端到端全景** · **Turn/Step 闭环** · **能力缝** · **事件流**（左时间线 / 右 payload）；钉住 Turn 跨维度共享
+- Flow 内第二行维度 Tab：**架构**（默认；端到端 + Turn 环 / 能力缝 Group，可展开或 SubNetwork 下钻，含事件珠）· **进程流**（`derive-flow`）· **事件流**（左时间线 / 右 payload）；钉住 Turn 跨维度共享
+- 架构图把全景 / 闭环 / 能力缝骨架作为层嵌入（不再单独占 Tab）
 - 流程 **双击空白画布** → 返回总览（点中节点/边不返回；事件流双栏不绑该手势）
 - 钉住的 Turn 不是 Session 最新时，流程工具栏出现 **跳到最新**；点击清除钉住并留在流程模式
 - **限制：** Turn 由快捷入口 `messageId` 对应的持久化 `assistant/message.id` 反查得出（插件内解析）；本轮不扩展 `packages/` 中的 `AssistantActionOwnerProps`
@@ -20,7 +21,7 @@
 - **边：** 灰色 **flow** = 控制 / 收束；青色 **data** = 载荷（`Client input → Host admit`、`Session → Envelope`、`Memory/Envelope → Context`、`Context → Model`、`Model → Tool`、`Model/Tool → Session`、`Session → Client render`）
 - 同一条 assistant 里的多个 tool 竖排为**并行列**，再汇入 Join
 - 渲染：[@neuravoxel/aitopo](../../vendor/aitopo) Canvas Network（dirty-rect）；无 SVG 舞台
-- 骨架维（全景 / 闭环 / 能力缝）为 TypeScript 常量图 + 保守实况高亮（无证据则保持灰态说明）
+- 骨架图（全景 / 闭环 / 能力缝）为 TypeScript 常量图 + 保守实况高亮（无证据则保持灰态说明），由架构 Tab 复用
 
 **不修改** `packages/`，通过 patch / `dsh plugin` 挂载。
 

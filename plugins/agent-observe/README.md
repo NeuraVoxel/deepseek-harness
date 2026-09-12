@@ -10,7 +10,8 @@ Opt-in plugin: a **Observe** tab beside Chat / Trajectory that shows Session / A
 - Click a node → `sessions.open(id)`
 - **Open Observe** on a Turn’s assistant-actions row → Observe tab in **flow** mode **pinned** to that Turn (newer Turns do not auto-steal the canvas)
 - Fleet **double-click** → process Canvas for that Agent’s **latest** Turn (`focusTurn = null`)
-- Inside Flow, a second-row dimension strip: **Architecture** (E2E + collapsed Turn-loop and Capability-seam SubNetwork gateways by default; toolbar expands each inline; event beads; default tab), **Process** (existing `derive-flow`), **Atlas** (integrated panorama + loop/seam SubNetworks + event beads), **End-to-end**, **Turn / Step loop**, **Capability seam**, **Events** (timeline + payload); the Turn pin is shared across dimensions
+- Inside Flow, a second-row dimension strip: **Architecture** (default; E2E + Turn-loop / Capability-seam Groups with expand and SubNetwork drill-in; event beads), **Process** (`derive-flow`), **Events** (timeline + payload); the Turn pin is shared across dimensions
+- Architecture embeds panorama / loop / seam skeletons as layers (not separate tabs)
 - Flow **double-click empty canvas** → back to Fleet (node/edge hits stay in flow; the events dual-pane does not bind that gesture)
 - **Jump to latest** appears on the flow toolbar when pinned away from the Session’s latest Turn; click clears the pin and stays in flow
 - **Limitation:** Turn is resolved from the durable `assistant/message.id` that owns the shortcut’s `messageId` (plugin reverse-lookup); this cut does not extend `AssistantActionOwnerProps` in `packages/`

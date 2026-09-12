@@ -7,7 +7,6 @@ import { skeletonToDocument, type SkeletonGraph } from '../skeleton-document.ts'
 import { collectTurnEvidence, statusFromSeen } from '../turn-evidence.ts'
 import type {
   FlowDimensionContext,
-  FlowDimensionModule,
   FlowNodeInspect,
   GraphDimensionView,
 } from '../types.ts'
@@ -47,10 +46,7 @@ export const PANORAMA_SKELETON: SkeletonGraph = {
   ],
 }
 
-/**
- * @param ctx - shared dimension context.
- * @returns panorama graph view.
- */
+/** Panorama skeleton + overlay helpers (used by Architecture; not a Flow tab). */
 export function derivePanoramaDimension(ctx: FlowDimensionContext): GraphDimensionView {
   const evidence = collectTurnEvidence(ctx.window, ctx.session, ctx.focusTurn)
   const statusById = new Map<string, FlowNodeStatus>()
@@ -106,11 +102,4 @@ export function derivePanoramaDimension(ctx: FlowDimensionContext): GraphDimensi
     blankDoubleClickToFleet: true,
     legend: 'status',
   }
-}
-
-/** Panorama dimension module. */
-export const panoramaDimension: FlowDimensionModule = {
-  id: 'panorama',
-  labelKey: 'flow.dim.panorama',
-  derive: derivePanoramaDimension,
 }
