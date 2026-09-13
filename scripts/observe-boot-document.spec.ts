@@ -79,6 +79,25 @@ describe('buildBootDocument', () => {
     expect(document.networks?.['network:compose']?.edges.every(edge => edge.style?.strokeDash !== undefined)).toBe(true)
   })
 
+  it('recolors phase nodes by their duration bucket', () => {
+    const document = buildBootDocument(recording({
+      phases: [
+        { id: 'compose', label: 'Compose', startedAtMs: 0, endedAtMs: 5, detail: '' },
+        { id: 'mount', label: 'Mount', startedAtMs: 5, endedAtMs: 805, detail: '' },
+        { id: 'settle', label: 'Settle', startedAtMs: 805, endedAtMs: 3_805, detail: '' },
+        { id: 'ready', label: 'Ready', startedAtMs: 3_805, endedAtMs: 8_805, detail: '' },
+      ],
+    }))
+    const byId = new Map(document.nodes.map(node => [node.id, node]))
+    expect(byId.get('phase:compose')?.data).toMatchObject({ durationBucket: 'fast', fill: '#2e7d32' })
+    expect(byId.get('phase:mount')?.data).toMatchObject({ durationBucket: 'moderate', fill: '#9a6b00' })
+    expect(byId.get('phase:settle')?.data).toMatchObject({ durationBucket: 'slow', fill: '#d84315' })
+    expect(byId.get('phase:ready')?.data).toMatchObject({ durationBucket: 'critical', fill: '#b71c1c' })
+    // Every phase carries both paint overrides.
+    expect(document.nodes.every(node => typeof node.data?.fill === 'string' && typeof node.data?.stroke === 'string'))
+      .toBe(true)
+  })
+
   it('bands construction events into per-layer groups on a time axis', () => {
     const document = buildBootDocument(recording({
       events: [

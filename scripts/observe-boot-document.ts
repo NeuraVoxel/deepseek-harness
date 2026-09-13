@@ -90,6 +90,23 @@ const DRILL_NETWORK_BY_PHASE: Partial<Record<BootPhaseMark['id'], string>> = {
 }
 
 /**
+ * Duration buckets recolor phase nodes as a heat scale. Colors stay dark so
+ * the white default icon keeps its contrast; the renderer reads
+ * `node.data.fill`/`stroke` as a body-color override (canvas2d drawNode).
+ */
+const PHASE_DURATION_BUCKETS = [
+  { maxMs: 100, bucket: 'fast', color: '#2e7d32' },
+  { maxMs: 1_000, bucket: 'moderate', color: '#9a6b00' },
+  { maxMs: 5_000, bucket: 'slow', color: '#d84315' },
+] as const
+
+function phaseDurationPaint(durationMs: number): { bucket: string; fill: string; stroke: string } {
+  const found = PHASE_DURATION_BUCKETS.find(candidate => durationMs < candidate.maxMs)
+  const color = found?.color ?? '#b71c1c'
+  return { bucket: found?.bucket ?? 'critical', fill: color, stroke: color }
+}
+
+/**
  * Build the AITopo document for a boot recording.
  * @param recording - phases, plugin events, and patch-layer attribution.
  * @returns a `version: 1` GraphDocument (phase flow root + two sub-networks).
@@ -102,11 +119,13 @@ export function buildBootDocument(recording: BootRecording): GraphDocument {
 
   const phaseNodes: GraphNode[] = recording.phases.map((phase, index) => {
     const drillNetworkId = DRILL_NETWORK_BY_PHASE[phase.id]
+    const durationMs = Math.round(phase.endedAtMs - phase.startedAtMs)
+    const paint = phaseDurationPaint(durationMs)
     return {
       id: `phase:${phase.id}`,
       type: 'phase',
       label: phase.label,
-      label2: `${Math.round(phase.endedAtMs - phase.startedAtMs)}ms`,
+      label2: `${durationMs}ms`,
       tooltip: phase.detail,
       // Built-in icon keys: drillable phases read as sub-network portals.
       icon: drillNetworkId === undefined ? 'node' : 'router',
@@ -114,7 +133,15 @@ export function buildBootDocument(recording: BootRecording): GraphDocument {
       y: 120,
       // exactOptionalPropertyTypes: absent drill target omits the key entirely.
       ...(drillNetworkId === undefined ? {} : { networkId: drillNetworkId }),
-      data: { phase: phase.id, durationMs: Math.round(phase.endedAtMs - phase.startedAtMs), detail: phase.detail },
+      data: {
+        phase: phase.id,
+        durationMs,
+        durationBucket: paint.bucket,
+        // Body-color override consumed by the renderer's drawNode.
+        fill: paint.fill,
+        stroke: paint.stroke,
+        detail: phase.detail,
+      },
     }
   })
   const phaseEdges: GraphEdge[] = recording.phases.slice(1).map((phase, index) => ({
