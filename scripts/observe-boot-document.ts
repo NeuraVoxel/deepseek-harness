@@ -71,12 +71,8 @@ const LAYER_NETWORK_PREFIX = 'network:layer:'
 const UNATTRIBUTED_LAYER = '(unattributed)'
 /** Plugin nodes per row inside a layer; keeps the fit-all view readable. */
 const PLUGIN_COLUMNS = 16
-/** Band palette: one hue per patch-layer lane; fill appends 8-digit hex alpha. */
-const LANE_COLORS = [
-  '#4e79a7', '#f28e2b', '#59a14f', '#e15759', '#76b7b2',
-  '#edc948', '#b07aa1', '#ff9da7', '#9c755f', '#bab0ac',
-] as const
-/** Portal grid on the root canvas. */
+
+/** Portal scatter grid on the root canvas: columns per row. */
 const PORTAL_COLUMNS = 3
 /** Phase nodes recolor as a heat scale (dark hues keep the white icon legible). */
 const PHASE_DURATION_BUCKETS = [
@@ -142,9 +138,9 @@ export function buildBootDocument(recording: BootRecording): GraphDocument {
 
   // Layer portals live on the ROOT: subnetworks drill exactly one level, so
   // the per-layer plugin detail must be reachable without an intermediate
-  // network. Portals grid below the phase flow; hue per layer. A synthetic
-  // unattributed portal follows the real layers when runtime-created entries
-  // (the include carrier, dynamic mounts) exist outside every patch layer.
+  // network. A synthetic unattributed portal follows the real layers when
+  // runtime-created entries (the include carrier, dynamic mounts) exist
+  // outside every patch layer.
   const realRowIds = new Set(recording.layers.flatMap(layer => layer.rowIds))
   const hasUnattributed = constructions.some(event => !realRowIds.has(event.entryId))
     || recording.inactiveEntryIds.some(id => !realRowIds.has(id))
@@ -154,36 +150,68 @@ export function buildBootDocument(recording: BootRecording): GraphDocument {
   // A layer earns a portal only when at least one placed plugin attributes to
   // it — an empty portal drills into a blank canvas. Zero-row layers still
   // appear in the composition view.
-  const visibleLayers: Array<{ name: string; rowIds: Set<string> ; unattributed: boolean }> = recording.layers
-    .map(layer => ({ name: layer.name, rowIds: new Set(layer.rowIds), unattributed: false }))
+  const visibleLayers: Array<{
+    name: string
+    rowIds: Set<string>
+    unattributed: boolean
+    /** `@deepseek-ai/*` bundles are first-party; everything else is third-party. */
+    internal: boolean
+  }> = recording.layers
+    .map(layer => ({
+      name: layer.name,
+      rowIds: new Set(layer.rowIds),
+      unattributed: false,
+      internal: layer.name.startsWith('@deepseek-ai/'),
+    }))
     .filter(layer => placedCount(layer.rowIds) > 0)
   if (hasUnattributed) {
-    visibleLayers.push({ name: UNATTRIBUTED_LAYER, rowIds: realRowIds, unattributed: true })
+    visibleLayers.push({ name: UNATTRIBUTED_LAYER, rowIds: realRowIds, unattributed: true, internal: false })
   }
 
   const layerNetworkId = (index: number): string => `${LAYER_NETWORK_PREFIX}${index}`
-  const portalNodes: GraphNode[] = visibleLayers.map((layer, index) => {
-    const hue = LANE_COLORS[index % LANE_COLORS.length] ?? '#4e79a7'
-    return {
-      id: `portal:layer:${index}`,
-      type: 'layer',
-      label: layer.name,
-      label2: `${layer.rowIds.size} rows`,
-      tooltip: `Double-click to enter — ${layer.rowIds.size} composed rows`,
-      icon: 'router',
-      x: 120 + (index % PORTAL_COLUMNS) * 300,
-      y: 320 + Math.floor(index / PORTAL_COLUMNS) * 160,
-      networkId: layerNetworkId(index),
-      data: { layer: layer.name, fill: hue, stroke: hue },
-    }
+  // All portals live BELOW the mount phase node: row 0 holds the dsh-internal
+  // layers, following rows hold third-party layers (≤3 per row). Every row
+  // centers on the mount node's x, so the dashed edges drop straight down
+  // instead of fanning across the other root phases.
+  const mountIndex = Math.max(recording.phases.findIndex(phase => phase.id === 'mount'), 0)
+  const mountX = 120 + mountIndex * 260
+  const PORTAL_ROW_PITCH = 160
+  const internalLayers = visibleLayers.filter(layer => layer.internal)
+  const externalLayers = visibleLayers.filter(layer => !layer.internal)
+  const rows: Array<typeof visibleLayers> = [
+    ...(internalLayers.length > 0 ? [internalLayers] : []),
+    ...Array.from({ length: Math.ceil(externalLayers.length / PORTAL_COLUMNS) }, (_, i) =>
+      externalLayers.slice(i * PORTAL_COLUMNS, (i + 1) * PORTAL_COLUMNS)),
+  ]
+  const portalNodes: GraphNode[] = []
+  const portalEdges: GraphEdge[] = []
+  rows.forEach((row, rowIndex) => {
+    const y = 320 + rowIndex * PORTAL_ROW_PITCH
+    row.forEach((layer, slot) => {
+      const index = visibleLayers.indexOf(layer)
+      const hue = layer.internal ? '#3d6f9e' : '#d97b2f'
+      portalNodes.push({
+        id: `portal:layer:${index}`,
+        type: 'layer',
+        label: layer.name,
+        label2: `${layer.rowIds.size} rows`,
+        tooltip: `Double-click to enter — ${layer.rowIds.size} composed rows`
+          + ` · ${layer.internal ? 'dsh internal' : 'third-party'}`,
+        icon: 'router',
+        x: mountX + (slot - (row.length - 1) / 2) * 300,
+        y,
+        networkId: layerNetworkId(index),
+        data: { layer: layer.name, origin: layer.internal ? 'internal' : 'external', fill: hue, stroke: hue },
+      })
+      portalEdges.push({
+        id: `edge:mount-${index}`,
+        from: 'phase:mount',
+        to: `portal:layer:${index}`,
+        kind: 'flow',
+        style: { strokeDash: [6, 4], alpha: 0.35 },
+      })
+    })
   })
-  const portalEdges: GraphEdge[] = portalNodes.map(portal => ({
-    id: `edge:mount-${portal.id}`,
-    from: 'phase:mount',
-    to: portal.id,
-    kind: 'flow',
-    style: { strokeDash: [6, 4], alpha: 0.35 },
-  }))
 
   const networks: Record<string, GraphDocument> = {
     [COMPOSE_NETWORK_ID]: buildComposeNetwork(recording),

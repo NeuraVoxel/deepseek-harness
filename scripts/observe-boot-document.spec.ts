@@ -150,6 +150,44 @@ describe('buildBootDocument', () => {
     expect(subnet?.nodes.map(node => node.id)).toEqual(['plugin:include'])
   })
 
+  it('rows portals under the mount phase: internal first, then external', () => {
+    const document = buildBootDocument(recording({
+      layers: [
+        { name: '@deepseek-ai/dsh-base', rowIds: ['entry-a'] },
+        { name: 'dshmarket', rowIds: ['entry-d'] },
+        { name: '@deepseek-ai/dsh-web-app', rowIds: ['entry-c'] },
+        { name: 'dsh-context', rowIds: ['entry-e'] },
+      ],
+      events: [
+        pluginEvent({ fiberUid: 1, entryId: 'entry-a', atMs: 12 }),
+        pluginEvent({ fiberUid: 2, entryId: 'entry-d', atMs: 40 }),
+        pluginEvent({ fiberUid: 3, entryId: 'entry-c', atMs: 60 }),
+        pluginEvent({ fiberUid: 4, entryId: 'entry-e', atMs: 80 }),
+      ],
+    }))
+    const byLabel = new Map(
+      document.nodes.filter(node => node.type === 'layer').map(node => [node.label, node]),
+    )
+    const base = byLabel.get('@deepseek-ai/dsh-base')
+    const webApp = byLabel.get('@deepseek-ai/dsh-web-app')
+    const market = byLabel.get('dshmarket')
+    const context = byLabel.get('dsh-context')
+    // Row 0 (internal, 2 items) centers on the mount node's x (fixture has
+    // two phases → mount at index 1 → x=380).
+    expect(base?.x).toBe(230)
+    expect(webApp?.x).toBe(530)
+    expect(base?.y).toBe(320)
+    expect(webApp?.y).toBe(320)
+    // External rows follow below, ≤3 per row, re-centered per row.
+    expect(market?.x).toBe(230)
+    expect(market?.y).toBe(480)
+    expect(context?.x).toBe(530)
+    expect(context?.y).toBe(480)
+    // Origin colors stay.
+    expect(base?.data?.fill).toBe('#3d6f9e')
+    expect(market?.data?.fill).toBe('#d97b2f')
+  })
+
   it('recolors phase nodes by their duration bucket', () => {
     const document = buildBootDocument(recording({
       phases: [
