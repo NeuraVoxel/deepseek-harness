@@ -6,6 +6,8 @@ export const NS = 'wordbook'
 /** Simplified Chinese dictionary (key-set source of truth). */
 export const zh = {
   'card.model': '模型',
+  'dock.action': '查询',
+  'dock.placeholder': '添加单词…',
   'lookup.title': '单词',
   'lookup.created': '已入库',
   'lookup.existing': '已存在',
@@ -25,6 +27,8 @@ export type WordbookKey = keyof typeof zh
 /** English dictionary (same key set). */
 export const en: Record<WordbookKey, string> = {
   'card.model': 'Model',
+  'dock.action': 'Look up',
+  'dock.placeholder': 'Add a word…',
   'lookup.title': 'Word',
   'lookup.created': 'Stored',
   'lookup.existing': 'Already stored',

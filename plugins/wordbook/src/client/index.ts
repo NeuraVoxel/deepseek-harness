@@ -5,15 +5,17 @@
  */
 
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
+import type {} from '@deepseek-ai/dsh-api-remotes/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 import type {} from '@deepseek-ai/dsh-client-ui-chat/client'
 import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
 import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
+import { submitWord } from './dock.ts'
 import { en, NS, zh, type WordbookKey } from './locales.ts'
 import { WordLookupCard } from './WordLookupCard.tsx'
 import { WordQueryCard } from './WordQueryCard.tsx'
-import { WordbookDock } from './WordbookDock.tsx'
+import { WordbookDock, type WordbookDockInjected } from './WordbookDock.tsx'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
@@ -22,8 +24,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
   }
 }
 
-/** Required services for dictionaries and slot registration. */
-export const inject = ['slots', 'locale']
+/** Required services for dictionaries, the commands Remote, and slot registration. */
+export const inject = ['slots', 'locale', 'remote', 'remote.commands']
 
 /**
  * Client plugin body: register the dictionaries, both tool cards, and the dock.
@@ -49,5 +51,8 @@ export function apply(ctx: ClientContext): void {
       id: 'wordbook',
       order: 20,
       locale: NS,
+      inject: (sessionId): WordbookDockInjected => ({
+        submit: input => submitWord(line => ctx.remote.commands.execute(sessionId, line, []), input),
+      }),
     }, WordbookDock))
 }

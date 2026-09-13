@@ -18,6 +18,9 @@
       "path": "../../packages/api/session-controller/tsconfig.client.json"
     },
     {
+      "path": "../../packages/api/remotes/tsconfig.client.json"
+    },
+    {
       "path": "../../packages/client/locale"
     },
     {
