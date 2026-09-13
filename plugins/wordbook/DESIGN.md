@@ -61,7 +61,7 @@ Host 半（`src/`）：
 | `spec.ts` | `defineDomain` 声明 `wordbook` 域、`words` 表与 zod 记录 schema | `@deepseek-ai/dsh-storage-domain` | 模块加载即校验 |
 | `store.ts` | 唯一持久化读写单元：open / get / put / query | `ctx.storageDomain` | `get(word)`、`put(record)`、`query(req)` |
 | `prompts.ts` | 词典式系统提示与 JSON 输出协议文本 | — | 常量 |
-| `lookup.ts` | 纯函数：构造请求消息、严格解析与规范化模型输出 | 无 I/O | `buildLookupMessages(word)`、`parseLookup(text)` |
+| `lookup.ts` | 纯函数：构造请求文本、严格解析与规范化模型输出 | 无 I/O | `buildLookupPrompt(word, opts)`、`parseLookup(text, opts)` |
 | `service.ts` | `WordbookService`（服务键 `wordbook`）：幂等查词编排与查询 | `ctx.llm`、`store`、`ctx.agentDefaultModel` | `lookup(word, {refresh})`、`query(req)` |
 | `command.ts` | `/word [--refresh] <word>` 适配器 | `ctx.commands` | 注册随 effect 回收 |
 | `tools.ts` | `word_lookup` 与 `word_query` 的 `defineTool` 定义 | `ctx.tools` | 同上 |
