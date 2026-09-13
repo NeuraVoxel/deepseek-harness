@@ -217,6 +217,24 @@ describe('buildBootDocument', () => {
     expect(portalById.get('network:layer:1')?.label2).toBe('1 plugins')
   })
 
+  it('collapses restart re-mounts into one node per plugin', () => {
+    // A config reload re-creates fibers: three construction events for the
+    // same entry id must render one node (the engine dedupes node ids).
+    const document = buildBootDocument(recording({
+      layers: [{ name: '@example/base', rowIds: ['entry-a'] }],
+      events: [
+        pluginEvent({ fiberUid: 1, entryId: 'entry-a', atMs: 12 }),
+        pluginEvent({ fiberUid: 2, entryId: 'entry-a', atMs: 40 }),
+        pluginEvent({ fiberUid: 3, entryId: 'entry-a', atMs: 90 }),
+      ],
+    }))
+    const subnet = document.networks?.['network:layer:0']
+    expect(subnet?.nodes).toHaveLength(1)
+    expect(subnet?.nodes[0]?.data?.atMs).toBe(90)
+    const portal = document.nodes.find(node => node.type === 'layer')
+    expect(portal?.label2).toBe('1 plugins')
+  })
+
   it('recolors phase nodes by their duration bucket', () => {
     const document = buildBootDocument(recording({
       phases: [

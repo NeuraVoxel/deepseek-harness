@@ -93,13 +93,29 @@ function phaseDurationPaint(durationMs: number): { bucket: string; fill: string;
 }
 
 /**
+ * Collapse restart re-mounts: a config reload during boot disposes and
+ * re-creates fibers, emitting several construction events per entry id. The
+ * document shows ONE node per plugin — the LAST construction (the live
+ * fiber) — so node count, label2, and engine id-dedup agree.
+ * @param events - all construction events, in activation order.
+ * @returns one event per entry id (the latest), re-sorted by time.
+ */
+function uniqueConstructions(events: BootPluginEvent[]): BootPluginEvent[] {
+  const lastById = new Map<string, BootPluginEvent>()
+  for (const event of events) lastById.set(event.entryId, event)
+  return [...lastById.values()].sort((a, b) => a.atMs - b.atMs)
+}
+
+/**
  * Build the AITopo document for a boot recording.
  * @param recording - phases, plugin events, and patch-layer attribution.
  * @returns a `version: 1` GraphDocument (phase flow + layer portals on the
  * root, compose subnet, one subnet per non-empty layer).
  */
 export function buildBootDocument(recording: BootRecording): GraphDocument {
-  const constructions = recording.events.filter(event => event.kind === 'construction')
+  const constructions = uniqueConstructions(
+    recording.events.filter(event => event.kind === 'construction'),
+  )
 
   const phaseNodes: GraphNode[] = recording.phases.map((phase, index) => {
     const drillNetworkId = DRILL_NETWORK_BY_PHASE[phase.id]
