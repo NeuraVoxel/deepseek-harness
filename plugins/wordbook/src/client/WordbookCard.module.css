@@ -1,0 +1,112 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
+  border-radius: 8px;
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.display {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.phonetic {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.badge {
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  font-size: 11px;
+}
+
+.senses {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sense {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.pos {
+  margin-right: 4px;
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.examples {
+  margin: 2px 0 0;
+  padding-left: 16px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.queryHead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.entry + .entry {
+  padding-top: 6px;
+  border-top: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+}
+
+.meta {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.empty {
+  font-size: 13px;
+  opacity: 0.7;
+}
+
+.fallback {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.fallbackHead {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  opacity: 0.8;
+}
+
+.detail {
+  margin: 0;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  opacity: 0.75;
+}

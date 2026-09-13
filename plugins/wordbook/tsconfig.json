@@ -21,6 +21,9 @@
       "path": "../../packages/client/locale"
     },
     {
+      "path": "../../packages/client/ui-chat"
+    },
+    {
       "path": "../../packages/client/ui-conversation"
     },
     {
@@ -28,6 +31,9 @@
     },
     {
       "path": "../../packages/client/ui-slots"
+    },
+    {
+      "path": "../../packages/client/ui-tool"
     },
     {
       "path": "../../packages/core/agent-default-model"

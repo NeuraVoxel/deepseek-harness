@@ -9,6 +9,6 @@ export default defineConfig({
   plugins: [tsconfigPaths({ projects: ['../../tsconfig.base.json'] }), standardDecoratorPlugin()],
   test: {
     environment: 'node',
-    include: ['src/**/*.spec.ts'],
+    include: ['src/**/*.spec.{ts,tsx}'],
   },
 })

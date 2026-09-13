@@ -11151,6 +11151,9 @@ importers:
       '@deepseek-ai/dsh-client-locale':
         specifier: workspace:^
         version: link:../../packages/client/locale
+      '@deepseek-ai/dsh-client-ui-chat':
+        specifier: workspace:^
+        version: link:../../packages/client/ui-chat
       '@deepseek-ai/dsh-client-ui-conversation':
         specifier: workspace:^
         version: link:../../packages/client/ui-conversation
@@ -11160,6 +11163,9 @@ importers:
       '@deepseek-ai/dsh-client-ui-slots':
         specifier: workspace:^
         version: link:../../packages/client/ui-slots
+      '@deepseek-ai/dsh-client-ui-tool':
+        specifier: workspace:^
+        version: link:../../packages/client/ui-tool
       '@deepseek-ai/dsh-commands':
         specifier: workspace:^
         version: link:../../packages/interaction/commands
