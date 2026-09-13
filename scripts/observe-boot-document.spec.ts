@@ -73,14 +73,44 @@ describe('buildBootDocument', () => {
     expect(mount).toBeDefined()
     const pluginNodes = mount?.nodes ?? []
     expect(pluginNodes.map(node => node.type)).toEqual(['plugin', 'plugin', 'plugin'])
-    // x follows the real activation order across lanes.
-    expect(pluginNodes.map(node => node.x)).toEqual([120, 300, 480])
-    // y is the layer lane: entry-a/entry-b share base (lane 0), entry-c in app (lane 1).
-    expect(pluginNodes.map(node => node.y)).toEqual([100, 100, 250])
+    // x is the per-layer activation order (each layer's row starts at x=120).
+    expect(pluginNodes.map(node => node.x)).toEqual([120, 300, 120])
+    // y is the layer block: base holds two rows-worth of one row (baseY 100);
+    // app's block starts one row + gap lower (100 + 100 + 60).
+    expect(pluginNodes.map(node => node.y)).toEqual([100, 100, 260])
     const groups = mount?.groups ?? []
     expect(groups.map(group => group.label)).toEqual(['@example/base', '@example/app'])
     expect(groups[0]?.memberIds).toEqual(['plugin:entry-a', 'plugin:entry-b'])
     expect(groups[1]?.memberIds).toEqual(['plugin:entry-c'])
+    // Nodes carry the groupId arm of the membership encoding.
+    expect(pluginNodes.map(node => node.groupId)).toEqual([
+      'group:example-base',
+      'group:example-base',
+      'group:example-app',
+    ])
+    // Bands default collapsed, sized to their member bbox, and hue-coded.
+    expect(groups.every(group => group.expanded !== true)).toBe(true)
+    expect(groups.every(group => group.x !== undefined && group.w !== undefined && group.h !== undefined)).toBe(true)
+    expect(groups[0]?.style?.fill).not.toBe(groups[1]?.style?.fill)
+    expect(groups[0]?.style?.stroke).toBeDefined()
+    // Bands grow around members when expanded: no autoFit opt-out.
+    expect(groups.every(group => group.style?.autoFit !== false)).toBe(true)
+  })
+
+  it('omits bands for layers with no placed plugins', () => {
+    const document = buildBootDocument(recording({
+      layers: [
+        { name: '@example/base', rowIds: ['entry-a'] },
+        { name: '@example/empty', rowIds: ['entry-gone'] },
+      ],
+      events: [pluginEvent({ fiberUid: 1, entryId: 'entry-a', atMs: 12 })],
+      inactiveEntryIds: [],
+    }))
+    const mount = document.networks?.['network:mount']
+    expect(mount?.groups?.map(group => group.label)).toEqual(['@example/base'])
+    // The composition view still shows every layer, including the empty one.
+    const compose = document.networks?.['network:compose']
+    expect(compose?.nodes.map(node => node.label)).toEqual(['@example/base', '@example/empty'])
   })
 
   it('edges observed fiber parent-child relations and marks inactive rows cold', () => {

@@ -254,6 +254,9 @@ async function main(): Promise<number> {
       out: { type: 'string' },
       'settle-ms': { type: 'string', default: '1500' },
       'emit-demo': { type: 'boolean', default: true },
+      // Forwarded to the web app's own flags (webStartup); lets a recording
+      // run beside an already-running dsh web on 3080.
+      port: { type: 'string' },
     },
   })
   const profileName = values.profile
@@ -293,8 +296,9 @@ async function main(): Promise<number> {
       })
       hostCtx.provide(DSH_LAUNCH_ENVIRONMENT_KEY, environment)
       provideCmdline(hostCtx, {
-        // Recording-only invocation: never pop the user's browser mid-capture.
-        args: ['--no-open'],
+        // Recording-only invocation: never pop the user's browser mid-capture;
+        // --port forwards the recorder's own option to the web app's flags.
+        args: ['--no-open', ...(values.port === undefined ? [] : ['--port', values.port])],
         exit: (code) => { console.warn(`observe-boot: app requested exit ${code}`) },
         ready: appReady.service,
       })

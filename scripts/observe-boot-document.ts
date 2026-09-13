@@ -65,9 +65,16 @@ const MOUNT_NETWORK_ID = 'network:mount'
 const COMPOSE_NETWORK_ID = 'network:compose'
 /** Lane for construction events whose entry id maps to no recorded layer. */
 const UNATTRIBUTED_LAYER = '(unattributed)'
+/** Plugin nodes per row inside a lane; keeps the fit-all view readable. */
+const PLUGIN_COLUMNS = 16
+/** Band palette: one hue per patch-layer lane; fill appends 8-digit hex alpha. */
+const LANE_COLORS = [
+  '#4e79a7', '#f28e2b', '#59a14f', '#e15759', '#76b7b2',
+  '#edc948', '#b07aa1', '#ff9da7', '#9c755f', '#bab0ac',
+] as const
 
 function slug(value: string): string {
-  return value.replace(/[^a-zA-Z0-9_-]+/g, '-')
+  return value.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '')
 }
 
 /** Attributed layer name for one entry id, or the unattributed lane. */
@@ -159,30 +166,84 @@ function buildMountNetwork(
   constructions: BootPluginEvent[],
   disposalIds: Set<string>,
 ): GraphDocument {
-  const layerNames = [...recording.layers.map(layer => layer.name)]
-  if (constructions.some(event => layerOfEntry(recording, event.entryId) === UNATTRIBUTED_LAYER)
-    || recording.inactiveEntryIds.some(id => layerOfEntry(recording, id) === UNATTRIBUTED_LAYER)) {
-    layerNames.push(UNATTRIBUTED_LAYER)
-  }
-  const laneOf = new Map(layerNames.map((name, index) => [name, index]))
+  // A layer earns a lane and a band only when at least one placed plugin
+  // attributes to it — an empty band would render as a stray degenerate
+  // rectangle (the composed stack legitimately contains zero-row layers,
+  // e.g. an empty home patch file).
+  const placedLayers = (entryIds: readonly string[]): Set<string> =>
+    new Set(entryIds.map(id => layerOfEntry(recording, id)))
+  const attributed = new Set([
+    ...placedLayers(constructions.map(event => event.entryId)),
+    ...placedLayers(recording.inactiveEntryIds),
+  ])
+  const layerNames = recording.layers
+    .map(layer => layer.name)
+    .filter(name => attributed.has(name))
+  if (attributed.has(UNATTRIBUTED_LAYER)) layerNames.push(UNATTRIBUTED_LAYER)
 
   const nodes: GraphNode[] = []
   const edges: GraphEdge[] = []
   // Group bands assemble at the end: GraphGroup.memberIds is readonly, so
-  // membership collects in a mutable map while nodes are placed.
+  // membership collects in a mutable map while nodes are placed. The bbox
+  // per layer gives collapsed bands their geometry (nodes default 50×50).
   const membersByLayer = new Map<string, string[]>()
-  const addMember = (layer: string, nodeId: string): void => {
+  const bboxByLayer = new Map<string, { minX: number; minY: number; maxX: number; maxY: number }>()
+  const addMember = (layer: string, nodeId: string, x: number, y: number): void => {
     const members = membersByLayer.get(layer) ?? []
     members.push(nodeId)
     membersByLayer.set(layer, members)
+    const bbox = bboxByLayer.get(layer)
+    bboxByLayer.set(layer, bbox === undefined
+      ? { minX: x, minY: y, maxX: x + 50, maxY: y + 50 }
+      : {
+        minX: Math.min(bbox.minX, x),
+        minY: Math.min(bbox.minY, y),
+        maxX: Math.max(bbox.maxX, x + 50),
+        maxY: Math.max(bbox.maxY, y + 50),
+      })
   }
+  const groupIdOf = (layer: string): string => `group:${slug(layer)}`
   const nodeIdByEntryId = new Map<string, string>()
 
-  constructions.forEach((event, index) => {
+  // Layer blocks stack vertically, each sized by its own row count — a fixed
+  // lane pitch would make a tall layer's rows overlap the next lane's block.
+  const constructionsByLayer = new Map<string, BootPluginEvent[]>()
+  for (const event of constructions) {
+    const layer = layerOfEntry(recording, event.entryId)
+    const events = constructionsByLayer.get(layer) ?? []
+    events.push(event)
+    constructionsByLayer.set(layer, events)
+  }
+  const constructedIds = new Set(constructions.map(event => event.entryId))
+  const inactiveByLayer = new Map<string, string[]>()
+  for (const entryId of recording.inactiveEntryIds) {
+    if (constructedIds.has(entryId)) continue
+    const layer = layerOfEntry(recording, entryId)
+    const ids = inactiveByLayer.get(layer) ?? []
+    ids.push(entryId)
+    inactiveByLayer.set(layer, ids)
+  }
+  const ROW_PITCH = 100
+  const LANE_GAP = 60
+  const laneBaseY = new Map<string, number>()
+  let cursorY = 100
+  for (const name of layerNames) {
+    laneBaseY.set(name, cursorY)
+    const count = (constructionsByLayer.get(name)?.length ?? 0) + (inactiveByLayer.get(name)?.length ?? 0)
+    cursorY += Math.ceil(Math.max(count, 1) / PLUGIN_COLUMNS) * ROW_PITCH + LANE_GAP
+  }
+
+  const placeNode = (layer: string, slot: number): { x: number; y: number } => ({
+    x: 120 + (slot % PLUGIN_COLUMNS) * 180,
+    y: (laneBaseY.get(layer) ?? cursorY) + Math.floor(slot / PLUGIN_COLUMNS) * ROW_PITCH,
+  })
+
+  constructions.forEach((event) => {
     const layer = layerOfEntry(recording, event.entryId)
     const id = `plugin:${event.entryId}`
+    const slot = (constructionsByLayer.get(layer) ?? []).indexOf(event)
+    const { x, y } = placeNode(layer, slot === -1 ? 0 : slot)
     nodeIdByEntryId.set(event.entryId, id)
-    const lane = laneOf.get(layer) ?? layerNames.length
     nodes.push({
       id,
       type: 'plugin',
@@ -191,35 +252,38 @@ function buildMountNetwork(
       tooltip: `+${Math.round(event.atMs)}ms · ${layer}`
         + (event.inject.length > 0 ? ` · inject: ${event.inject.join(', ')}` : ''),
       status: disposalIds.has(event.entryId) ? 'cold' : 'running',
-      x: 120 + index * 180,
-      y: 100 + lane * 150,
+      x,
+      y,
+      // Dual membership encoding: the renderer resolves groupId first and
+      // memberIds as the fallback arm; observe writes both.
+      groupId: groupIdOf(layer),
       data: { atMs: Math.round(event.atMs), layer, inject: event.inject, fiberUid: event.fiberUid },
     })
-    addMember(layer, id)
+    addMember(layer, id, x, y)
   })
 
   // Composed rows that never activated (disabled or otherwise inactive): still
-  // part of the composition's truth, rendered cold at the end of their lane.
-  const constructedIds = new Set(constructions.map(event => event.entryId))
-  const inactiveNodes = recording.inactiveEntryIds.filter(id => !constructedIds.has(id))
-  const laneWidth = 120 + Math.max(constructions.length, 1) * 180
-  for (const [index, entryId] of inactiveNodes.entries()) {
-    const layer = layerOfEntry(recording, entryId)
-    const id = `plugin:${entryId}`
-    nodeIdByEntryId.set(entryId, id)
-    const lane = laneOf.get(layer) ?? layerNames.length
-    nodes.push({
-      id,
-      type: 'plugin',
-      label: entryId,
-      label2: entryId,
-      tooltip: `${layer} · disabled/inactive — composed but never activated`,
-      status: 'cold',
-      x: laneWidth + index * 180,
-      y: 100 + lane * 150,
-      data: { layer, inactive: true },
-    })
-    addMember(layer, id)
+  // part of the composition's truth, rendered cold after their layer's rows.
+  for (const [layer, ids] of inactiveByLayer) {
+    const built = constructionsByLayer.get(layer)?.length ?? 0
+    for (const [index, entryId] of ids.entries()) {
+      const id = `plugin:${entryId}`
+      nodeIdByEntryId.set(entryId, id)
+      const { x, y } = placeNode(layer, built + index)
+      nodes.push({
+        id,
+        type: 'plugin',
+        label: entryId,
+        label2: entryId,
+        tooltip: `${layer} · disabled/inactive — composed but never activated`,
+        status: 'cold',
+        x,
+        y,
+        groupId: groupIdOf(layer),
+        data: { layer, inactive: true },
+      })
+      addMember(layer, id, x, y)
+    }
   }
 
   for (const event of constructions) {
@@ -229,17 +293,29 @@ function buildMountNetwork(
     edges.push({ id: `edge:parent-${event.fiberUid}`, from: parentId, to: childId, kind: 'flow', label: 'parent' })
   }
 
-  const groups: GraphGroup[] = layerNames.map(name => ({
-    id: `group:${slug(name)}`,
-    label: name,
-    memberIds: membersByLayer.get(name) ?? [],
-    expanded: true,
-    style: { autoFit: false },
-  }))
+  // Bands default collapsed (`expanded` omitted): the subnet opens as a
+  // per-layer summary of colored boxes; double-click a band to reveal its
+  // members. Collapsed geometry must be explicit — it falls back to the
+  // engine's 50×50 otherwise — so each band wraps its member bbox + padding.
+  const GROUP_PADDING = 16
+  const groups: GraphGroup[] = layerNames.map((name, laneIndex) => {
+    const bbox = bboxByLayer.get(name)
+    const hue = LANE_COLORS[laneIndex % LANE_COLORS.length] ?? '#4e79a7'
+    return {
+      id: groupIdOf(name),
+      label: name,
+      memberIds: membersByLayer.get(name) ?? [],
+      x: (bbox?.minX ?? 0) - GROUP_PADDING,
+      y: (bbox?.minY ?? 0) - GROUP_PADDING,
+      w: bbox === undefined ? 50 : bbox.maxX - bbox.minX + 2 * GROUP_PADDING,
+      h: bbox === undefined ? 50 : bbox.maxY - bbox.minY + 2 * GROUP_PADDING,
+      style: { fill: `${hue}2e`, stroke: hue },
+    }
+  })
 
   return {
     version: 1,
-    meta: { title: `Plugin activation (${constructions.length} activated, ${inactiveNodes.length} inactive)` },
+    meta: { title: `Plugin activation (${constructions.length} activated, ${recording.inactiveEntryIds.length} inactive)` },
     nodes,
     edges,
     groups,
