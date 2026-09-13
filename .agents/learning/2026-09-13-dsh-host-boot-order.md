@@ -66,8 +66,39 @@ bin.ts (runCli)
 
 `skipFiles: ["**/node_modules/**"]` 不影响 packages 源码，因为 workspace 依赖经符号链接 realpath 回 src。
 
+## bundle 名字与代码入口的对应（清单层 vs 插件层）
+
+`dsh.profile.bundles` 里的 `@deepseek-ai/dsh-base`、`@deepseek-ai/dsh-web-app` 是 **bundle（清单层）** 名字，入口分两层，解析链路在 `packages/boot/app-boot/src/profile.ts`（`loadProfile` 读 profile 包的 `dsh.profile.bundles`，再按每个 bundle 包的 `dsh.bundle.patch` 字段找 patch 文件）：
+
+| 名字 | 清单入口 | 实际代码 |
+|---|---|---|
+| `@deepseek-ai/dsh-base` | `packages/bundle/base/cordis.patch.yml`（package.json 的 `dsh.bundle.patch` 声明） | **没有**——`src/index.ts` 是空占位（`export {}`），包的全部实质就是那份 yml |
+| `@deepseek-ai/dsh-web-app` | `packages/bundle/web-app/cordis.patch.yml` | **有，双角色**——`src/index.ts` 是真实插件，被 yml 里的 `web-runtime` 行以 `name: '@deepseek-ai/dsh-web-app'` 挂载（dist 解析、静态回退、URL 打印、开浏览器都在这） |
+
+bundle yml 本身不含逻辑，每行 `insert:`/`- id:` 的 `name:` 指向一个真正的插件 npm 包，入口是该包的 `src/index.ts`（构建后 `lib/index.js`）：
+
+- **dsh-base 的行** = host 核心（timer、loader、session、system-prompt、llm、tools、persistence 等），代码在 `packages/core/`、`packages/host/`、`packages/session/` 等各组。找某行的代码：拿 `name` 里的包名 grep package.json，例如 `@deepseek-ai/dsh-host-webserver` → `packages/host/webserver/src/index.ts`。
+- **web-app 的行** = web 传输层 + 浏览器 roster（`webserver`、`web-runtime`、`connection`、`modules`、`ui-*`），host 半在 `packages/host/`、`packages/api/`、`packages/client/`，浏览器半在对应包的 `./client` 导出。
+
+本机 `~/.dsh/profiles/web/package.json` 的实际 bundle 栈有 7 层：`dsh-base → dsh-web-app → dshmarket → dsh-context → @vectorize-io/hindsight-coding-agents → @linxin666/dsh-client-ui-skill-explorer → dsh-cost-meter`。后 5 个是安装的第三方 bundle（装在 profile 的 node_modules），在 dsh-web-app 之上再叠 patch 层——调试时看到的某些行为（如 dsh-cost-meter 启动日志）来自这些层，仓库源码里没有。看某层内容：`~/.dsh/profiles/node_modules/<包名>/cordis.patch.yml`。
+
+## 启动记录工具（scripts/observe-boot.ts）
+
+2026-09-13 新增的配套工具，把上面的启动链录成 AITopo 文档：
+
+```sh
+pnpm exec tsx scripts/observe-boot.ts --profile web   # 记录并生成文档 + demo sample
+```
+
+- **记录方式**：in-process boot——脚本复刻 `runProfile` 的 patch 栈组合（约 40 行耦合，若 launcher 组合变化需同步），在 `boot()` 的 `prepare` 回调第一行订阅 `internal/plugin`，早于任何配置树行挂载，base 第一行的时序也能拿到。
+- **产物**（`.artifacts/observe-boot/<profile>-<stamp>/`）：`boot-timeline.json`（原始事件）、`boot-topology.document.json`（GraphDocument，经 `parseDocument` 校验）、`boot-report.md`（阶段/层/激活顺序表）；另发射 demo sample 到 `vendor/aitopo/demo/samples/dsh/boot.ts`（submodule 改动，需在 aitopo 仓提交）。
+- **文档结构**：根画布 = 阶段流程（compose → prepare → mount → settle → ready，带耗时）；下钻 `network:compose` = patch 层应用顺序；下钻 `network:mount` = 插件明细（x=真实激活顺序，y=patch 层车道，每层一条 Group 带，边=fiber 父子关系，未激活行 `status:'cold'`）。
+- **本机 web profile 实测**：9 层（base 84 行、web-app 94 行、5 个第三方 bundle、profile/home 用户层），boot() 返回前 186 个 fiber，settle 后 221 个——懒挂载是真实波动，照实记录。
+- 踩坑两则：`Loader.entries()` 返回 Generator，Node 22 iterator helpers 会让 `.filter().map()` 链返回迭代器而非数组，须先 `[...]` 物化；GraphGroup 的 `autoFit` 在 `style` 里而非顶层字段。
+
 ## 相关权威（学习笔记不是权威）
 
+- Loader 插件职责详解：学习笔记 [cordis-plugin-loader 的作用](2026-09-13-cordis-plugin-loader-role.md)
 - 单一 launcher 决策：Agent Note `implemented/architecture/2026-08-22-single-dsh-application-launcher.md`（application launch 范围、patchReload 表、协议 profile 的 stdout 纯净）
 - profile bundle 分层：Agent Note `implemented/architecture/2026-08-05-profile-plugin-bundles.md`
 - web 组合与传输分层：Agent Note `implemented/architecture/2026-07-24-web-config-tree-boot-and-transport-layering.md`（其中 base.cordis.yml 布局已被 profile patch 栈取代，以 launcher 笔记为准）
