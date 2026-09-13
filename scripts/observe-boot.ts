@@ -24,7 +24,7 @@
  */
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { parseArgs } from 'node:util'
 
 import { FiberState, type Context, type Fiber } from '@deepseek-ai/cordis'
@@ -35,6 +35,7 @@ import {
   healProfilesModuleFallback,
   loadLayeredEnv,
   loadOptionalPatches,
+  loadOverlayPatches,
   type Profile,
 } from '@deepseek-ai/dsh-app-boot'
 import { DSH_LAUNCH_ENVIRONMENT_KEY } from '@deepseek-ai/dsh-launch-environment'
@@ -94,14 +95,21 @@ interface ComposedProfile {
 
 /**
  * Mirror `runProfile`/`composeProfile`'s stack: bundle layers in
- * `dsh.profile.bundles` order, the profile's user layer, the home layer, then
- * the telemetry switch. Attribution records which layer owns each row id so
- * the document can band plugins by origin.
+ * `dsh.profile.bundles` order, the profile's user layer, the home layer,
+ * invocation `--patch` overlays, then the telemetry switch. Attribution
+ * records which layer owns each row id so the document can band plugins by
+ * origin.
  */
-async function composeRecordingProfile(profileName: string): Promise<ComposedProfile> {
+async function composeRecordingProfile(profileName: string, patchFiles: readonly string[]): Promise<ComposedProfile> {
   const profile = prepareProfile(profileName)
   await healProfilesModuleFallback({ installAnchor: INSTALL_ANCHOR, profile })
   const homePatches = loadOptionalPatches(BIN_NAME, homePatchPath()) ?? []
+  const invocationOverlays = patchFiles.map(file => ({
+    // Named by the patch file's directory: overlay files are conventionally
+    // `cordis.patch.yml`, so the plugin directory tells them apart.
+    name: `overlay:${basename(dirname(file))}`,
+    patches: loadOverlayPatches(BIN_NAME, resolve(file)),
+  }))
 
   const layers: BootLayerInfo[] = []
   const layerOfRow = new Map<string, string>()
@@ -120,9 +128,16 @@ async function composeRecordingProfile(profileName: string): Promise<ComposedPro
   profile.layers.forEach(layer => attribute(layer.packageName, layer.patches))
   attribute('profile:cordis.patch.yml', profile.patches)
   attribute('home:cordis.patch.yml', homePatches)
+  invocationOverlays.forEach(overlay => attribute(overlay.name, overlay.patches))
 
+  const overlayPatches = invocationOverlays.flatMap(overlay => overlay.patches)
   const rows = new Map<string, unknown>()
-  for (const row of composeEntries([profile.layers.flatMap(layer => layer.patches), profile.patches, homePatches])) {
+  for (const row of composeEntries([
+    profile.layers.flatMap(layer => layer.patches),
+    profile.patches,
+    homePatches,
+    overlayPatches,
+  ])) {
     if (typeof row.id === 'string') rows.set(row.id, row)
   }
   const telemetryPatch = resolveTelemetryPatch(process.env.DSH_TELEMETRY_DISABLED, rows.has(TELEMETRY_ROW_ID))
@@ -137,6 +152,7 @@ async function composeRecordingProfile(profileName: string): Promise<ComposedPro
       ...profile.layers.flatMap(layer => layer.patches),
       ...profile.patches,
       ...homePatches,
+      ...overlayPatches,
       ...overlays,
     ]) as PatchOptions[],
     layers,
@@ -259,6 +275,8 @@ async function main(): Promise<number> {
       // Forwarded to the web app's own flags (webStartup); lets a recording
       // run beside an already-running dsh web on 3080.
       port: { type: 'string' },
+      // Invocation overlays, applied after the home layer (repeatable).
+      patch: { type: 'string', multiple: true },
     },
   })
   const profileName = values.profile
@@ -285,7 +303,7 @@ async function main(): Promise<number> {
   })
 
   endPhase('compose', 'Compose profile', `patch layers + attribution for profile "${profileName}"`)
-  const composed = await composeRecordingProfile(profileName)
+  const composed = await composeRecordingProfile(profileName, values.patch ?? [])
 
   const appReady = createAppReady()
   beginPhase()
