@@ -5,17 +5,21 @@
  * recording; this module owns the document vocabulary:
  *
  * - Root canvas: the launcher's boot phases as a flow (compose → prepare →
- *   mount → settle → ready), each node labeled with its duration.
- * - `networks['network:compose']`: one node per patch layer in application
- *   order — the composition view.
- * - `networks['network:mount']`: one node per plugin entry. x encodes the real
- *   activation order; y lanes group by patch layer; a GraphGroup band per
- *   layer; edges are observed fiber parent-child relations. Entries that were
- *   composed but never activated (disabled rows) render `status: 'cold'`.
+ *   mount → settle → ready), each node recolored by its duration bucket.
+ *   Below the flow, one colored "layer portal" node per non-empty patch
+ *   layer, each carrying a `networkId` — aitopo SubNetworks support exactly
+ *   one drill level, so layer portals live on the ROOT and the per-layer
+ *   plugin detail replaces the former group-band mount network.
+ * - `network:compose`: one node per patch layer in application order — the
+ *   composition view.
+ * - `network:layer:<i>`: that layer's plugin nodes only. x encodes the
+ *   per-layer activation order (row-wrapped); edges are observed fiber
+ *   parent-child relations inside the layer; entries composed but never
+ *   activated render `status: 'cold'` after the activated ones.
  * @module scripts/observe-boot-document
  */
 
-import type { GraphDocument, GraphEdge, GraphGroup, GraphNode } from '@neuravoxel/aitopo'
+import type { GraphDocument, GraphEdge, GraphNode } from '@neuravoxel/aitopo'
 
 /** One observed loader fiber construction or disposal. */
 export interface BootPluginEvent {
@@ -61,44 +65,30 @@ export interface BootRecording {
   inactiveEntryIds: string[]
 }
 
-const MOUNT_NETWORK_ID = 'network:mount'
 const COMPOSE_NETWORK_ID = 'network:compose'
+const LAYER_NETWORK_PREFIX = 'network:layer:'
 /** Lane for construction events whose entry id maps to no recorded layer. */
 const UNATTRIBUTED_LAYER = '(unattributed)'
-/** Plugin nodes per row inside a lane; keeps the fit-all view readable. */
+/** Plugin nodes per row inside a layer; keeps the fit-all view readable. */
 const PLUGIN_COLUMNS = 16
 /** Band palette: one hue per patch-layer lane; fill appends 8-digit hex alpha. */
 const LANE_COLORS = [
   '#4e79a7', '#f28e2b', '#59a14f', '#e15759', '#76b7b2',
   '#edc948', '#b07aa1', '#ff9da7', '#9c755f', '#bab0ac',
 ] as const
-
-function slug(value: string): string {
-  return value.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '')
-}
-
-/** Attributed layer name for one entry id, or the unattributed lane. */
-function layerOfEntry(recording: BootRecording, entryId: string): string {
-  const layer = recording.layers.find(candidate => candidate.rowIds.includes(entryId))
-  return layer?.name ?? UNATTRIBUTED_LAYER
-}
-
-/** Phase nodes carry a `networkId` when that phase drills into a sub-network. */
-const DRILL_NETWORK_BY_PHASE: Partial<Record<BootPhaseMark['id'], string>> = {
-  compose: COMPOSE_NETWORK_ID,
-  mount: MOUNT_NETWORK_ID,
-}
-
-/**
- * Duration buckets recolor phase nodes as a heat scale. Colors stay dark so
- * the white default icon keeps its contrast; the renderer reads
- * `node.data.fill`/`stroke` as a body-color override (canvas2d drawNode).
- */
+/** Portal grid on the root canvas. */
+const PORTAL_COLUMNS = 3
+/** Phase nodes recolor as a heat scale (dark hues keep the white icon legible). */
 const PHASE_DURATION_BUCKETS = [
   { maxMs: 100, bucket: 'fast', color: '#2e7d32' },
   { maxMs: 1_000, bucket: 'moderate', color: '#9a6b00' },
   { maxMs: 5_000, bucket: 'slow', color: '#d84315' },
 ] as const
+
+/** Phase nodes carry a `networkId` when that phase drills into a sub-network. */
+const DRILL_NETWORK_BY_PHASE: Partial<Record<BootPhaseMark['id'], string>> = {
+  compose: COMPOSE_NETWORK_ID,
+}
 
 function phaseDurationPaint(durationMs: number): { bucket: string; fill: string; stroke: string } {
   const found = PHASE_DURATION_BUCKETS.find(candidate => durationMs < candidate.maxMs)
@@ -109,13 +99,11 @@ function phaseDurationPaint(durationMs: number): { bucket: string; fill: string;
 /**
  * Build the AITopo document for a boot recording.
  * @param recording - phases, plugin events, and patch-layer attribution.
- * @returns a `version: 1` GraphDocument (phase flow root + two sub-networks).
+ * @returns a `version: 1` GraphDocument (phase flow + layer portals on the
+ * root, compose subnet, one subnet per non-empty layer).
  */
 export function buildBootDocument(recording: BootRecording): GraphDocument {
   const constructions = recording.events.filter(event => event.kind === 'construction')
-  const disposalIds = new Set(
-    recording.events.filter(event => event.kind === 'disposal').map(event => event.entryId),
-  )
 
   const phaseNodes: GraphNode[] = recording.phases.map((phase, index) => {
     const drillNetworkId = DRILL_NETWORK_BY_PHASE[phase.id]
@@ -149,8 +137,60 @@ export function buildBootDocument(recording: BootRecording): GraphDocument {
     from: `phase:${recording.phases[index]?.id}`,
     to: `phase:${phase.id}`,
     kind: 'flow',
-    style: { strokeDash: [6, 4] },
+    style: { strokeDash: [6, 4], alpha: 0.35 },
   }))
+
+  // Layer portals live on the ROOT: subnetworks drill exactly one level, so
+  // the per-layer plugin detail must be reachable without an intermediate
+  // network. Portals grid below the phase flow; hue per layer. A synthetic
+  // unattributed portal follows the real layers when runtime-created entries
+  // (the include carrier, dynamic mounts) exist outside every patch layer.
+  const realRowIds = new Set(recording.layers.flatMap(layer => layer.rowIds))
+  const hasUnattributed = constructions.some(event => !realRowIds.has(event.entryId))
+    || recording.inactiveEntryIds.some(id => !realRowIds.has(id))
+  const placedCount = (rowIds: Set<string>): number =>
+    constructions.filter(event => rowIds.has(event.entryId)).length
+      + recording.inactiveEntryIds.filter(id => rowIds.has(id)).length
+  // A layer earns a portal only when at least one placed plugin attributes to
+  // it — an empty portal drills into a blank canvas. Zero-row layers still
+  // appear in the composition view.
+  const visibleLayers: Array<{ name: string; rowIds: Set<string> ; unattributed: boolean }> = recording.layers
+    .map(layer => ({ name: layer.name, rowIds: new Set(layer.rowIds), unattributed: false }))
+    .filter(layer => placedCount(layer.rowIds) > 0)
+  if (hasUnattributed) {
+    visibleLayers.push({ name: UNATTRIBUTED_LAYER, rowIds: realRowIds, unattributed: true })
+  }
+
+  const layerNetworkId = (index: number): string => `${LAYER_NETWORK_PREFIX}${index}`
+  const portalNodes: GraphNode[] = visibleLayers.map((layer, index) => {
+    const hue = LANE_COLORS[index % LANE_COLORS.length] ?? '#4e79a7'
+    return {
+      id: `portal:layer:${index}`,
+      type: 'layer',
+      label: layer.name,
+      label2: `${layer.rowIds.size} rows`,
+      tooltip: `Double-click to enter — ${layer.rowIds.size} composed rows`,
+      icon: 'router',
+      x: 120 + (index % PORTAL_COLUMNS) * 300,
+      y: 320 + Math.floor(index / PORTAL_COLUMNS) * 160,
+      networkId: layerNetworkId(index),
+      data: { layer: layer.name, fill: hue, stroke: hue },
+    }
+  })
+  const portalEdges: GraphEdge[] = portalNodes.map(portal => ({
+    id: `edge:mount-${portal.id}`,
+    from: 'phase:mount',
+    to: portal.id,
+    kind: 'flow',
+    style: { strokeDash: [6, 4], alpha: 0.35 },
+  }))
+
+  const networks: Record<string, GraphDocument> = {
+    [COMPOSE_NETWORK_ID]: buildComposeNetwork(recording),
+  }
+  visibleLayers.forEach((layer, index) => {
+    networks[layerNetworkId(index)] = buildLayerNetwork(recording, layer, constructions)
+  })
 
   return {
     version: 1,
@@ -158,13 +198,10 @@ export function buildBootDocument(recording: BootRecording): GraphDocument {
       title: `dsh boot: ${recording.profile}`,
       kind: 'topology',
     },
-    nodes: phaseNodes,
-    edges: phaseEdges,
+    nodes: [...phaseNodes, ...portalNodes],
+    edges: [...phaseEdges, ...portalEdges],
     groups: [],
-    networks: {
-      [COMPOSE_NETWORK_ID]: buildComposeNetwork(recording),
-      [MOUNT_NETWORK_ID]: buildMountNetwork(recording, constructions, disposalIds),
-    },
+    networks,
   }
 }
 
@@ -187,140 +224,83 @@ function buildComposeNetwork(recording: BootRecording): GraphDocument {
     to: `layer:${index + 1}`,
     kind: 'flow',
     label: 'then',
-    style: { strokeDash: [6, 4] },
+    style: { strokeDash: [6, 4], alpha: 0.35 },
   }))
   return { version: 1, meta: { title: 'Patch layers (application order)' }, nodes, edges, groups: [] }
 }
 
-/** The activation view: plugin nodes on a time axis, banded by patch layer. */
-function buildMountNetwork(
+/**
+ * One layer's activation view: that layer's plugin nodes only, on a per-layer
+ * time axis — replacing the former group-band network whose expanded bands
+ * held too many nodes to read. The unattributed variant holds every
+ * runtime-created entry (ids outside every declared patch layer).
+ */
+function buildLayerNetwork(
   recording: BootRecording,
+  layer: { name: string; rowIds: Set<string>; unattributed: boolean },
   constructions: BootPluginEvent[],
-  disposalIds: Set<string>,
 ): GraphDocument {
-  // A layer earns a lane and a band only when at least one placed plugin
-  // attributes to it — an empty band would render as a stray degenerate
-  // rectangle (the composed stack legitimately contains zero-row layers,
-  // e.g. an empty home patch file).
-  const placedLayers = (entryIds: readonly string[]): Set<string> =>
-    new Set(entryIds.map(id => layerOfEntry(recording, id)))
-  const attributed = new Set([
-    ...placedLayers(constructions.map(event => event.entryId)),
-    ...placedLayers(recording.inactiveEntryIds),
-  ])
-  const layerNames = recording.layers
-    .map(layer => layer.name)
-    .filter(name => attributed.has(name))
-  if (attributed.has(UNATTRIBUTED_LAYER)) layerNames.push(UNATTRIBUTED_LAYER)
+  const inLayer = (entryId: string): boolean =>
+    layer.unattributed ? !layer.rowIds.has(entryId) : layer.rowIds.has(entryId)
+  const layerConstructions = constructions.filter(event => inLayer(event.entryId))
+  const constructedIds = new Set(layerConstructions.map(event => event.entryId))
+  const layerInactive = recording.inactiveEntryIds.filter(id => inLayer(id) && !constructedIds.has(id))
+  const layerName = layer.name
+
+  const disposalIds = new Set(
+    recording.events.filter(event => event.kind === 'disposal').map(event => event.entryId),
+  )
 
   const nodes: GraphNode[] = []
   const edges: GraphEdge[] = []
-  // Group bands assemble at the end: GraphGroup.memberIds is readonly, so
-  // membership collects in a mutable map while nodes are placed. The bbox
-  // per layer gives collapsed bands their geometry (nodes default 50×50).
-  const membersByLayer = new Map<string, string[]>()
-  const bboxByLayer = new Map<string, { minX: number; minY: number; maxX: number; maxY: number }>()
-  const addMember = (layer: string, nodeId: string, x: number, y: number): void => {
-    const members = membersByLayer.get(layer) ?? []
-    members.push(nodeId)
-    membersByLayer.set(layer, members)
-    const bbox = bboxByLayer.get(layer)
-    bboxByLayer.set(layer, bbox === undefined
-      ? { minX: x, minY: y, maxX: x + 50, maxY: y + 50 }
-      : {
-        minX: Math.min(bbox.minX, x),
-        minY: Math.min(bbox.minY, y),
-        maxX: Math.max(bbox.maxX, x + 50),
-        maxY: Math.max(bbox.maxY, y + 50),
-      })
-  }
-  const groupIdOf = (layer: string): string => `group:${slug(layer)}`
   const nodeIdByEntryId = new Map<string, string>()
 
-  // Layer blocks stack vertically, each sized by its own row count — a fixed
-  // lane pitch would make a tall layer's rows overlap the next lane's block.
-  const constructionsByLayer = new Map<string, BootPluginEvent[]>()
-  for (const event of constructions) {
-    const layer = layerOfEntry(recording, event.entryId)
-    const events = constructionsByLayer.get(layer) ?? []
-    events.push(event)
-    constructionsByLayer.set(layer, events)
-  }
-  const constructedIds = new Set(constructions.map(event => event.entryId))
-  const inactiveByLayer = new Map<string, string[]>()
-  for (const entryId of recording.inactiveEntryIds) {
-    if (constructedIds.has(entryId)) continue
-    const layer = layerOfEntry(recording, entryId)
-    const ids = inactiveByLayer.get(layer) ?? []
-    ids.push(entryId)
-    inactiveByLayer.set(layer, ids)
-  }
-  const ROW_PITCH = 100
-  const LANE_GAP = 60
-  const laneBaseY = new Map<string, number>()
-  let cursorY = 100
-  for (const name of layerNames) {
-    laneBaseY.set(name, cursorY)
-    const count = (constructionsByLayer.get(name)?.length ?? 0) + (inactiveByLayer.get(name)?.length ?? 0)
-    cursorY += Math.ceil(Math.max(count, 1) / PLUGIN_COLUMNS) * ROW_PITCH + LANE_GAP
-  }
-
-  const placeNode = (layer: string, slot: number): { x: number; y: number } => ({
+  const place = (slot: number): { x: number; y: number } => ({
     x: 120 + (slot % PLUGIN_COLUMNS) * 180,
-    y: (laneBaseY.get(layer) ?? cursorY) + Math.floor(slot / PLUGIN_COLUMNS) * ROW_PITCH,
+    y: 100 + Math.floor(slot / PLUGIN_COLUMNS) * 100,
   })
 
-  constructions.forEach((event) => {
-    const layer = layerOfEntry(recording, event.entryId)
+  layerConstructions.forEach((event, slot) => {
     const id = `plugin:${event.entryId}`
-    const slot = (constructionsByLayer.get(layer) ?? []).indexOf(event)
-    const { x, y } = placeNode(layer, slot === -1 ? 0 : slot)
     nodeIdByEntryId.set(event.entryId, id)
+    const { x, y } = place(slot)
     nodes.push({
       id,
       type: 'plugin',
       label: event.entryName,
       label2: event.entryId,
-      tooltip: `+${Math.round(event.atMs)}ms · ${layer}`
+      tooltip: `+${Math.round(event.atMs)}ms`
         + (event.inject.length > 0 ? ` · inject: ${event.inject.join(', ')}` : ''),
       status: disposalIds.has(event.entryId) ? 'cold' : 'running',
       icon: 'node',
       x,
       y,
-      // Dual membership encoding: the renderer resolves groupId first and
-      // memberIds as the fallback arm; observe writes both.
-      groupId: groupIdOf(layer),
-      data: { atMs: Math.round(event.atMs), layer, inject: event.inject, fiberUid: event.fiberUid },
+      data: { atMs: Math.round(event.atMs), layer: layerName, inject: event.inject, fiberUid: event.fiberUid },
     })
-    addMember(layer, id, x, y)
   })
 
   // Composed rows that never activated (disabled or otherwise inactive): still
-  // part of the composition's truth, rendered cold after their layer's rows.
-  for (const [layer, ids] of inactiveByLayer) {
-    const built = constructionsByLayer.get(layer)?.length ?? 0
-    for (const [index, entryId] of ids.entries()) {
-      const id = `plugin:${entryId}`
-      nodeIdByEntryId.set(entryId, id)
-      const { x, y } = placeNode(layer, built + index)
-      nodes.push({
-        id,
-        type: 'plugin',
-        label: entryId,
-        label2: entryId,
-        tooltip: `${layer} · disabled/inactive — composed but never activated`,
-        status: 'cold',
-        icon: 'node',
-        x,
-        y,
-        groupId: groupIdOf(layer),
-        data: { layer, inactive: true },
-      })
-      addMember(layer, id, x, y)
-    }
+  // part of the composition's truth, rendered cold after the activated rows.
+  for (const [index, entryId] of layerInactive.entries()) {
+    const id = `plugin:${entryId}`
+    nodeIdByEntryId.set(entryId, id)
+    const { x, y } = place(layerConstructions.length + index)
+    nodes.push({
+      id,
+      type: 'plugin',
+      label: entryId,
+      label2: entryId,
+      tooltip: `${layerName} · disabled/inactive — composed but never activated`,
+      status: 'cold',
+      icon: 'node',
+      x,
+      y,
+      data: { layer: layerName, inactive: true },
+    })
   }
 
-  for (const event of constructions) {
+  // Parent edges only when both ends live in THIS layer's subnet.
+  for (const event of layerConstructions) {
     const parentId = event.parentEntryId === undefined ? undefined : nodeIdByEntryId.get(event.parentEntryId)
     const childId = nodeIdByEntryId.get(event.entryId)
     if (parentId === undefined || childId === undefined || parentId === childId) continue
@@ -329,33 +309,17 @@ function buildMountNetwork(
       from: parentId,
       to: childId,
       kind: 'flow',
-      label: 'parent',
-      style: { strokeDash: [6, 4] },
+      style: { strokeDash: [6, 4], alpha: 0.35 },
     })
   }
 
-  // Bands default collapsed (`expanded` omitted) at the engine's ORIGINAL
-  // size: x/y anchors the square at its layer block's first node, w/h stay
-  // omitted (→ 50×50 default) — the expanded member-union size must NOT be
-  // baked into the collapsed body. Expanding grows the band via autoFit.
-  const groups: GraphGroup[] = layerNames.map((name, laneIndex) => {
-    const bbox = bboxByLayer.get(name)
-    const hue = LANE_COLORS[laneIndex % LANE_COLORS.length] ?? '#4e79a7'
-    return {
-      id: groupIdOf(name),
-      label: name,
-      memberIds: membersByLayer.get(name) ?? [],
-      x: bbox?.minX ?? 0,
-      y: bbox?.minY ?? 0,
-      style: { fill: `${hue}2e`, stroke: hue },
-    }
-  })
-
   return {
     version: 1,
-    meta: { title: `Plugin activation (${constructions.length} activated, ${recording.inactiveEntryIds.length} inactive)` },
+    meta: {
+      title: `${layerName} (${layerConstructions.length} activated, ${layerInactive.length} inactive)`,
+    },
     nodes,
     edges,
-    groups,
+    groups: [],
   }
 }

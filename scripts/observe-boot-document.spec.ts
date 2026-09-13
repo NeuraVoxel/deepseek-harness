@@ -50,33 +50,104 @@ describe('buildBootDocument', () => {
     expect(Object.keys(parsed.networks ?? {})).toEqual(Object.keys(document.networks ?? {}))
   })
 
-  it('lays the root canvas out as a phase flow with sub-network drill-downs', () => {
-    const document = buildBootDocument(recording())
-    expect(document.nodes.map(node => node.id)).toEqual(['phase:compose', 'phase:mount'])
-    expect(document.edges).toEqual([
-      {
-        id: 'edge:compose-mount',
-        from: 'phase:compose',
-        to: 'phase:mount',
-        kind: 'flow',
-        style: { strokeDash: [6, 4] },
-      },
+  it('lays the root canvas out as a phase flow plus layer portals', () => {
+    const document = buildBootDocument(recording({
+      events: [
+        pluginEvent({ fiberUid: 1, entryId: 'entry-a', atMs: 12 }),
+        pluginEvent({ fiberUid: 2, entryId: 'entry-c', atMs: 40 }),
+      ],
+    }))
+    expect(document.nodes.filter(node => node.type === 'phase').map(node => node.id))
+      .toEqual(['phase:compose', 'phase:mount'])
+    // One colored portal per non-empty layer, each drilling into its subnet.
+    const portals = document.nodes.filter(node => node.type === 'layer')
+    expect(portals.map(node => node.label)).toEqual(['@example/base', '@example/app'])
+    expect(portals.map(node => node.networkId)).toEqual(['network:layer:0', 'network:layer:1'])
+    expect(portals.every(node => node.icon === 'router')).toBe(true)
+    expect(portals.every(node => typeof node.data?.fill === 'string')).toBe(true)
+    // Portals hang off the mount phase with low-alpha dashed edges.
+    expect(document.edges.every(edge => edge.from === 'phase:compose' || edge.to !== undefined)).toBe(true)
+    expect(document.edges.filter(edge => edge.from === 'phase:mount')).toHaveLength(2)
+    // The compose phase keeps its application-order subnet.
+    expect(document.nodes.find(node => node.id === 'phase:compose')?.networkId).toBe('network:compose')
+    expect(Object.keys(document.networks ?? {}).sort()).toEqual([
+      'network:compose',
+      'network:layer:0',
+      'network:layer:1',
     ])
-    const mount = document.nodes.find(node => node.id === 'phase:mount')
-    expect(mount?.networkId).toBe('network:mount')
-    // Drillable phases carry the router icon; plain phases stay 'node'.
-    expect(mount?.icon).toBe('router')
-    expect(document.nodes.find(node => node.id === 'phase:compose')?.icon).toBe('router')
-    expect(Object.keys(document.networks ?? {}).sort()).toEqual(['network:compose', 'network:mount'])
   })
 
-  it('styles plugin nodes with the plain node icon and layer nodes as servers', () => {
+  it('keeps empty layers out of the portal roster', () => {
     const document = buildBootDocument(recording({
+      layers: [
+        { name: '@example/base', rowIds: ['entry-a'] },
+        { name: '@example/empty', rowIds: ['entry-gone'] },
+      ],
       events: [pluginEvent({ fiberUid: 1, entryId: 'entry-a', atMs: 12 })],
     }))
-    expect(document.networks?.['network:mount']?.nodes.every(node => node.icon === 'node')).toBe(true)
-    expect(document.networks?.['network:compose']?.nodes.every(node => node.icon === 'server')).toBe(true)
-    expect(document.networks?.['network:compose']?.edges.every(edge => edge.style?.strokeDash !== undefined)).toBe(true)
+    expect(document.nodes.filter(node => node.type === 'layer').map(node => node.label))
+      .toEqual(['@example/base'])
+    // The composition view still shows every layer, including the empty one.
+    const compose = document.networks?.['network:compose']
+    expect(compose?.nodes.map(node => node.label)).toEqual(['@example/base', '@example/empty'])
+  })
+
+  it('routes each layer into its own subnetwork on a per-layer time axis', () => {
+    const document = buildBootDocument(recording({
+      events: [
+        pluginEvent({ fiberUid: 1, entryId: 'entry-a', atMs: 12, inject: ['webStartup'] }),
+        pluginEvent({ fiberUid: 2, entryId: 'entry-b', atMs: 30 }),
+        pluginEvent({ fiberUid: 3, entryId: 'entry-c', atMs: 60 }),
+      ],
+    }))
+    const base = document.networks?.['network:layer:0']
+    const app = document.networks?.['network:layer:1']
+    expect(base?.nodes.map(node => node.id)).toEqual(['plugin:entry-a', 'plugin:entry-b'])
+    expect(app?.nodes.map(node => node.id)).toEqual(['plugin:entry-c'])
+    // x is the per-layer activation order; every node uses the plain icon.
+    expect(base?.nodes.map(node => node.x)).toEqual([120, 300])
+    expect(base?.nodes.every(node => node.icon === 'node')).toBe(true)
+    expect(base?.nodes[0]?.data).toMatchObject({ layer: '@example/base', inject: ['webStartup'] })
+    expect(app?.nodes[0]?.data?.layer).toBe('@example/app')
+  })
+
+  it('edges observed fiber parent-child relations and marks inactive rows cold', () => {
+    const document = buildBootDocument(recording({
+      events: [
+        pluginEvent({ fiberUid: 1, entryId: 'entry-a', atMs: 12 }),
+        pluginEvent({ fiberUid: 2, entryId: 'entry-b', atMs: 40, parentEntryId: 'entry-a' }),
+      ],
+      inactiveEntryIds: ['entry-c'],
+    }))
+    const base = document.networks?.['network:layer:0']
+    expect(base?.edges).toEqual([{
+      id: 'edge:parent-2',
+      from: 'plugin:entry-a',
+      to: 'plugin:entry-b',
+      kind: 'flow',
+      style: { strokeDash: [6, 4], alpha: 0.35 },
+    }])
+    // Cross-layer parent relations have no endpoints in a single subnet; the
+    // cold inactive row lives in its own layer's subnet after the activated rows.
+    const app = document.networks?.['network:layer:1']
+    const inactive = app?.nodes.find(node => node.id === 'plugin:entry-c')
+    expect(inactive?.status).toBe('cold')
+    expect(inactive?.x).toBe(120) // first slot of its layer (nothing activated there)
+  })
+
+  it('parks runtime-created entries in an unattributed subnetwork', () => {
+    const document = buildBootDocument(recording({
+      events: [
+        pluginEvent({ fiberUid: 1, entryId: 'entry-a', atMs: 12 }),
+        pluginEvent({ fiberUid: 9, entryId: 'include', entryName: 'cordis:include', atMs: 102 }),
+      ],
+    }))
+    const portals = document.nodes.filter(node => node.type === 'layer')
+    // The app layer placed nothing in this recording, so it earns no portal.
+    expect(portals.map(node => node.label)).toEqual(['@example/base', '(unattributed)'])
+    const portal = portals.find(node => node.label === '(unattributed)')
+    const subnet = document.networks?.[portal?.networkId ?? '']
+    expect(subnet?.nodes.map(node => node.id)).toEqual(['plugin:include'])
   })
 
   it('recolors phase nodes by their duration bucket', () => {
@@ -96,83 +167,5 @@ describe('buildBootDocument', () => {
     // Every phase carries both paint overrides.
     expect(document.nodes.every(node => typeof node.data?.fill === 'string' && typeof node.data?.stroke === 'string'))
       .toBe(true)
-  })
-
-  it('bands construction events into per-layer groups on a time axis', () => {
-    const document = buildBootDocument(recording({
-      events: [
-        pluginEvent({ fiberUid: 1, entryId: 'entry-a', atMs: 12 }),
-        pluginEvent({ fiberUid: 2, entryId: 'entry-b', atMs: 30, inject: ['webStartup'] }),
-        pluginEvent({ fiberUid: 3, entryId: 'entry-c', atMs: 60 }),
-      ],
-    }))
-    const mount = document.networks?.['network:mount']
-    expect(mount).toBeDefined()
-    const pluginNodes = mount?.nodes ?? []
-    expect(pluginNodes.map(node => node.type)).toEqual(['plugin', 'plugin', 'plugin'])
-    // x is the per-layer activation order (each layer's row starts at x=120).
-    expect(pluginNodes.map(node => node.x)).toEqual([120, 300, 120])
-    // y is the layer block: base holds two rows-worth of one row (baseY 100);
-    // app's block starts one row + gap lower (100 + 100 + 60).
-    expect(pluginNodes.map(node => node.y)).toEqual([100, 100, 260])
-    const groups = mount?.groups ?? []
-    expect(groups.map(group => group.label)).toEqual(['@example/base', '@example/app'])
-    expect(groups[0]?.memberIds).toEqual(['plugin:entry-a', 'plugin:entry-b'])
-    expect(groups[1]?.memberIds).toEqual(['plugin:entry-c'])
-    // Nodes carry the groupId arm of the membership encoding.
-    expect(pluginNodes.map(node => node.groupId)).toEqual([
-      'group:example-base',
-      'group:example-base',
-      'group:example-app',
-    ])
-    // Bands default collapsed at ORIGINAL engine size: anchored per layer
-    // block, w/h omitted (→ 50×50), NOT pre-sized to the expanded bbox.
-    expect(groups.every(group => group.expanded !== true)).toBe(true)
-    expect(groups.every(group => group.x !== undefined && group.y !== undefined)).toBe(true)
-    expect(groups.every(group => group.w === undefined && group.h === undefined)).toBe(true)
-    expect(groups[0]?.style?.fill).not.toBe(groups[1]?.style?.fill)
-    expect(groups[0]?.style?.stroke).toBeDefined()
-    // Bands grow around members when expanded: no autoFit opt-out.
-    expect(groups.every(group => group.style?.autoFit !== false)).toBe(true)
-  })
-
-  it('omits bands for layers with no placed plugins', () => {
-    const document = buildBootDocument(recording({
-      layers: [
-        { name: '@example/base', rowIds: ['entry-a'] },
-        { name: '@example/empty', rowIds: ['entry-gone'] },
-      ],
-      events: [pluginEvent({ fiberUid: 1, entryId: 'entry-a', atMs: 12 })],
-      inactiveEntryIds: [],
-    }))
-    const mount = document.networks?.['network:mount']
-    expect(mount?.groups?.map(group => group.label)).toEqual(['@example/base'])
-    // The composition view still shows every layer, including the empty one.
-    const compose = document.networks?.['network:compose']
-    expect(compose?.nodes.map(node => node.label)).toEqual(['@example/base', '@example/empty'])
-  })
-
-  it('edges observed fiber parent-child relations and marks inactive rows cold', () => {
-    const document = buildBootDocument(recording({
-      events: [
-        pluginEvent({ fiberUid: 1, entryId: 'entry-a', atMs: 12 }),
-        pluginEvent({ fiberUid: 2, entryId: 'entry-c', atMs: 40, parentEntryId: 'entry-a' }),
-      ],
-      inactiveEntryIds: ['entry-b'],
-    }))
-    const mount = document.networks?.['network:mount']
-    expect(mount?.edges).toContainEqual({
-      id: 'edge:parent-2',
-      from: 'plugin:entry-a',
-      to: 'plugin:entry-c',
-      kind: 'flow',
-      label: 'parent',
-      style: { strokeDash: [6, 4] },
-    })
-    const inactive = mount?.nodes.find(node => node.id === 'plugin:entry-b')
-    expect(inactive?.status).toBe('cold')
-    // Inactive members still join their layer's group band.
-    const baseGroup = mount?.groups?.find(group => group.label === '@example/base')
-    expect(baseGroup?.memberIds).toContain('plugin:entry-b')
   })
 })
