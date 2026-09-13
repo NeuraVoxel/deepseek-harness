@@ -217,7 +217,7 @@ export const dshBootDocument: GraphDocument = ${JSON.stringify(document, null, 2
 
 export const dshBootSample: DemoSample = {
   id: 'dsh-boot',
-  title: 'DSH boot',
+  title: 'Boot',
   group: 'dsh',
   description: 'Recorded dsh ${profileName}-profile startup: phase flow, patch layers, plugin activation time axis.',
   document: dshBootDocument,
