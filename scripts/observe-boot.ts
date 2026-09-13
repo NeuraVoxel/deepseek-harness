@@ -50,6 +50,7 @@ import {
 } from '../apps/cli/src/profile-boot.ts'
 import {
   buildBootDocument,
+  UNATTRIBUTED_LAYER,
   type BootLayerInfo,
   type BootPhaseMark,
   type BootPluginEvent,
@@ -197,7 +198,8 @@ function renderReport(recording: BootRecording, outPath: string): void {
     '|---|---|---|---|---|---|',
   )
   constructions.forEach((event, index) => {
-    const layer = recording.layers.find(candidate => candidate.rowIds.includes(event.entryId))?.name ?? '(unattributed)'
+    const layer = recording.layers.find(candidate => candidate.rowIds.includes(event.entryId))?.name
+      ?? UNATTRIBUTED_LAYER
     lines.push(
       `| ${index} | ${Math.round(event.atMs)} | ${layer} | ${event.entryId} | ${event.entryName} | ${event.inject.join(', ') || '—'} |`,
     )

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { parseDocument } from '@neuravoxel/aitopo'
 
-import { buildBootDocument, type BootPluginEvent, type BootRecording } from './observe-boot-document.ts'
+import { buildBootDocument, UNATTRIBUTED_LAYER, type BootPluginEvent, type BootRecording } from './observe-boot-document.ts'
 
 function pluginEvent(overrides: Partial<BootPluginEvent>): BootPluginEvent {
   return {
@@ -144,8 +144,12 @@ describe('buildBootDocument', () => {
     }))
     const portals = document.nodes.filter(node => node.type === 'layer')
     // The app layer placed nothing in this recording, so it earns no portal.
-    expect(portals.map(node => node.label)).toEqual(['@example/base', '(unattributed)'])
-    const portal = portals.find(node => node.label === '(unattributed)')
+    // The label names the bucket plainly: runtime mounts with no yml row.
+    expect(portals.map(node => node.label)).toEqual([
+      '@example/base',
+      'runtime-mounted（动态挂载，无 yml 声明）',
+    ])
+    const portal = portals.find(node => node.label === UNATTRIBUTED_LAYER)
     const subnet = document.networks?.[portal?.networkId ?? '']
     expect(subnet?.nodes.map(node => node.id)).toEqual(['plugin:include'])
   })
@@ -186,6 +190,31 @@ describe('buildBootDocument', () => {
     // Origin colors stay.
     expect(base?.data?.fill).toBe('#3d6f9e')
     expect(market?.data?.fill).toBe('#d97b2f')
+  })
+
+  it('attributes a restated row id to its LAST declaring layer only', () => {
+    // Patch semantics: a later layer restating an id overrides it, so the
+    // constructed plugin must appear in that layer's subnet — and nowhere else.
+    const document = buildBootDocument(recording({
+      layers: [
+        { name: '@example/base', rowIds: ['entry-a', 'entry-b'] },
+        { name: '@example/app', rowIds: ['entry-b'] },
+      ],
+      events: [
+        pluginEvent({ fiberUid: 1, entryId: 'entry-a', atMs: 12 }),
+        pluginEvent({ fiberUid: 2, entryId: 'entry-b', atMs: 40 }),
+      ],
+    }))
+    const base = document.networks?.['network:layer:0']
+    const app = document.networks?.['network:layer:1']
+    expect(base?.nodes.map(node => node.id)).toEqual(['plugin:entry-a'])
+    expect(app?.nodes.map(node => node.id)).toEqual(['plugin:entry-b'])
+    // Portal counts equal their subnet contents.
+    const portalById = new Map(
+      document.nodes.filter(node => node.type === 'layer').map(node => [node.networkId, node]),
+    )
+    expect(portalById.get('network:layer:0')?.label2).toBe('1 plugins')
+    expect(portalById.get('network:layer:1')?.label2).toBe('1 plugins')
   })
 
   it('recolors phase nodes by their duration bucket', () => {

@@ -68,7 +68,7 @@ export interface BootRecording {
 const COMPOSE_NETWORK_ID = 'network:compose'
 const LAYER_NETWORK_PREFIX = 'network:layer:'
 /** Lane for construction events whose entry id maps to no recorded layer. */
-const UNATTRIBUTED_LAYER = '(unattributed)'
+export const UNATTRIBUTED_LAYER = 'runtime-mounted（动态挂载，无 yml 声明）'
 /** Plugin nodes per row inside a layer; keeps the fit-all view readable. */
 const PLUGIN_COLUMNS = 16
 
@@ -140,32 +140,69 @@ export function buildBootDocument(recording: BootRecording): GraphDocument {
   // the per-layer plugin detail must be reachable without an intermediate
   // network. A synthetic unattributed portal follows the real layers when
   // runtime-created entries (the include carrier, dynamic mounts) exist
-  // outside every patch layer.
-  const realRowIds = new Set(recording.layers.flatMap(layer => layer.rowIds))
-  const hasUnattributed = constructions.some(event => !realRowIds.has(event.entryId))
-    || recording.inactiveEntryIds.some(id => !realRowIds.has(id))
-  const placedCount = (rowIds: Set<string>): number =>
-    constructions.filter(event => rowIds.has(event.entryId)).length
-      + recording.inactiveEntryIds.filter(id => rowIds.has(id)).length
+  // Single-owner attribution: an entry id may be declared by SEVERAL layers
+  // (a later patch restates an earlier row to override it), but the plugin
+  // belongs to the LAST declarer — mirroring patch application semantics.
+  // Without this, one construction event would be duplicated into every
+  // layer that restates its id.
+  const constructedIds = new Set(constructions.map(event => event.entryId))
+  const ownerIndexById = new Map<string, number>()
+  recording.layers.forEach((layer, layerIndex) => {
+    for (const rowId of layer.rowIds) ownerIndexById.set(rowId, layerIndex)
+  })
+  const constructionsByOwner = new Map<number, BootPluginEvent[]>()
+  const unattributedConstructions: BootPluginEvent[] = []
+  for (const event of constructions) {
+    const owner = ownerIndexById.get(event.entryId)
+    if (owner === undefined) {
+      unattributedConstructions.push(event)
+      continue
+    }
+    const list = constructionsByOwner.get(owner) ?? []
+    list.push(event)
+    constructionsByOwner.set(owner, list)
+  }
+  const inactiveByOwner = new Map<number, string[]>()
+  const unattributedInactive: string[] = []
+  for (const entryId of recording.inactiveEntryIds) {
+    if (constructedIds.has(entryId)) continue
+    const owner = ownerIndexById.get(entryId)
+    if (owner === undefined) {
+      unattributedInactive.push(entryId)
+      continue
+    }
+    const list = inactiveByOwner.get(owner) ?? []
+    list.push(entryId)
+    inactiveByOwner.set(owner, list)
+  }
+
+  interface LayerPlacement {
+    name: string
+    internal: boolean
+    unattributed: boolean
+    constructions: BootPluginEvent[]
+    inactive: string[]
+  }
   // A layer earns a portal only when at least one placed plugin attributes to
   // it — an empty portal drills into a blank canvas. Zero-row layers still
   // appear in the composition view.
-  const visibleLayers: Array<{
-    name: string
-    rowIds: Set<string>
-    unattributed: boolean
-    /** `@deepseek-ai/*` bundles are first-party; everything else is third-party. */
-    internal: boolean
-  }> = recording.layers
-    .map(layer => ({
+  const placements: LayerPlacement[] = recording.layers
+    .map((layer, layerIndex) => ({
       name: layer.name,
-      rowIds: new Set(layer.rowIds),
-      unattributed: false,
       internal: layer.name.startsWith('@deepseek-ai/'),
+      unattributed: false,
+      constructions: constructionsByOwner.get(layerIndex) ?? [],
+      inactive: inactiveByOwner.get(layerIndex) ?? [],
     }))
-    .filter(layer => placedCount(layer.rowIds) > 0)
-  if (hasUnattributed) {
-    visibleLayers.push({ name: UNATTRIBUTED_LAYER, rowIds: realRowIds, unattributed: true, internal: false })
+    .filter(placement => placement.constructions.length + placement.inactive.length > 0)
+  if (unattributedConstructions.length + unattributedInactive.length > 0) {
+    placements.push({
+      name: UNATTRIBUTED_LAYER,
+      internal: false,
+      unattributed: true,
+      constructions: unattributedConstructions,
+      inactive: unattributedInactive,
+    })
   }
 
   const layerNetworkId = (index: number): string => `${LAYER_NETWORK_PREFIX}${index}`
@@ -176,38 +213,61 @@ export function buildBootDocument(recording: BootRecording): GraphDocument {
   const mountIndex = Math.max(recording.phases.findIndex(phase => phase.id === 'mount'), 0)
   const mountX = 120 + mountIndex * 260
   const PORTAL_ROW_PITCH = 160
-  const internalLayers = visibleLayers.filter(layer => layer.internal)
-  const externalLayers = visibleLayers.filter(layer => !layer.internal)
-  const rows: Array<typeof visibleLayers> = [
-    ...(internalLayers.length > 0 ? [internalLayers] : []),
-    ...Array.from({ length: Math.ceil(externalLayers.length / PORTAL_COLUMNS) }, (_, i) =>
-      externalLayers.slice(i * PORTAL_COLUMNS, (i + 1) * PORTAL_COLUMNS)),
-  ]
+  const rows: Array<typeof placements> = [
+    ...Array.from({ length: Math.ceil(placements.filter(p => p.internal).length / PORTAL_COLUMNS) }, (_, i) =>
+      placements.filter(p => p.internal).slice(i * PORTAL_COLUMNS, (i + 1) * PORTAL_COLUMNS)),
+    ...Array.from({ length: Math.ceil(placements.filter(p => !p.internal).length / PORTAL_COLUMNS) }, (_, i) =>
+      placements.filter(p => !p.internal).slice(i * PORTAL_COLUMNS, (i + 1) * PORTAL_COLUMNS)),
+  ].filter(row => row.length > 0)
   const portalNodes: GraphNode[] = []
   const portalEdges: GraphEdge[] = []
+  // Bus geometry for the mount fan: every edge STARTS at the mount node's
+  // bottom center, drops to the shared bus line, runs horizontally, and ENDS
+  // at the portal's top center — for BOTH sides. The two waypoints pin the
+  // exit/entry sides; the router cannot choose mount's right edge instead.
+  const PORTAL_BUS_Y = 220
+  const MOUNT_CENTER_X = mountX + 25
   rows.forEach((row, rowIndex) => {
     const y = 320 + rowIndex * PORTAL_ROW_PITCH
-    row.forEach((layer, slot) => {
-      const index = visibleLayers.indexOf(layer)
-      const hue = layer.internal ? '#3d6f9e' : '#d97b2f'
+    row.forEach((placement, slot) => {
+      const index = placements.indexOf(placement)
+      const hue = placement.internal ? '#3d6f9e' : '#d97b2f'
+      const pluginCount = placement.constructions.length + placement.inactive.length
+      const portalX = mountX + (slot - (row.length - 1) / 2) * 300
+      const portalCenterX = portalX + 25
       portalNodes.push({
         id: `portal:layer:${index}`,
         type: 'layer',
-        label: layer.name,
-        label2: `${layer.rowIds.size} rows`,
-        tooltip: `Double-click to enter — ${layer.rowIds.size} composed rows`
-          + ` · ${layer.internal ? 'dsh internal' : 'third-party'}`,
+        label: placement.name,
+        // The count the subnet actually contains — not the declared row count.
+        label2: `${pluginCount} plugins`,
+        tooltip: `Double-click to enter — ${pluginCount} plugins`
+          + ` · ${placement.unattributed ? 'runtime' : placement.internal ? 'dsh internal' : 'third-party'}`,
         icon: 'router',
-        x: mountX + (slot - (row.length - 1) / 2) * 300,
+        x: portalX,
         y,
         networkId: layerNetworkId(index),
-        data: { layer: layer.name, origin: layer.internal ? 'internal' : 'external', fill: hue, stroke: hue },
+        data: {
+          layer: placement.name,
+          origin: placement.internal ? 'internal' : 'external',
+          fill: hue,
+          stroke: hue,
+        },
       })
       portalEdges.push({
         id: `edge:mount-${index}`,
         from: 'phase:mount',
         to: `portal:layer:${index}`,
         kind: 'flow',
+        // Anchor pins: leave the mount's bottom center, enter the portal's
+        // top center — the auto heuristic would pick right/left for portals
+        // right of the mount node.
+        fromAnchor: 'bottom',
+        toAnchor: 'top',
+        waypoints: [
+          { x: MOUNT_CENTER_X, y: PORTAL_BUS_Y },
+          { x: portalCenterX, y: PORTAL_BUS_Y },
+        ],
         style: { strokeDash: [6, 4], alpha: 0.35 },
       })
     })
@@ -216,8 +276,8 @@ export function buildBootDocument(recording: BootRecording): GraphDocument {
   const networks: Record<string, GraphDocument> = {
     [COMPOSE_NETWORK_ID]: buildComposeNetwork(recording),
   }
-  visibleLayers.forEach((layer, index) => {
-    networks[layerNetworkId(index)] = buildLayerNetwork(recording, layer, constructions)
+  placements.forEach((placement, index) => {
+    networks[layerNetworkId(index)] = buildLayerNetwork(recording, placement)
   })
 
   return {
@@ -258,22 +318,23 @@ function buildComposeNetwork(recording: BootRecording): GraphDocument {
 }
 
 /**
- * One layer's activation view: that layer's plugin nodes only, on a per-layer
- * time axis — replacing the former group-band network whose expanded bands
- * held too many nodes to read. The unattributed variant holds every
- * runtime-created entry (ids outside every declared patch layer).
+ * One layer's activation view: exactly the plugins attributed to this layer
+ * (single-owner — see the attribution map in {@link buildBootDocument}), on a
+ * per-layer time axis. The unattributed variant holds every runtime-created
+ * entry (ids outside every declared patch layer).
  */
 function buildLayerNetwork(
   recording: BootRecording,
-  layer: { name: string; rowIds: Set<string>; unattributed: boolean },
-  constructions: BootPluginEvent[],
+  placement: {
+    name: string
+    unattributed: boolean
+    constructions: BootPluginEvent[]
+    inactive: string[]
+  },
 ): GraphDocument {
-  const inLayer = (entryId: string): boolean =>
-    layer.unattributed ? !layer.rowIds.has(entryId) : layer.rowIds.has(entryId)
-  const layerConstructions = constructions.filter(event => inLayer(event.entryId))
-  const constructedIds = new Set(layerConstructions.map(event => event.entryId))
-  const layerInactive = recording.inactiveEntryIds.filter(id => inLayer(id) && !constructedIds.has(id))
-  const layerName = layer.name
+  const layerConstructions = placement.constructions
+  const layerInactive = placement.inactive
+  const layerName = placement.name
 
   const disposalIds = new Set(
     recording.events.filter(event => event.kind === 'disposal').map(event => event.entryId),
