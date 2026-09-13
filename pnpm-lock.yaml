@@ -11126,6 +11126,9 @@ importers:
 
   plugins/wordbook:
     dependencies:
+      '@deepseek-ai/dsh-llm':
+        specifier: workspace:^
+        version: link:../../packages/llm/llm
       '@deepseek-ai/dsh-storage-domain':
         specifier: workspace:^
         version: link:../../packages/storage/storage-domain
@@ -11136,6 +11139,9 @@ importers:
       '@deepseek-ai/cordis':
         specifier: workspace:^
         version: link:../../vendor/cordis
+      '@deepseek-ai/dsh-agent-default-model':
+        specifier: workspace:^
+        version: link:../../packages/core/agent-default-model
       '@deepseek-ai/dsh-api-session-controller':
         specifier: workspace:^
         version: link:../../packages/api/session-controller
@@ -11151,6 +11157,12 @@ importers:
       '@deepseek-ai/dsh-client-ui-slots':
         specifier: workspace:^
         version: link:../../packages/client/ui-slots
+      '@deepseek-ai/dsh-commands':
+        specifier: workspace:^
+        version: link:../../packages/interaction/commands
+      '@deepseek-ai/dsh-session':
+        specifier: workspace:^
+        version: link:../../packages/core/session
       '@deepseek-ai/dsh-storage':
         specifier: workspace:^
         version: link:../../packages/storage/storage

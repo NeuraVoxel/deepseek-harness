@@ -30,6 +30,18 @@
       "path": "../../packages/client/ui-slots"
     },
     {
+      "path": "../../packages/core/agent-default-model"
+    },
+    {
+      "path": "../../packages/core/session"
+    },
+    {
+      "path": "../../packages/interaction/commands"
+    },
+    {
+      "path": "../../packages/llm/llm"
+    },
+    {
       "path": "../../packages/storage/storage"
     },
     {
