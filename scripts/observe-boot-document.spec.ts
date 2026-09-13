@@ -54,11 +54,29 @@ describe('buildBootDocument', () => {
     const document = buildBootDocument(recording())
     expect(document.nodes.map(node => node.id)).toEqual(['phase:compose', 'phase:mount'])
     expect(document.edges).toEqual([
-      { id: 'edge:compose-mount', from: 'phase:compose', to: 'phase:mount', kind: 'flow' },
+      {
+        id: 'edge:compose-mount',
+        from: 'phase:compose',
+        to: 'phase:mount',
+        kind: 'flow',
+        style: { strokeDash: [6, 4] },
+      },
     ])
     const mount = document.nodes.find(node => node.id === 'phase:mount')
     expect(mount?.networkId).toBe('network:mount')
+    // Drillable phases carry the router icon; plain phases stay 'node'.
+    expect(mount?.icon).toBe('router')
+    expect(document.nodes.find(node => node.id === 'phase:compose')?.icon).toBe('router')
     expect(Object.keys(document.networks ?? {}).sort()).toEqual(['network:compose', 'network:mount'])
+  })
+
+  it('styles plugin nodes with the plain node icon and layer nodes as servers', () => {
+    const document = buildBootDocument(recording({
+      events: [pluginEvent({ fiberUid: 1, entryId: 'entry-a', atMs: 12 })],
+    }))
+    expect(document.networks?.['network:mount']?.nodes.every(node => node.icon === 'node')).toBe(true)
+    expect(document.networks?.['network:compose']?.nodes.every(node => node.icon === 'server')).toBe(true)
+    expect(document.networks?.['network:compose']?.edges.every(edge => edge.style?.strokeDash !== undefined)).toBe(true)
   })
 
   it('bands construction events into per-layer groups on a time axis', () => {
@@ -128,6 +146,7 @@ describe('buildBootDocument', () => {
       to: 'plugin:entry-c',
       kind: 'flow',
       label: 'parent',
+      style: { strokeDash: [6, 4] },
     })
     const inactive = mount?.nodes.find(node => node.id === 'plugin:entry-b')
     expect(inactive?.status).toBe('cold')

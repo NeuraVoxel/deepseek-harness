@@ -108,6 +108,8 @@ export function buildBootDocument(recording: BootRecording): GraphDocument {
       label: phase.label,
       label2: `${Math.round(phase.endedAtMs - phase.startedAtMs)}ms`,
       tooltip: phase.detail,
+      // Built-in icon keys: drillable phases read as sub-network portals.
+      icon: drillNetworkId === undefined ? 'node' : 'router',
       x: 120 + index * 260,
       y: 120,
       // exactOptionalPropertyTypes: absent drill target omits the key entirely.
@@ -120,6 +122,7 @@ export function buildBootDocument(recording: BootRecording): GraphDocument {
     from: `phase:${recording.phases[index]?.id}`,
     to: `phase:${phase.id}`,
     kind: 'flow',
+    style: { strokeDash: [6, 4] },
   }))
 
   return {
@@ -146,6 +149,7 @@ function buildComposeNetwork(recording: BootRecording): GraphDocument {
     label: layer.name,
     label2: `${layer.rowIds.length} rows`,
     tooltip: layer.rowIds.join(', '),
+    icon: 'server',
     x: 120,
     y: 100 + index * 140,
     data: { rowIds: layer.rowIds },
@@ -156,6 +160,7 @@ function buildComposeNetwork(recording: BootRecording): GraphDocument {
     to: `layer:${index + 1}`,
     kind: 'flow',
     label: 'then',
+    style: { strokeDash: [6, 4] },
   }))
   return { version: 1, meta: { title: 'Patch layers (application order)' }, nodes, edges, groups: [] }
 }
@@ -252,6 +257,7 @@ function buildMountNetwork(
       tooltip: `+${Math.round(event.atMs)}ms · ${layer}`
         + (event.inject.length > 0 ? ` · inject: ${event.inject.join(', ')}` : ''),
       status: disposalIds.has(event.entryId) ? 'cold' : 'running',
+      icon: 'node',
       x,
       y,
       // Dual membership encoding: the renderer resolves groupId first and
@@ -277,6 +283,7 @@ function buildMountNetwork(
         label2: entryId,
         tooltip: `${layer} · disabled/inactive — composed but never activated`,
         status: 'cold',
+        icon: 'node',
         x,
         y,
         groupId: groupIdOf(layer),
@@ -290,7 +297,14 @@ function buildMountNetwork(
     const parentId = event.parentEntryId === undefined ? undefined : nodeIdByEntryId.get(event.parentEntryId)
     const childId = nodeIdByEntryId.get(event.entryId)
     if (parentId === undefined || childId === undefined || parentId === childId) continue
-    edges.push({ id: `edge:parent-${event.fiberUid}`, from: parentId, to: childId, kind: 'flow', label: 'parent' })
+    edges.push({
+      id: `edge:parent-${event.fiberUid}`,
+      from: parentId,
+      to: childId,
+      kind: 'flow',
+      label: 'parent',
+      style: { strokeDash: [6, 4] },
+    })
   }
 
   // Bands default collapsed (`expanded` omitted): the subnet opens as a
