@@ -125,9 +125,11 @@ describe('buildBootDocument', () => {
       'group:example-base',
       'group:example-app',
     ])
-    // Bands default collapsed, sized to their member bbox, and hue-coded.
+    // Bands default collapsed at ORIGINAL engine size: anchored per layer
+    // block, w/h omitted (→ 50×50), NOT pre-sized to the expanded bbox.
     expect(groups.every(group => group.expanded !== true)).toBe(true)
-    expect(groups.every(group => group.x !== undefined && group.w !== undefined && group.h !== undefined)).toBe(true)
+    expect(groups.every(group => group.x !== undefined && group.y !== undefined)).toBe(true)
+    expect(groups.every(group => group.w === undefined && group.h === undefined)).toBe(true)
     expect(groups[0]?.style?.fill).not.toBe(groups[1]?.style?.fill)
     expect(groups[0]?.style?.stroke).toBeDefined()
     // Bands grow around members when expanded: no autoFit opt-out.

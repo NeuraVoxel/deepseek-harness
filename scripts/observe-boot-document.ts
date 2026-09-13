@@ -334,11 +334,10 @@ function buildMountNetwork(
     })
   }
 
-  // Bands default collapsed (`expanded` omitted): the subnet opens as a
-  // per-layer summary of colored boxes; double-click a band to reveal its
-  // members. Collapsed geometry must be explicit — it falls back to the
-  // engine's 50×50 otherwise — so each band wraps its member bbox + padding.
-  const GROUP_PADDING = 16
+  // Bands default collapsed (`expanded` omitted) at the engine's ORIGINAL
+  // size: x/y anchors the square at its layer block's first node, w/h stay
+  // omitted (→ 50×50 default) — the expanded member-union size must NOT be
+  // baked into the collapsed body. Expanding grows the band via autoFit.
   const groups: GraphGroup[] = layerNames.map((name, laneIndex) => {
     const bbox = bboxByLayer.get(name)
     const hue = LANE_COLORS[laneIndex % LANE_COLORS.length] ?? '#4e79a7'
@@ -346,10 +345,8 @@ function buildMountNetwork(
       id: groupIdOf(name),
       label: name,
       memberIds: membersByLayer.get(name) ?? [],
-      x: (bbox?.minX ?? 0) - GROUP_PADDING,
-      y: (bbox?.minY ?? 0) - GROUP_PADDING,
-      w: bbox === undefined ? 50 : bbox.maxX - bbox.minX + 2 * GROUP_PADDING,
-      h: bbox === undefined ? 50 : bbox.maxY - bbox.minY + 2 * GROUP_PADDING,
+      x: bbox?.minX ?? 0,
+      y: bbox?.minY ?? 0,
       style: { fill: `${hue}2e`, stroke: hue },
     }
   })
