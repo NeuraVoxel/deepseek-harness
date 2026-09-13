@@ -70,7 +70,7 @@ const LAYER_NETWORK_PREFIX = 'network:layer:'
 /** Lane for construction events whose entry id maps to no recorded layer. */
 export const UNATTRIBUTED_LAYER = 'runtime-mounted（动态挂载，无 yml 声明）'
 /** Plugin nodes per row inside a layer; keeps the fit-all view readable. */
-const PLUGIN_COLUMNS = 16
+const PLUGIN_COLUMNS = 6
 
 /** Portal scatter grid on the root canvas: columns per row. */
 const PORTAL_COLUMNS = 3
@@ -84,6 +84,16 @@ const PHASE_DURATION_BUCKETS = [
 /** Phase nodes carry a `networkId` when that phase drills into a sub-network. */
 const DRILL_NETWORK_BY_PHASE: Partial<Record<BootPhaseMark['id'], string>> = {
   compose: COMPOSE_NETWORK_ID,
+}
+
+/**
+ * Plugin display names drop the internal `@deepseek-ai/` scope: every scoped
+ * plugin lives in an internal portal that already names the source tree, and
+ * the untrimmed name stays in boot-timeline.json and boot-report.md. Other
+ * scopes are third-party identifiers and keep their prefix.
+ */
+function pluginDisplayName(entryName: string): string {
+  return entryName.startsWith('@deepseek-ai/') ? entryName.slice('@deepseek-ai/'.length) : entryName
 }
 
 function phaseDurationPaint(durationMs: number): { bucket: string; fill: string; stroke: string } {
@@ -337,7 +347,9 @@ function buildComposeNetwork(recording: BootRecording): GraphDocument {
  * One layer's activation view: exactly the plugins attributed to this layer
  * (single-owner — see the attribution map in {@link buildBootDocument}), on a
  * per-layer time axis. The unattributed variant holds every runtime-created
- * entry (ids outside every declared patch layer).
+ * entry (ids outside every declared patch layer). Plugin nodes carry no
+ * `label2`: that second label is reserved for SubNetwork portals — the
+ * drillable phase and layer nodes.
  */
 function buildLayerNetwork(
   recording: BootRecording,
@@ -372,8 +384,7 @@ function buildLayerNetwork(
     nodes.push({
       id,
       type: 'plugin',
-      label: event.entryName,
-      label2: event.entryId,
+      label: pluginDisplayName(event.entryName),
       tooltip: `+${Math.round(event.atMs)}ms`
         + (event.inject.length > 0 ? ` · inject: ${event.inject.join(', ')}` : ''),
       status: disposalIds.has(event.entryId) ? 'cold' : 'running',
@@ -394,7 +405,6 @@ function buildLayerNetwork(
       id,
       type: 'plugin',
       label: entryId,
-      label2: entryId,
       tooltip: `${layerName} · disabled/inactive — composed but never activated`,
       status: 'cold',
       icon: 'node',

@@ -235,6 +235,42 @@ describe('buildBootDocument', () => {
     expect(portal?.label2).toBe('1 plugins')
   })
 
+  it('wraps plugin nodes to a new row every six columns', () => {
+    const events = Array.from({ length: 7 }, (_, index) =>
+      pluginEvent({ fiberUid: index + 1, entryId: `entry-${index}`, atMs: 10 + index * 5 }))
+    const document = buildBootDocument(recording({
+      layers: [{ name: '@example/base', rowIds: events.map(event => event.entryId) }],
+      events,
+    }))
+    const base = document.networks?.['network:layer:0']
+    // Slots 0-5 fill row 0; slot 6 wraps to x of column 0 on row 1.
+    expect(base?.nodes.slice(0, 6).map(node => node.y)).toEqual(Array.from({ length: 6 }, () => 100))
+    const seventh = base?.nodes[6]
+    expect(seventh?.x).toBe(120)
+    expect(seventh?.y).toBe(200)
+  })
+
+  it('strips the @deepseek-ai scope from plugin display names, keeping other scopes', () => {
+    const document = buildBootDocument(recording({
+      layers: [{ name: '@deepseek-ai/dsh-base', rowIds: ['entry-a', 'entry-b', 'entry-c'] }],
+      events: [
+        pluginEvent({ fiberUid: 1, entryId: 'entry-a', entryName: '@deepseek-ai/dsh-client-ui-layout', atMs: 12 }),
+        pluginEvent({ fiberUid: 2, entryId: 'entry-b', entryName: 'dsh-cost-meter', atMs: 30 }),
+        pluginEvent({ fiberUid: 3, entryId: 'entry-c', entryName: '@linxin666/dsh-client-ui-skill-explorer', atMs: 60 }),
+      ],
+    }))
+    const base = document.networks?.['network:layer:0']
+    expect(base?.nodes.map(node => node.label)).toEqual([
+      'dsh-client-ui-layout',
+      'dsh-cost-meter',
+      '@linxin666/dsh-client-ui-skill-explorer',
+    ])
+    // The layer data keeps the full portal name; plugin nodes carry no label2 —
+    // that second label is reserved for SubNetwork portals.
+    expect(base?.nodes[0]?.data?.layer).toBe('@deepseek-ai/dsh-base')
+    expect(base?.nodes.every(node => node.label2 === undefined)).toBe(true)
+  })
+
   it('recolors phase nodes by their duration bucket', () => {
     const document = buildBootDocument(recording({
       phases: [
