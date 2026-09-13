@@ -36,6 +36,12 @@
       "path": "../../packages/core/session"
     },
     {
+      "path": "../../packages/core/system-prompt"
+    },
+    {
+      "path": "../../packages/core/tools"
+    },
+    {
       "path": "../../packages/interaction/commands"
     },
     {
