@@ -1,0 +1,85 @@
+{
+  // VSCode 调试配置。注意：program 不能直接指向 .ts 入口 —— js-debug 会按
+  // tsconfig outDir 把它重映射到编译产物 lib/types/*.js（缺少 package.json
+  // 邻居，直接 ENOENT）。因此 program 指向 tsx 的 .mjs CLI，由它加载 .ts；
+  // tsx 生成内联 sourcemap，断点仍直接绑定 packages/ 与 apps/ 的源文件。
+  "version": "0.2.0",
+  "inputs": [
+    {
+      "id": "dshTask",
+      "type": "promptString",
+      "description": "传给 headless profile 的任务描述",
+      "default": "list the repository layout"
+    },
+    {
+      "id": "vitestTestName",
+      "type": "promptString",
+      "description": "按测试名过滤（vitest -t），留空则跑整个文件",
+      "default": ""
+    }
+  ],
+  "configurations": [
+    {
+      "name": "dsh: headless 任务",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "node",
+      "program": "${workspaceFolder}/node_modules/tsx/dist/cli.mjs",
+      "args": ["${workspaceFolder}/apps/cli/src/bin.ts", "--profile", "headless", "${input:dshTask}"],
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
+    },
+    {
+      "name": "dsh: web (Web UI)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "node",
+      "program": "${workspaceFolder}/node_modules/tsx/dist/cli.mjs",
+      "args": ["${workspaceFolder}/apps/cli/src/bin.ts", "web", "--no-open"],
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
+    },
+    {
+      "name": "dsh: dump-config (无需 API key)",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "node",
+      "program": "${workspaceFolder}/node_modules/tsx/dist/cli.mjs",
+      "args": ["${workspaceFolder}/apps/cli/src/bin.ts", "--profile", "headless", "--dump-config"],
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
+    },
+    {
+      "name": "附加到 Node 进程 (Attach)",
+      "type": "node",
+      "request": "attach",
+      "processId": "${command:PickProcess}",
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
+    },
+    {
+      "name": "Vitest: 当前文件",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "node",
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+      "args": ["run", "${relativeFile}"],
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
+    },
+    {
+      "name": "Vitest: 当前文件按名称过滤",
+      "type": "node",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "runtimeExecutable": "node",
+      "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
+      "args": ["run", "${relativeFile}", "-t", "${input:vitestTestName}"],
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**", "**/node_modules/**"]
+    }
+  ]
+}
