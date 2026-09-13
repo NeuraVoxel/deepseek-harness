@@ -1,0 +1,11 @@
+# Opt-in wordbook plugin: the Host half registers the word lookup service, the
+# `/word` command, and the word tools; the browser half joins via package.json
+# dsh.client once this row is in the Loader.
+#
+# Use a path relative to THIS file (not the bare package name). Bare names
+# resolve from $DSH_HOME/profiles/<profile>/, which has no workspace link unless
+# you `dsh plugin add` first. Relative ./ paths are anchored to this patch file
+# (same rule as plugins/hello-patch).
+- insert:
+    - id: wordbook
+      name: './src/index.ts'
