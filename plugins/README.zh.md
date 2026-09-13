@@ -15,5 +15,6 @@
 | [agent-observe](agent-observe/README.zh.md) | 观察 Tab（Session / Agent 拓扑） |
 | [agent-orchestrator](agent-orchestrator/README.zh.md) | Orchestrator 画布实验 |
 | [turn-cost](turn-cost/README.zh.md) | 每轮费用展示 |
+| [wordbook](wordbook/README.zh.md) | 大模型查词、落库与 Chat 内查询 |
 
 每个包自有 README、构建与测试。按该包说明在仓库根目录运行。

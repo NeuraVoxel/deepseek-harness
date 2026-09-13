@@ -57,6 +57,9 @@
       "path": "../../packages/llm/llm"
     },
     {
+      "path": "../../packages/llm/llm-deepseek"
+    },
+    {
       "path": "../../packages/storage/storage"
     },
     {

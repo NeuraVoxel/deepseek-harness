@@ -15,5 +15,6 @@ Opt-in demos and local experiment packages that mount onto a shipped `dsh` profi
 | [agent-observe](agent-observe/README.md) | Observe tab (Session / Agent topology) |
 | [agent-orchestrator](agent-orchestrator/README.md) | Orchestrator canvas experiment |
 | [turn-cost](turn-cost/README.md) | Per-turn cost display |
+| [wordbook](wordbook/README.md) | Model-backed word lookup, durable storage, and chat query |
 
 Each package owns its README, build, and tests. Follow that package’s run instructions from the repository root.
