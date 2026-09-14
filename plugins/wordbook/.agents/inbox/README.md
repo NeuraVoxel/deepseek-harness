@@ -59,12 +59,12 @@ Status: open
 1. 新建 `yyyy-mm-dd-slug.md`，`Status: open`，`## Spark` 写几句即可。
 2. 在 `QUEUE.md` 顶部（新→旧）加一行 `- [ ] [标题](./yyyy-mm-dd-slug.md)`。
 
-也可用随包安装的 `kit-inbox-*` skills（kit 创作的技能统一位于 `.agents/skills/kit/`，名称带 `kit-` 前缀）：
+也可用随包安装的 `kit-inbox-*` skills（kit 创作的技能统一位于 `.agents/skills/`，名称带 `kit-` 前缀；技能发现只读该目录的直属子项、不再递归，所以不放进子目录）：
 
 | Skill | 用途 |
 |---|---|
-| [kit-inbox-capture](../skills/kit/kit-inbox-capture/SKILL.md) | 只需**主体**（可选标题 / slug / Notes）；写 spark 并更新 `QUEUE.md` |
-| [kit-inbox-promote](../skills/kit/kit-inbox-promote/SKILL.md) | 明确升格某条 `open` spark → `proposed/` Agent Note，并改 Status / QUEUE |
+| [kit-inbox-capture](../skills/kit-inbox-capture/SKILL.md) | 只需**主体**（可选标题 / slug / Notes）；写 spark 并更新 `QUEUE.md` |
+| [kit-inbox-promote](../skills/kit-inbox-promote/SKILL.md) | 明确升格某条 `open` spark → `proposed/` Agent Note，并改 Status / QUEUE |
 
 捕获不升格；升格须当轮明确说「升格」或使用 `kit-inbox-promote`。
 
