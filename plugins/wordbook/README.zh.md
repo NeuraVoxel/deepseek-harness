@@ -78,4 +78,4 @@ pnpm --filter dsh-wordbook test:e2e   # one real provider call; skips without DE
 - **辅助调用不带 `purpose`**：该字段是闭集（`compaction` | `session-title`），插件无法为自己的调用声明用途。
 - **记录 schema 的破坏性变更需要人工迁移**。默认 `single` 布局要求域版本与存储文件版本严格相等，且 `compatibleVersions` 不生效；保持版本 1 就要把新字段声明为可选。
 
-设计与计划：[DESIGN.md](DESIGN.md) · [PLAN.md](PLAN.md)
+设计与计划：[DESIGN.md](DESIGN.md) · [PLAN.md](PLAN.md) · [DESIGN-sync.md](DESIGN-sync.md)（v2 提案：自持存储、全文检索与多设备同步）

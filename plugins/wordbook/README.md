@@ -76,4 +76,4 @@ pnpm --filter dsh-wordbook test:e2e   # one real provider call; skips without DE
 - **The auxiliary call carries no `purpose`**: that field is a closed union (`compaction` | `session-title`), so a plugin cannot classify its own call.
 - **A breaking record-schema change needs a manual migration.** Under the default `single` layout the domain version must equal the stored file's, and `compatibleVersions` does not apply; add new fields as optional to stay at version 1.
 
-Design and plan: [DESIGN.md](DESIGN.md) · [PLAN.md](PLAN.md)
+Design and plan: [DESIGN.md](DESIGN.md) · [PLAN.md](PLAN.md) · [DESIGN-sync.md](DESIGN-sync.md) (proposed v2: self-owned storage, full-text search, multi-device sync)

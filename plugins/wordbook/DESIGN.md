@@ -1,6 +1,8 @@
 # 单词学习台（wordbook）技术方案
 
-状态：设计已评审，待实现 ｜ 日期：2026-09-13 ｜ 范围：`plugins/wordbook/`
+状态：v1 设计已实现 ｜ 日期：2026-09-13 ｜ 范围：`plugins/wordbook/`
+
+本文描述 v1：storage 域 + json 介质。多设备共享与全文检索的后续方案见 [DESIGN-sync.md](DESIGN-sync.md)——它不再使用 storage 域，因此本文 §5 关于"切换介质"的结论只适用于 v1。
 
 ## 1. 目标与非目标
 
@@ -110,7 +112,7 @@ export const wordbookDomainSpec = defineDomain({
 
 检索：精确词用 `table.get(key)`（O(1)）；模糊查询用 `table.entries()` 扫描，在个人词量级下开销可忽略。
 
-切换介质是配置变更而非代码变更：在插件 patch 里插入 `storage-sqlite` 行，并覆写 `storage-domain` 的 `routes` 把 `wordbook` 指向 `sqlite`。注意 patch 替换目标行的整份 config，因此需要重述 `backend`。这是选择 storage 域而不是自建 SQLite 的主要原因。
+切换介质是配置变更而非代码变更：在插件 patch 里插入 `storage-sqlite` 行，并覆写 `storage-domain` 的 `routes` 把 `wordbook` 指向 `sqlite`。注意 patch 替换目标行的整份 config，因此需要重述 `backend`。这是 v1 选择 storage 域而不是自建 SQLite 的主要原因；[DESIGN-sync.md](DESIGN-sync.md) 为检索与多设备同步改为自持存储，那里不再沿用本结论。
 
 schema 演进规则：`single` 布局要求域 `version` 与文件头版本严格相等，否则以 `version-mismatch` 拒绝打开，且 `compatibleVersions` 在该布局下不生效。
 
