@@ -67,6 +67,7 @@
     "@deepseek-ai/dsh-storage": "workspace:^",
     "@deepseek-ai/dsh-storage-json": "workspace:^",
     "@deepseek-ai/dsh-system-prompt": "workspace:^",
+    "@neuravoxel/ai-eng": "github:NeuraVoxel/ai-eng-kit#v0.1.14",
     "@types/react": "~18.3.1",
     "@types/react-dom": "~18.3.0",
     "react": "^18.2.0",
