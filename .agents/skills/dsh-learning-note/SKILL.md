@@ -1,6 +1,6 @@
 ---
 name: dsh-learning-note
-description: Use when capturing a learning note for this repository — a session retrospective, a process walkthrough, or an observed fact about how the harness behaves — especially after finishing work, when the user says 记学习笔记 / 新建学习笔记 / record a learning / retrospective, or asks to write down what this session just learned. Writes one dated entry into `.agents/learning/`. Not for decisions, which are Agent Notes, and not for durable contracts, which belong in READMEs, `docs/`, or Agent Notes.
+description: Use when capturing a learning note for this repository — a session retrospective, a process walkthrough, or an observed fact about how the harness behaves — especially after finishing work, when the user says 记学习笔记 / 新建学习笔记 / record a learning / retrospective, or asks to write down what this session just learned. Writes one numbered entry into `.agents/learning/`. Not for decisions, which are Agent Notes, and not for durable contracts, which belong in READMEs, `docs/`, or Agent Notes.
 ---
 
 # Learning note
@@ -20,7 +20,7 @@ If the topic is missing, ask once and stop. Do not interview for optional fields
 ## Steps
 
 1. Confirm `.agents/learning/README.md` exists; if not, stop and say learning is not initialized.
-2. Date = today (`yyyy-mm-dd`). Path: `.agents/learning/{date}-{slug}.md`. If the path exists, adjust the slug (`-2`, `-3`, …) — never overwrite.
+2. Number = the highest existing `NNN` prefix in `.agents/learning/` plus one, zero-padded to three digits (`001` when the directory holds no entries); numbers are never reused. Path: `.agents/learning/{NNN}-{slug}.md`. If the path exists, adjust the slug (`-2`, `-3`, …) — never overwrite.
 3. Write the note: a `# <title>` heading plus a short body, in Chinese by default; terms, paths, and commands stay English. No Agent Note header, no `Status:` line, no proposal skeleton.
 4. Content that must not leave the machine goes to `.agents/learning/private/`, ignored by that directory's `.gitignore`.
 5. If the note surfaces an idea worth formal review, do not queue it inside the note: say so and leave the Agent Note decision to an explicit request, per [Agent Notes](../../notes/README.md).

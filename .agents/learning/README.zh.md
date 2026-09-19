@@ -16,6 +16,6 @@
 
 ## 布局
 
-- 条目命名 `yyyy-mm-dd-topic.md`，日期为首次撰写日；用 [dsh-learning-note](../skills/dsh-learning-note/SKILL.md) 落一篇。
+- 条目命名 `NNN-topic.md`，按创建顺序从 `001`、`002` 依次累加，补零至三位；新条目取现有最大编号加一，编号不复用。编号之后是 `kebab-case` 主题 slug。用 [dsh-learning-note](../skills/dsh-learning-note/SKILL.md) 落一篇。
 - 不能离开本机的笔记放 `.agents/learning/private/`，同目录的 `.gitignore` 已忽略该子树：勿提交。
 - 当笔记中的持久事实已被 Agent Note 或已发布文档吸收后，删除该笔记或在文首标明已吸收——本目录绝不成为第二套权威来源。

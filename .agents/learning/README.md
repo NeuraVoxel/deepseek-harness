@@ -16,6 +16,6 @@ Write an entry in Chinese by default; terms, paths, and commands stay English. T
 
 ## Layout
 
-- Entries are named `yyyy-mm-dd-topic.md`, dated when the note was first written; capture one with [dsh-learning-note](../skills/dsh-learning-note/SKILL.md).
+- Entries are named `NNN-topic.md`, numbered `001`, `002`, … in creation order, zero-padded to three digits; the next entry takes the highest existing number plus one, and numbers are never reused. A `kebab-case` topic slug follows the number. Capture one with [dsh-learning-note](../skills/dsh-learning-note/SKILL.md).
 - Notes that must not leave the machine go to `.agents/learning/private/`, which the sibling `.gitignore` ignores: never commit that subtree.
 - When a note's durable facts have been absorbed into an Agent Note or shipped documentation, delete the note or mark it absorbed at its top, so this directory never becomes a second authority.
